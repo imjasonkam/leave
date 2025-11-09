@@ -34,7 +34,8 @@ import {
   Group as GroupIcon,
   Settings as SettingsIcon,
   Lock as LockIcon,
-  ExitToApp as ExitToAppIcon
+  ExitToApp as ExitToAppIcon,
+  Description as DescriptionIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -55,6 +56,7 @@ const Layout = ({ children }) => {
     { text: '申請歷史', icon: <HistoryIcon />, path: '/leave/history', show: true },
     { text: '假期餘額', icon: <AccountBalanceIcon />, path: '/leave/balance', show: true },
     { text: '待批核', icon: <CheckCircleIcon />, path: '/approval/list', show: isDeptHead || isSystemAdmin },
+    { text: 'Paper Flow', icon: <DescriptionIcon />, path: '/admin/paper-flow', show: isSystemAdmin },
     { text: '用戶管理', icon: <PeopleIcon />, path: '/admin/users', show: isSystemAdmin },
     { text: '假期類型', icon: <EventNoteIcon />, path: '/admin/leave-types', show: isSystemAdmin },
     { text: '假期餘額管理', icon: <AccountBalanceWalletIcon />, path: '/admin/balances', show: isSystemAdmin },

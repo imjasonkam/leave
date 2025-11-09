@@ -56,17 +56,12 @@ class ApprovalController {
           const leaveType = await require('../database/models/LeaveType').findById(updatedApplication.leave_type_id);
           if (leaveType && leaveType.requires_balance) {
             const currentYear = new Date().getFullYear();
-            const balance = await LeaveBalance.findByUserAndType(
+            await LeaveBalance.incrementBalance(
               updatedApplication.user_id,
               updatedApplication.leave_type_id,
-              currentYear
+              currentYear,
+              parseFloat(updatedApplication.total_days)
             );
-            if (balance) {
-              await LeaveBalance.updateUsed(
-                balance.id,
-                Math.max(0, parseFloat(balance.used) - parseFloat(updatedApplication.total_days))
-              );
-            }
           }
         }
 
@@ -75,17 +70,12 @@ class ApprovalController {
           const leaveType = await require('../database/models/LeaveType').findById(updatedApplication.leave_type_id);
           if (leaveType && leaveType.requires_balance) {
             const currentYear = new Date().getFullYear();
-            const balance = await LeaveBalance.findByUserAndType(
+            await LeaveBalance.decrementBalance(
               updatedApplication.user_id,
               updatedApplication.leave_type_id,
-              currentYear
+              currentYear,
+              parseFloat(updatedApplication.total_days)
             );
-            if (balance) {
-              await LeaveBalance.updateUsed(
-                balance.id,
-                parseFloat(balance.used) + parseFloat(updatedApplication.total_days)
-              );
-            }
           }
         }
 

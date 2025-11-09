@@ -21,10 +21,10 @@ import dayjs from 'dayjs';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 
-const LeaveApplication = () => {
-  const { user, isDeptHead } = useAuth();
+const AdminPaperFlow = () => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
-    applicant_id: '',
+    user_id: '',
     leave_type_id: '',
     start_date: null,
     end_date: null,
@@ -40,18 +40,14 @@ const LeaveApplication = () => {
 
   useEffect(() => {
     fetchLeaveTypes();
-    if (isDeptHead) {
-      fetchUsers();
-    }
-  }, [isDeptHead]);
+    fetchUsers();
+  }, []);
 
   useEffect(() => {
-    if (formData.leave_type_id && formData.applicant_id) {
-      fetchBalance(formData.applicant_id, formData.leave_type_id);
-    } else if (formData.leave_type_id && !isDeptHead) {
-      fetchBalance(user.id, formData.leave_type_id);
+    if (formData.leave_type_id && formData.user_id) {
+      fetchBalance(formData.user_id, formData.leave_type_id);
     }
-  }, [formData.leave_type_id, formData.applicant_id, user.id, isDeptHead]);
+  }, [formData.leave_type_id, formData.user_id]);
 
   useEffect(() => {
     if (formData.start_date && formData.end_date) {
@@ -71,10 +67,8 @@ const LeaveApplication = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = isDeptHead 
-        ? await axios.get('/api/users/department')
-        : await axios.get('/api/admin/users');
-      setUsers(response.data.users);
+      const response = await axios.get('/api/admin/users');
+      setUsers(response.data.users || []);
     } catch (error) {
       console.error('Fetch users error:', error);
     }
@@ -101,7 +95,7 @@ const LeaveApplication = () => {
     setSuccess('');
     setLoading(true);
 
-    if (!formData.leave_type_id || !formData.start_date || !formData.end_date || !formData.days) {
+    if (!formData.user_id || !formData.leave_type_id || !formData.start_date || !formData.end_date || !formData.days) {
       setError('請填寫所有必填欄位');
       setLoading(false);
       return;
@@ -109,18 +103,19 @@ const LeaveApplication = () => {
 
     try {
       const submitData = {
-        user_id: formData.applicant_id || user.id,
+        user_id: formData.user_id,
         leave_type_id: formData.leave_type_id,
         start_date: formData.start_date.format('YYYY-MM-DD'),
         end_date: formData.end_date.format('YYYY-MM-DD'),
         total_days: parseFloat(formData.days),
-        reason: formData.reason || undefined
+        reason: formData.reason || undefined,
+        flow_type: 'paper-flow'
       };
 
       const response = await axios.post('/api/leaves', submitData);
-      setSuccess(`申請已提交，交易編號：${response.data.application.transaction_id}`);
+      setSuccess(`Paper Flow 申請已提交並批准，交易編號：${response.data.application.transaction_id}`);
       setFormData({
-        applicant_id: '',
+        user_id: '',
         leave_type_id: '',
         start_date: null,
         end_date: null,
@@ -136,12 +131,16 @@ const LeaveApplication = () => {
   };
 
   const selectedLeaveType = leaveTypes.find(lt => lt.id === parseInt(formData.leave_type_id));
+  const selectedUser = users.find(u => u.id === parseInt(formData.user_id));
 
   return (
     <Container maxWidth="md">
       <Paper sx={{ p: 4 }}>
         <Typography variant="h5" gutterBottom>
-          申請假期
+          Paper Flow 假期申請（系統管理員專用）
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          此頁面用於代員工輸入紙本假期申請，申請將直接批准並扣除餘額，不經過電子批核流程。
         </Typography>
 
         {error && (
@@ -157,30 +156,27 @@ const LeaveApplication = () => {
         )}
 
         <Box component="form" onSubmit={handleSubmit}>
-          {isDeptHead && (
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel>申請人</InputLabel>
-              <Select
-                value={formData.applicant_id}
-                label="申請人"
-                onChange={(e) => setFormData(prev => ({ ...prev, applicant_id: e.target.value }))}
-              >
-                {users.map((u) => (
-                  <MenuItem key={u.id} value={u.id}>
-                    {u.name_zh} ({u.employee_number})
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          )}
+          <FormControl fullWidth sx={{ mb: 2 }} required>
+            <InputLabel>申請人</InputLabel>
+            <Select
+              value={formData.user_id}
+              label="申請人"
+              onChange={(e) => setFormData(prev => ({ ...prev, user_id: e.target.value }))}
+            >
+              {users.map((u) => (
+                <MenuItem key={u.id} value={u.id}>
+                  {u.name_zh} ({u.employee_number})
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-          <FormControl fullWidth sx={{ mb: 2 }}>
+          <FormControl fullWidth sx={{ mb: 2 }} required>
             <InputLabel>假期類型</InputLabel>
             <Select
               value={formData.leave_type_id}
               label="假期類型"
               onChange={(e) => setFormData(prev => ({ ...prev, leave_type_id: e.target.value }))}
-              required
             >
               {leaveTypes.map((lt) => (
                 <MenuItem key={lt.id} value={lt.id}>
@@ -193,7 +189,7 @@ const LeaveApplication = () => {
           {selectedLeaveType?.requires_balance && balance && (
             <Box sx={{ mb: 2 }}>
               <Chip
-                label={`可用餘額：${parseFloat(balance.balance).toFixed(1)} 天`}
+                label={`${selectedUser?.name_zh || '申請人'} 可用餘額：${parseFloat(balance.balance).toFixed(1)} 天`}
                 color={parseFloat(balance.balance) >= parseFloat(formData.days || 0) ? 'success' : 'error'}
                 sx={{ mb: 1 }}
               />
@@ -249,7 +245,7 @@ const LeaveApplication = () => {
             fullWidth
             disabled={loading}
           >
-            {loading ? '提交中...' : '提交申請'}
+            {loading ? '提交中...' : '提交 Paper Flow 申請（直接批准）'}
           </Button>
         </Box>
       </Paper>
@@ -257,4 +253,5 @@ const LeaveApplication = () => {
   );
 };
 
-export default LeaveApplication;
+export default AdminPaperFlow;
+

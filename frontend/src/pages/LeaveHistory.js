@@ -34,9 +34,10 @@ const LeaveHistory = () => {
     try {
       setLoading(true);
       const params = {};
-      
-      if (!isSystemAdmin && !isDeptHead) {
-        params.applicant_id = user.id;
+
+      if (isSystemAdmin || isDeptHead) {
+        // 管理角色可選擇查看自身與批核清單
+        params.include_approver = 'true';
       }
 
       const response = await axios.get('/api/leaves', { params });
@@ -66,11 +67,18 @@ const LeaveHistory = () => {
     return statusMap[status] || status;
   };
 
-  const filteredApplications = applications.filter(app => 
-    app.transaction_id?.toLowerCase().includes(search.toLowerCase()) ||
-    app.leave_type_name_zh?.toLowerCase().includes(search.toLowerCase()) ||
-    app.applicant_name_zh?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredApplications = applications.filter(app => {
+    const keyword = search.toLowerCase();
+    const transactionId = app.transaction_id?.toString().toLowerCase() || '';
+    const leaveTypeNameZh = app.leave_type_name_zh?.toLowerCase() || '';
+    const applicantNameZh = app.applicant_name_zh?.toLowerCase() || '';
+
+    return (
+      transactionId.includes(keyword) ||
+      leaveTypeNameZh.includes(keyword) ||
+      applicantNameZh.includes(keyword)
+    );
+  });
 
   return (
     <Box>

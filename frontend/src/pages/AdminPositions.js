@@ -24,10 +24,34 @@ const AdminPositions = () => {
   const [positions, setPositions] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     name_zh: '',
     description: ''
+  });
+
+  const trimmedSearch = searchTerm.trim();
+  const normalizedSearch = trimmedSearch.toLowerCase();
+  const filteredPositions = positions.filter((pos) => {
+    if (!trimmedSearch) {
+      return true;
+    }
+
+    const candidates = [
+      pos.id?.toString() || '',
+      pos.name || '',
+      pos.name_zh || '',
+      pos.description || ''
+    ];
+
+    return candidates.some((candidate) => {
+      const value = candidate.toString();
+      return (
+        value.toLowerCase().includes(normalizedSearch) ||
+        value.includes(trimmedSearch)
+      );
+    });
   });
 
   useEffect(() => {
@@ -75,8 +99,26 @@ const AdminPositions = () => {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5">職位管理</Typography>
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 2,
+          mb: 2
+        }}
+      >
+        <Typography variant="h5" sx={{ flexGrow: 1 }}>
+          職位管理
+        </Typography>
+        <TextField
+          size="small"
+          placeholder="搜尋職位名稱 / 中文名稱 / 描述"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          sx={{ minWidth: 260 }}
+        />
         <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpen}>
           新增職位
         </Button>
@@ -94,7 +136,7 @@ const AdminPositions = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {positions.map((pos) => (
+              {filteredPositions.map((pos) => (
                 <TableRow key={pos.id}>
                   <TableCell>{pos.name}</TableCell>
                   <TableCell>{pos.name_zh}</TableCell>

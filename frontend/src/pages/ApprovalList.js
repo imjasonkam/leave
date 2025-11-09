@@ -41,10 +41,10 @@ const ApprovalList = () => {
   };
 
   const getCurrentStage = (application) => {
-    if (!application.checked_at) return 'checker';
-    if (!application.approved_1_at) return 'approver_1';
-    if (!application.approved_2_at) return 'approver_2';
-    if (!application.approved_3_at) return 'approver_3';
+    if (!application.checker_at && application.checker_id) return 'checker';
+    if (!application.approver_1_at && application.approver_1_id) return 'approver_1';
+    if (!application.approver_2_at && application.approver_2_id) return 'approver_2';
+    if (!application.approver_3_at && application.approver_3_id) return 'approver_3';
     return 'completed';
   };
 

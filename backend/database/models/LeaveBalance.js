@@ -75,7 +75,7 @@ class LeaveBalance {
         leave_type_id: leaveTypeId,
         year,
         balance: parseFloat(days),
-        taken: Math.max(0, parseFloat(balance?.taken || 0) - parseFloat(days))
+        taken: 0
       });
     }
 

@@ -17,6 +17,7 @@ import AdminBalances from './pages/AdminBalances';
 import AdminDepartments from './pages/AdminDepartments';
 import AdminPositions from './pages/AdminPositions';
 import AdminGroups from './pages/AdminGroups';
+import AdminPaperFlow from './pages/AdminPaperFlow';
 import ChangePassword from './pages/ChangePassword';
 
 const theme = createTheme({
@@ -44,6 +45,7 @@ function App() {
             <Route path="/leave/balance" element={<PrivateRoute><LeaveBalance /></PrivateRoute>} />
             <Route path="/approval/list" element={<PrivateRoute><ApprovalList /></PrivateRoute>} />
             <Route path="/approval/:id" element={<PrivateRoute><ApprovalDetail /></PrivateRoute>} />
+            <Route path="/admin/paper-flow" element={<PrivateRoute><AdminPaperFlow /></PrivateRoute>} />
             <Route path="/admin/users" element={<PrivateRoute><AdminUsers /></PrivateRoute>} />
             <Route path="/admin/leave-types" element={<PrivateRoute><AdminLeaveTypes /></PrivateRoute>} />
             <Route path="/admin/balances" element={<PrivateRoute><AdminBalances /></PrivateRoute>} />

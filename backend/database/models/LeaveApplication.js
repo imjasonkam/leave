@@ -1,5 +1,40 @@
 const knex = require('../../config/database');
 
+const formatApplication = (application) => {
+  if (!application) {
+    return application;
+  }
+
+  const transactionId =
+    application.transaction_id ||
+    `LA-${String(application.id).padStart(6, '0')}`;
+
+  const applicantNameZh =
+    application.applicant_name_zh ||
+    application.user_name_zh ||
+    null;
+
+  const applicantEmployeeNumber =
+    application.applicant_employee_number ||
+    application.user_employee_number ||
+    null;
+
+  const days =
+    application.days !== undefined && application.days !== null
+      ? application.days
+      : application.total_days !== undefined && application.total_days !== null
+        ? Number(application.total_days)
+        : null;
+
+  return {
+    ...application,
+    transaction_id: transactionId,
+    applicant_name_zh: applicantNameZh,
+    applicant_employee_number: applicantEmployeeNumber,
+    days
+  };
+};
+
 class LeaveApplication {
   static async create(applicationData) {
     const [application] = await knex('leave_applications').insert(applicationData).returning('*');
@@ -18,10 +53,14 @@ class LeaveApplication {
       .leftJoin('users as cancelled_by', 'leave_applications.cancelled_by_id', 'cancelled_by.id')
       .select(
         'leave_applications.*',
+        knex.raw('leave_applications.total_days as days'),
+        knex.raw('leave_applications.id as transaction_id'),
         'users.employee_number as user_employee_number',
+        'users.employee_number as applicant_employee_number',
         'users.surname as user_surname',
         'users.given_name as user_given_name',
         'users.name_zh as user_name_zh',
+        'users.name_zh as applicant_name_zh',
         'leave_types.code as leave_type_code',
         'leave_types.name as leave_type_name',
         'leave_types.name_zh as leave_type_name_zh',
@@ -41,7 +80,7 @@ class LeaveApplication {
         .where('leave_application_id', id);
     }
     
-    return application;
+    return formatApplication(application);
   }
 
   static async findAll(options = {}) {
@@ -50,10 +89,14 @@ class LeaveApplication {
       .leftJoin('leave_types', 'leave_applications.leave_type_id', 'leave_types.id')
       .select(
         'leave_applications.*',
+        knex.raw('leave_applications.total_days as days'),
+        knex.raw('leave_applications.id as transaction_id'),
         'users.employee_number as user_employee_number',
+        'users.employee_number as applicant_employee_number',
         'users.surname as user_surname',
         'users.given_name as user_given_name',
         'users.name_zh as user_name_zh',
+        'users.name_zh as applicant_name_zh',
         'leave_types.code as leave_type_code',
         'leave_types.name as leave_type_name',
         'leave_types.name_zh as leave_type_name_zh',
@@ -89,7 +132,8 @@ class LeaveApplication {
       query = query.where('leave_applications.is_cancellation_request', options.is_cancellation_request);
     }
 
-    return await query.orderBy('leave_applications.created_at', 'desc');
+    const applications = await query.orderBy('leave_applications.created_at', 'desc');
+    return applications.map(formatApplication);
   }
 
   static async update(id, updateData) {
@@ -99,15 +143,19 @@ class LeaveApplication {
 
   // 取得待批核的申請（針對特定使用者）
   static async getPendingApprovals(userId) {
-    return await knex('leave_applications')
+    const applications = await knex('leave_applications')
       .leftJoin('users', 'leave_applications.user_id', 'users.id')
       .leftJoin('leave_types', 'leave_applications.leave_type_id', 'leave_types.id')
       .select(
         'leave_applications.*',
+        knex.raw('leave_applications.total_days as days'),
+        knex.raw('leave_applications.id as transaction_id'),
         'users.employee_number as user_employee_number',
+        'users.employee_number as applicant_employee_number',
         'users.surname as user_surname',
         'users.given_name as user_given_name',
         'users.name_zh as user_name_zh',
+        'users.name_zh as applicant_name_zh',
         'leave_types.code as leave_type_code',
         'leave_types.name as leave_type_name',
         'leave_types.name_zh as leave_type_name_zh'
@@ -120,6 +168,8 @@ class LeaveApplication {
           .orWhere('leave_applications.approver_3_id', userId);
       })
       .orderBy('leave_applications.created_at', 'asc');
+
+    return applications.map(formatApplication);
   }
 
   // 取得下一個批核者

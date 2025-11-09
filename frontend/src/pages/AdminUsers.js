@@ -30,6 +30,7 @@ const AdminUsers = () => {
   const [positions, setPositions] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     employee_number: '',
     surname: '',
@@ -41,6 +42,36 @@ const AdminUsers = () => {
     department_id: '',
     position_id: '',
     hire_date: ''
+  });
+
+  const trimmedSearch = searchTerm.trim();
+  const normalizedSearch = trimmedSearch.toLowerCase();
+  const filteredUsers = users.filter((u) => {
+    if (!trimmedSearch) {
+      return true;
+    }
+
+    const englishFullName = `${u.given_name || ''} ${u.surname || ''}`.trim();
+    const reversedEnglishFullName = `${u.surname || ''} ${u.given_name || ''}`.trim();
+
+    const candidates = [
+      u.id?.toString() || '',
+      u.employee_number || '',
+      englishFullName,
+      reversedEnglishFullName,
+      u.surname || '',
+      u.given_name || '',
+      u.name_zh || '',
+      u.alias || ''
+    ];
+
+    return candidates.some((candidate) => {
+      const value = candidate.toString();
+      return (
+        value.toLowerCase().includes(normalizedSearch) ||
+        value.includes(trimmedSearch)
+      );
+    });
   });
 
   useEffect(() => {
@@ -136,8 +167,26 @@ const AdminUsers = () => {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5">用戶管理</Typography>
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 2,
+          mb: 2
+        }}
+      >
+        <Typography variant="h5" sx={{ flexGrow: 1 }}>
+          用戶管理
+        </Typography>
+        <TextField
+          size="small"
+          placeholder="搜尋員工編號 / 英文姓名 / 中文姓名 / 別名"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          sx={{ minWidth: 260 }}
+        />
         <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpen}>
           新增用戶
         </Button>
@@ -158,7 +207,7 @@ const AdminUsers = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {users.map((u) => (
+              {filteredUsers.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell>{u.employee_number}</TableCell>
                   <TableCell>{u.name_zh}</TableCell>

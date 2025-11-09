@@ -117,20 +117,44 @@ exports.seed = async function(knex) {
 
   // 建立授權群組 (Delegation Groups)
   const delegationGroups = await knex('delegation_groups').insert([
-    { name: 'HR Group', name_zh: 'HR群組', description: '人力資源授權群組', user_ids: [] },
-    { name: 'Accounting', name_zh: '會計授權群組', description: '會計部授權群組', user_ids: [] },
+    { name: 'HR Group', name_zh: 'HR群組', description: '人力資源授權群組', user_ids: [1,29,31] },
+    { name: 'Accounting', name_zh: '會計授權群組', description: '會計部授權群組', user_ids: [7] },
     { name: 'B2B', name_zh: '企客業務授權群組', description: '企客業務部授權群組', user_ids: [] },
     { name: 'Business Development', name_zh: '業務拓展授權群組', description: '業務拓展部授權群組', user_ids: [] },
     { name: 'Category', name_zh: '品類授權群組', description: '品類部授權群組', user_ids: [] },
-    { name: 'General Administration', name_zh: '行政授權群組', description: '行政部授權群組', user_ids: [] },
-    { name: 'Human Resources', name_zh: '人力資源授權群組', description: '人力資源部授權群組', user_ids: [] },
-    { name: 'IT', name_zh: '資訊科技授權群組', description: '資訊科技部授權群組', user_ids: [] },
+    { name: 'General Administration', name_zh: '行政授權群組', description: '行政部授權群組', user_ids: [26] },
+    { name: 'Human Resources', name_zh: '人力資源授權群組', description: '人力資源部授權群組', user_ids: [29] },
+    { name: 'IT', name_zh: '資訊科技授權群組', description: '資訊科技部授權群組', user_ids: [32] },
     { name: 'Marketing', name_zh: '市場推廣授權群組', description: '市場推廣部授權群組', user_ids: [] },
-    { name: 'Merchandising', name_zh: '採購授權群組', description: '採購部授權群組', user_ids: [] },
+    { name: 'Merchandising', name_zh: '採購授權群組', description: '採購部授權群組', user_ids: [23] },
     { name: 'Project', name_zh: '專案授權群組', description: '專案部授權群組', user_ids: [] },
-    { name: 'Retail Heads', name_zh: '零售主管授權群組', description: '零售部主管授權群組', user_ids: [] },
+    { name: 'Retail Heads', name_zh: '零售主管授權群組', description: '零售部主管授權群組', user_ids: [284,265] },
     { name: 'Retail Checker', name_zh: '零售檢查授權群組', description: '零售部檢查授權群組', user_ids: [] },
-    { name: 'Supply Chain and Logistics', name_zh: '供應鏈及物流授權群組', description: '供應鏈及物流部授權群組', user_ids: [] }
+    { name: 'Supply Chain and Logistics', name_zh: '供應鏈及物流授權群組', description: '供應鏈及物流部授權群組', user_ids: [312] },
+    { name: 'Retail Checker - ADM', name_zh: 'ADM零售檢查授權群組', description: 'ADM零售檢查授權群組', user_ids: [44] },
+    { name: 'Retail Checker - TWS', name_zh: 'TWS零售檢查授權群組', description: 'TWS零售檢查授權群組', user_ids: [243] },
+    { name: 'Retail Checker - WTS', name_zh: 'WTS零售檢查授權群組', description: 'WTS零售檢查授權群組', user_ids: [65] },
+    { name: 'Retail Checker - LF1', name_zh: 'LF1零售檢查授權群組', description: 'LF1零售檢查授權群組', user_ids: [236] },
+    { name: 'Retail Checker - TK3', name_zh: 'TK3零售檢查授權群組', description: 'TK3零售檢查授權群組', user_ids: [54] },
+    { name: 'Retail Checker - TK4', name_zh: 'TK4零售檢查授權群組', description: 'TK4零售檢查授權群組', user_ids: [326] },
+    { name: 'Retail Checker - OC', name_zh: 'OC零售檢查授權群組', description: 'OC零售檢查授權群組', user_ids: [241] },
+    { name: 'Retail Checker - SP1', name_zh: 'SP1零售檢查授權群組', description: 'SP1零售檢查授權群組', user_ids: [303] },
+    { name: 'Retail Checker - WPG', name_zh: 'WPG零售檢查授權群組', description: 'WPG零售檢查授權群組', user_ids: [202] },
+    { name: 'Retail Checker - MK2', name_zh: 'MK2零售檢查授權群組', description: 'MK2零售檢查授權群組', user_ids: [140] },
+    { name: 'Retail Checker - TT2', name_zh: 'TT2零售檢查授權群組', description: 'TT2零售檢查授權群組', user_ids: [239] },
+    { name: 'Retail Checker - CDW', name_zh: 'CDW零售檢查授權群組', description: 'CDW零售檢查授權群組', user_ids: [46] },
+    { name: 'Retail Checker - TW2', name_zh: 'TW2零售檢查授權群組', description: 'TW2零售檢查授權群組', user_ids: [46] },
+    { name: 'Retail Checker - TY4', name_zh: 'TY4零售檢查授權群組', description: 'TY4零售檢查授權群組', user_ids: [141] },
+    { name: 'Retail Checker - TW3', name_zh: 'TW3零售檢查授權群組', description: 'TW3零售檢查授權群組', user_ids: [46] },
+    { name: 'Retail Checker - FAN', name_zh: 'FAN零售檢查授權群組', description: 'FAN零售檢查授權群組', user_ids: [328] },
+    { name: 'Retail Checker - TPU', name_zh: 'TPU零售檢查授權群組', description: 'TPU零售檢查授權群組', user_ids: [88] },
+    { name: 'Retail Checker - TP2', name_zh: 'TP2零售檢查授權群組', description: 'TP2零售檢查授權群組', user_ids: [34] },
+    { name: 'Retail Checker - MO2', name_zh: 'MO2零售檢查授權群組', description: 'MO2零售檢查授權群組', user_ids: [67] },
+    { name: 'Retail Checker - ST1', name_zh: 'ST1零售檢查授權群組', description: 'ST1零售檢查授權群組', user_ids: [52] },
+    { name: 'Retail Checker - TM1', name_zh: 'TM1零售檢查授權群組', description: 'TM1零售檢查授權群組', user_ids: [43] },
+    { name: 'Retail Checker - YL3', name_zh: 'YL3零售檢查授權群組', description: 'YL3零售檢查授權群組', user_ids: [42] },
+    { name: 'Retail Checker - YL4', name_zh: 'YL4零售檢查授權群組', description: 'YL4零售檢查授權群組', user_ids: [316] },
+    { name: 'Direct Reporting to MD', name_zh: '管理層授權群組', description: '管理層授權群組', user_ids: [68] },
   ]).returning('*');
 
   // 取得各授權群組的 ID
@@ -156,7 +180,7 @@ exports.seed = async function(knex) {
       name: 'Accounting',
       name_zh: '會計部群組',
       description: '會計部門群組',
-      user_ids: [],
+      user_ids: [4,7,9,18,348,432],
       checker_id: null,
       approver_1_id: accountingDelegId,
       approver_2_id: null,
@@ -166,7 +190,7 @@ exports.seed = async function(knex) {
       name: 'B2B',
       name_zh: '企客業務部群組',
       description: '企客業務部門群組',
-      user_ids: [],
+      user_ids: [205],
       checker_id: null,
       approver_1_id: b2bDelegId,
       approver_2_id: null,
@@ -196,7 +220,7 @@ exports.seed = async function(knex) {
       name: 'General Administration',
       name_zh: '行政部群組',
       description: '行政部門群組',
-      user_ids: [],
+      user_ids: [25,290,315],
       checker_id: null,
       approver_1_id: gaDelegId,
       approver_2_id: null,
@@ -206,7 +230,7 @@ exports.seed = async function(knex) {
       name: 'Human Resources',
       name_zh: '人力資源部群組',
       description: '人力資源部門群組',
-      user_ids: [],
+      user_ids: [31],
       checker_id: null,
       approver_1_id: hrDelegId,
       approver_2_id: null,
@@ -216,7 +240,7 @@ exports.seed = async function(knex) {
       name: 'IT',
       name_zh: '資訊科技部群組',
       description: '資訊科技部門群組',
-      user_ids: [],
+      user_ids: [475],
       checker_id: null,
       approver_1_id: itDelegId,
       approver_2_id: null,
@@ -236,7 +260,7 @@ exports.seed = async function(knex) {
       name: 'Merchandising',
       name_zh: '採購部群組',
       description: '採購部門群組',
-      user_ids: [],
+      user_ids: [20,21,154,275,278,311,318,471],
       checker_id: null,
       approver_1_id: merchandisingDelegId,
       approver_2_id: null,
@@ -253,11 +277,11 @@ exports.seed = async function(knex) {
       approver_3_id: hrGroupId
     },
     {
-      name: 'Retail Operation',
-      name_zh: '零售運營群組',
-      description: '零售運營部門群組',
-      user_ids: [],
-      checker_id: retailCheckerDelegId,
+      name: 'Retail Administration',
+      name_zh: '零售行政群組',
+      description: '零售行政群組',
+      user_ids: [38,234],
+      checker_id: null,
       approver_1_id: retailHeadsDelegId,
       approver_2_id: null,
       approver_3_id: hrGroupId
@@ -266,7 +290,7 @@ exports.seed = async function(knex) {
       name: 'Supply Chain and Logistics',
       name_zh: '供應鏈及物流部群組',
       description: '供應鏈及物流部門群組',
-      user_ids: [],
+      user_ids: [267,268,270,271,273],
       checker_id: null,
       approver_1_id: scDelegId,
       approver_2_id: null,
@@ -283,15 +307,245 @@ exports.seed = async function(knex) {
       approver_3_id: hrGroupId
     },
     {
-      name: 'Mangagement',
-      name_zh: '管理層群組',
-      description: '管理層部門群組',
-      user_ids: [],
-      checker_id: null,
-      approver_1_id: scDelegId,
+      name: 'Retail Store - ADM',
+      name_zh: '零售店舖群組 - ADM',
+      description: '',
+      user_ids: [44,48,89,226,260,308],
+      checker_id: 15,
+      approver_1_id: 12,
       approver_2_id: null,
       approver_3_id: hrGroupId
-    }
+    },
+    {
+      name: 'Retail Store - TWS',
+      name_zh: '零售店舖群組 - TWS',
+      description: '',
+      user_ids: [196,243,295,466,469,479],
+      checker_id: 16,
+      approver_1_id: 12,
+      approver_2_id: null,
+      approver_3_id: hrGroupId
+    },
+    {
+      name: 'Retail Store - WTS',
+      name_zh: '零售店舖群組 - WTS',
+      description: '',
+      user_ids: [37,61,65,124,128,201,406,429],
+      checker_id: 17,
+      approver_1_id: 12,
+      approver_2_id: null,
+      approver_3_id: hrGroupId
+    },
+    {
+      name: 'Retail Store - LF1',
+      name_zh: '零售店舖群組 - LF1',
+      description: '',
+      user_ids: [110,155,236,323,330,392,428,474],
+      checker_id: 18,
+      approver_1_id: 12,
+      approver_2_id: null,
+      approver_3_id: hrGroupId
+    },
+    {
+      name: 'Retail Store - TK3',
+      name_zh: '零售店舖群組 - TK3',
+      description: '',
+      user_ids: [54,193,258,403,470],
+      checker_id: 19,
+      approver_1_id: 12,
+      approver_2_id: null,
+      approver_3_id: hrGroupId
+    },
+    {
+      name: 'Retail Store - TK4',
+      name_zh: '零售店舖群組 - TK4',
+      description: '',
+      user_ids: [161,218,326,441,455],
+      checker_id: 20,
+      approver_1_id: 12,
+      approver_2_id: null,
+      approver_3_id: hrGroupId
+    },
+    {
+      name: 'Retail Store - OC',
+      name_zh: '零售店舖群組 - OC',
+      description: '',
+      user_ids: [164,217,241,249],
+      checker_id: 21,
+      approver_1_id: 12,
+      approver_2_id: null,
+      approver_3_id: hrGroupId
+    },
+    {
+      name: 'Retail Store - SP1',
+      name_zh: '零售店舖群組 - SP1',
+      description: '',
+      user_ids: [303,457,461,473],
+      checker_id: 22,
+      approver_1_id: 12,
+      approver_2_id: null,
+      approver_3_id: hrGroupId
+    },
+    {
+      name: 'Retail Store - WPG',
+      name_zh: '零售店舖群組 - WPG',
+      description: '',
+      user_ids: [306,411,448,472],
+      checker_id: 23,
+      approver_1_id: 12,
+      approver_2_id: null,
+      approver_3_id: hrGroupId
+    },
+    {
+      name: 'Retail Store - MK2',
+      name_zh: '零售店舖群組 - MK2',
+      description: '',
+      user_ids: [36,69,108,136,140,293],
+      checker_id: 24,
+      approver_1_id: 12,
+      approver_2_id: null,
+      approver_3_id: hrGroupId
+    },
+    {
+      name: 'Retail Store - TT2',
+      name_zh: '零售店舖群組 - TT2',
+      description: '',
+      user_ids: [71,239,400,409,414,456,477],
+      checker_id: 25,
+      approver_1_id: 12,
+      approver_2_id: null,
+      approver_3_id: hrGroupId
+    },
+    {
+      name: 'Retail Store - CDW',
+      name_zh: '零售店舖群組 - CDW',
+      description: '',
+      user_ids: [122,169,175,378,402],
+      checker_id: 26,
+      approver_1_id: 12,
+      approver_2_id: null,
+      approver_3_id: hrGroupId
+    },
+    {
+      name: 'Retail Store - TW2',
+      name_zh: '零售店舖群組 - TW2',
+      description: '',
+      user_ids: [46,58,120,242,272,339],
+      checker_id: 27,
+      approver_1_id: 12,
+      approver_2_id: null,
+      approver_3_id: hrGroupId
+    },
+    {
+      name: 'Retail Store - TY4',
+      name_zh: '零售店舖群組 - TY4',
+      description: '',
+      user_ids: [53,141,276,458,464],
+      checker_id: 28,
+      approver_1_id: 12,
+      approver_2_id: null,
+      approver_3_id: hrGroupId
+    },
+    {
+      name: 'Retail Store - TW3',
+      name_zh: '零售店舖群組 - TW3',
+      description: '',
+      user_ids: [138,297,299],
+      checker_id: 29,
+      approver_1_id: 12,
+      approver_2_id: null,
+      approver_3_id: hrGroupId
+    },
+    {
+      name: 'Retail Store - FAN',
+      name_zh: '零售店舖群組 - FAN',
+      description: '',
+      user_ids: [87,328,332,467,468,480],
+      checker_id: 30,
+      approver_1_id: 12,
+      approver_2_id: null,
+      approver_3_id: hrGroupId
+    },
+    {
+      name: 'Retail Store - TPU',
+      name_zh: '零售店舖群組 - TPU',
+      description: '',
+      user_ids: [88,92,422,442,462],
+      checker_id: 31,
+      approver_1_id: 12,
+      approver_2_id: null,
+      approver_3_id: hrGroupId
+    },
+    {
+      name: 'Retail Store - TP2',
+      name_zh: '零售店舖群組 - TP2',
+      description: '',
+      user_ids: [34,354,423,439,443,453],
+      checker_id: 32,
+      approver_1_id: 12,
+      approver_2_id: null,
+      approver_3_id: hrGroupId
+    },
+    {
+      name: 'Retail Store - MO2',
+      name_zh: '零售店舖群組 - MO2',
+      description: '',
+      user_ids: [56,67,114,387,426,445,476],
+      checker_id: 33,
+      approver_1_id: 12,
+      approver_2_id: null,
+      approver_3_id: hrGroupId
+    },
+    {
+      name: 'Retail Store - ST1',
+      name_zh: '零售店舖群組 - ST1',
+      description: '',
+      user_ids: [52,222,300,417,418,420,425,452],
+      checker_id: 34,
+      approver_1_id: 12,
+      approver_2_id: null,
+      approver_3_id: hrGroupId
+    },
+    {
+      name: 'Retail Store - TM1',
+      name_zh: '零售店舖群組 - TM1',
+      description: '',
+      user_ids: [43,75,78,389,444,465],
+      checker_id: 35,
+      approver_1_id: 12,
+      approver_2_id: null,
+      approver_3_id: hrGroupId
+    },
+    {
+      name: 'Retail Store - YL3',
+      name_zh: '零售店舖群組 - YL3',
+      description: '',
+      user_ids: [42,55,82,131,156,345,437],
+      checker_id: 36,
+      approver_1_id: 12,
+      approver_2_id: null,
+      approver_3_id: hrGroupId
+    },
+    {
+      name: 'Retail Store - YL4',
+      name_zh: '零售店舖群組 - YL4',
+      description: '',
+      user_ids: [316,376,385,407,416,463],
+      checker_id: 37,
+      approver_1_id: 12,
+      approver_2_id: null,
+      approver_3_id: hrGroupId
+    },
+    {
+      name: 'Direct Reporting to MD',
+      name_zh: '直接向MD匯報群組',
+      description: '直接向MD匯報群組',
+      user_ids: [3,450,451,478,26,29,32,412,23,291,265,284,312],
+      checker_id: null,
+      approver_1_id: 38,
+      approver_2_id: null,
+      approver_3_id: hrGroupId
+    },
   ]);
 
   // 建立假期類型
@@ -334,51 +588,19 @@ exports.seed = async function(knex) {
     }
   ]).returning('*');
 
-  // 建立測試用戶
-  // const userPasswordHash = await bcrypt.hash('user123', 10);
-  // const [john] = await knex('users').insert([
-  //   {
-  //     employee_number: '4240001',
-  //     surname: 'Chan',
-  //     given_name: 'John',
-  //     name_zh: '陳約翰',
-  //     alias: 'John',
-  //     email: 'john.chan@example.com',
-  //     password_hash: userPasswordHash,
-  //     department_id: hrDept.id,
-  //     position_id: staffPos.id,
-  //     hire_date: '2023-01-01'
-  //   }
-  // ]).returning('*');
+  // // 更新 HR 授權群組，將管理員加入
+  // await knex('delegation_groups')
+  //   .where('name', 'HR Group')
+  //   .update({
+  //     user_ids: knex.raw('ARRAY[?]::integer[]', [admin.id])
+  //   });
 
-  // const [jason] = await knex('users').insert([
-  //   {
-  //     employee_number: '4240004',
-  //     surname: 'Kam',
-  //     given_name: 'Chun Kin Jason',
-  //     name_zh: '甘晉鍵',
-  //     alias: 'Jason',
-  //     email: 'jason.kam@bigchk.com',
-  //     password_hash: userPasswordHash,
-  //     department_id: hrDept.id,
-  //     position_id: staffPos.id,
-  //     hire_date: '2023-01-01'
-  //   }
-  // ]).returning('*');
-
-  // 更新 HR 授權群組，將管理員加入
-  await knex('delegation_groups')
-    .where('name', 'HR Group')
-    .update({
-      user_ids: knex.raw('ARRAY[?]::integer[]', [admin.id])
-    });
-
-  // 更新 Human Resources 授權群組，將管理員加入
-  await knex('delegation_groups')
-    .where('name', 'Human Resources')
-    .update({
-      user_ids: knex.raw('ARRAY[?]::integer[]', [admin.id])
-    });
+  // // 更新 Human Resources 授權群組，將管理員加入
+  // await knex('delegation_groups')
+  //   .where('name', 'Human Resources')
+  //   .update({
+  //     user_ids: knex.raw('ARRAY[?]::integer[]', [admin.id])
+  //   });
 
   // 更新 Human Resources 部門群組，將所有 HR 員工加入
   // const hrDeptGroup = await knex('department_groups').where('name', 'Human Resources').first();
