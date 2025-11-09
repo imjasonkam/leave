@@ -25,7 +25,6 @@ class AuthController {
         console.log('Found user details:');
         console.log('- Employee number:', user.employee_number);
         console.log('- Name:', user.name_zh);
-        console.log('- Is active:', user.is_active);
         console.log('- Has password_hash:', !!user.password_hash);
       }
 
@@ -37,18 +36,13 @@ class AuthController {
         return res.status(401).json({ message: '無效的員工編號或密碼' });
       }
 
-      if (!user.is_active) {
-        console.log('❌ User account is inactive:', employee_number);
-        return res.status(403).json({ message: '帳戶已被停用' });
-      }
-
       console.log('Comparing password...');
       const isValidPassword = await comparePassword(password, user.password_hash);
       console.log('Password match result:', isValidPassword);
 
       if (!isValidPassword) {
         console.log('❌ Invalid password for employee_number:', employee_number);
-        console.log('Expected password: admin123 (for ADMIN001)');
+        console.log('Expected password: admin123 (for admin), user123 (for test users)');
         return res.status(401).json({ message: '無效的員工編號或密碼' });
       }
 
@@ -68,7 +62,18 @@ class AuthController {
         });
       }
 
-      // 準備用戶數據，確保沒有 undefined 值
+      // 取得使用者的群組資訊
+      const departmentGroups = await User.getDepartmentGroups(user.id);
+      const delegationGroups = await User.getDelegationGroups(user.id);
+      const isHRMember = await User.isHRMember(user.id);
+      const delegationGroupIds = delegationGroups.map(group => Number(group.id));
+      const isDeptHead = departmentGroups.some(group =>
+        (group.approver_1_id && delegationGroupIds.includes(Number(group.approver_1_id))) ||
+        (group.approver_2_id && delegationGroupIds.includes(Number(group.approver_2_id))) ||
+        (group.approver_3_id && delegationGroupIds.includes(Number(group.approver_3_id)))
+      );
+
+      // 準備用戶數據
       const userData = {
         id: user.id,
         employee_number: user.employee_number,
@@ -77,17 +82,17 @@ class AuthController {
         alias: user.alias || null,
         name_zh: user.name_zh,
         email: user.email,
-        is_system_admin: user.is_system_admin || false,
-        is_dept_head: user.is_dept_head || false,
         department_id: user.department_id || null,
         department_name: user.department_name || null,
         department_name_zh: user.department_name_zh || null,
         position_id: user.position_id || null,
         position_name: user.position_name || null,
         position_name_zh: user.position_name_zh || null,
-        group_id: user.group_id || null,
-        group_name: user.group_name || null,
-        group_name_zh: user.group_name_zh || null
+        is_system_admin: isHRMember,
+        is_dept_head: isDeptHead,
+        is_hr_member: isHRMember,
+        department_groups: departmentGroups,
+        delegation_groups: delegationGroups
       };
 
       console.log('Sending response with token and user data');
@@ -100,7 +105,6 @@ class AuthController {
       console.error('❌ Login error:', error);
       console.error('Error stack:', error.stack);
       
-      // 返回詳細錯誤信息以便診斷
       const errorMessage = error.message || '登入時發生錯誤';
       console.error('Error message:', errorMessage);
       
@@ -155,6 +159,17 @@ class AuthController {
         return res.status(404).json({ message: '用戶不存在' });
       }
 
+      // 取得使用者的群組資訊
+      const departmentGroups = await User.getDepartmentGroups(user.id);
+      const delegationGroups = await User.getDelegationGroups(user.id);
+      const isHRMember = await User.isHRMember(user.id);
+      const delegationGroupIds = delegationGroups.map(group => Number(group.id));
+      const isDeptHead = departmentGroups.some(group =>
+        (group.approver_1_id && delegationGroupIds.includes(Number(group.approver_1_id))) ||
+        (group.approver_2_id && delegationGroupIds.includes(Number(group.approver_2_id))) ||
+        (group.approver_3_id && delegationGroupIds.includes(Number(group.approver_3_id)))
+      );
+
       res.json({
         user: {
           id: user.id,
@@ -164,17 +179,17 @@ class AuthController {
           alias: user.alias,
           name_zh: user.name_zh,
           email: user.email,
-          is_system_admin: user.is_system_admin,
-          is_dept_head: user.is_dept_head,
           department_id: user.department_id,
           department_name: user.department_name,
           department_name_zh: user.department_name_zh,
           position_id: user.position_id,
           position_name: user.position_name,
           position_name_zh: user.position_name_zh,
-          group_id: user.group_id,
-          group_name: user.group_name,
-          group_name_zh: user.group_name_zh
+          is_system_admin: isHRMember,
+          is_dept_head: isDeptHead,
+          is_hr_member: isHRMember,
+          department_groups: departmentGroups,
+          delegation_groups: delegationGroups
         }
       });
     } catch (error) {

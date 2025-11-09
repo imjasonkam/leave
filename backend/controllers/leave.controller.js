@@ -3,15 +3,17 @@ const LeaveBalance = require('../database/models/LeaveBalance');
 const LeaveDocument = require('../database/models/LeaveDocument');
 const LeaveType = require('../database/models/LeaveType');
 const User = require('../database/models/User');
+const DepartmentGroup = require('../database/models/DepartmentGroup');
+const DelegationGroup = require('../database/models/DelegationGroup');
 const path = require('path');
 
 class LeaveController {
   async createApplication(req, res) {
     try {
-      const { start_date, end_date, days, leave_type_id, reason, applicant_id } = req.body;
+      const { start_date, end_date, total_days, leave_type_id, reason, user_id, flow_type } = req.body;
       const applied_by_id = req.user.id;
 
-      if (!start_date || !end_date || !days || !leave_type_id) {
+      if (!start_date || !end_date || !total_days || !leave_type_id) {
         return res.status(400).json({ message: '請填寫所有必填欄位' });
       }
 
@@ -20,41 +22,82 @@ class LeaveController {
         return res.status(404).json({ message: '假期類型不存在' });
       }
 
-      const applicantId = applicant_id || req.user.id;
+      const applicantId = user_id || req.user.id;
       const applicant = await User.findById(applicantId);
       if (!applicant) {
         return res.status(404).json({ message: '申請人不存在' });
       }
 
+      // 檢查是否為 HR 成員（可使用 paper flow）
+      const isHRMember = await User.isHRMember(applied_by_id);
+      const actualFlowType = flow_type || (isHRMember && user_id ? 'paper-flow' : 'e-flow');
+
       const currentYear = new Date().getFullYear();
 
+      // 檢查假期餘額
       if (leaveType.requires_balance) {
         const balance = await LeaveBalance.findByUserAndType(applicantId, leave_type_id, currentYear);
         
-        if (!balance || parseFloat(balance.balance) < parseFloat(days)) {
+        if (!balance || parseFloat(balance.balance) < parseFloat(total_days)) {
           return res.status(400).json({ message: '假期餘額不足' });
         }
       }
 
-      const transactionId = LeaveApplication.generateTransactionId();
-
       const applicationData = {
-        transaction_id: transactionId,
-        applicant_id: applicantId,
-        applied_by_id: applied_by_id === applicantId ? null : applied_by_id,
+        user_id: applicantId,
         leave_type_id,
         start_date,
         end_date,
-        days: parseFloat(days),
+        total_days: parseFloat(total_days),
         reason: reason || null,
-        status: 'pending',
-        checker_id: applicant.checker_id,
-        approver_1_id: applicant.approver_1_id,
-        approver_2_id: applicant.approver_2_id,
-        approver_3_id: applicant.approver_3_id
+        status: actualFlowType === 'paper-flow' ? 'approved' : 'pending',
+        flow_type: actualFlowType
       };
 
+      // 如果是 e-flow，設定批核流程
+      if (actualFlowType === 'e-flow') {
+        // 取得使用者所屬的部門群組
+        const departmentGroups = await DepartmentGroup.findByUserId(applicantId);
+        
+        if (departmentGroups && departmentGroups.length > 0) {
+          const deptGroup = departmentGroups[0]; // 使用第一個部門群組
+          
+          // 取得批核流程
+          const approvalFlow = await DepartmentGroup.getApprovalFlow(deptGroup.id);
+          
+          if (approvalFlow.length === 0) {
+            // 如果沒有設定任何批核者，自動批准
+            applicationData.status = 'approved';
+          } else {
+            // 設定批核者（這裡需要從 delegation groups 中選擇具體的批核者）
+            // 暫時先設為 null，實際使用時需要實作選擇邏輯
+            for (const step of approvalFlow) {
+              if (step.level === 'checker' && deptGroup.checker_id) {
+                // 可以從 delegation group 中隨機選擇或使用其他邏輯
+                applicationData.checker_id = null;
+              } else if (deptGroup[`${step.level}_id`]) {
+                applicationData[`${step.level}_id`] = null;
+              }
+            }
+          }
+        } else {
+          // 如果使用者不屬於任何部門群組，自動批准
+          applicationData.status = 'approved';
+        }
+      }
+
       const application = await LeaveApplication.create(applicationData);
+
+      // 如果是已批准的申請，更新假期餘額
+      if (application.status === 'approved' && leaveType.requires_balance) {
+        const balance = await LeaveBalance.findByUserAndType(applicantId, leave_type_id, currentYear);
+        if (balance) {
+          await LeaveBalance.updateUsed(
+            balance.id,
+            parseFloat(balance.used) + parseFloat(total_days)
+          );
+        }
+      }
 
       res.status(201).json({
         message: '假期申請已提交',
@@ -68,31 +111,25 @@ class LeaveController {
 
   async getApplications(req, res) {
     try {
-      const { status, leave_type_id, transaction_id, applicant_id } = req.query;
+      const { status, leave_type_id, flow_type, user_id } = req.query;
       
       const options = {};
       if (status) options.status = status;
       if (leave_type_id) options.leave_type_id = leave_type_id;
-      if (transaction_id) options.transaction_id = transaction_id;
+      if (flow_type) options.flow_type = flow_type;
       
-      const isSystemAdmin = req.user.is_system_admin;
-      const isDeptHead = req.user.is_dept_head;
+      // 檢查是否為 HR 成員
+      const isHRMember = await User.isHRMember(req.user.id);
       
-      if (!isSystemAdmin && !isDeptHead) {
-        options.applicant_id = req.user.id;
-      } else if (isDeptHead && !isSystemAdmin) {
-        const deptUsers = await User.findAll({ department_id: req.user.department_id });
-        const deptUserIds = deptUsers.map(u => u.id);
-        if (applicant_id && deptUserIds.includes(parseInt(applicant_id))) {
-          options.applicant_id = applicant_id;
-        } else if (!applicant_id) {
-          return res.status(403).json({ message: '請指定申請人' });
-        }
-      } else if (applicant_id) {
-        options.applicant_id = applicant_id;
+      if (!isHRMember && !user_id) {
+        // 一般使用者只能查看自己的申請
+        options.user_id = req.user.id;
+      } else if (user_id) {
+        options.user_id = user_id;
       }
 
-      if (isSystemAdmin || isDeptHead) {
+      // 如果使用者為批核者，也顯示需要批核的申請
+      if (!user_id) {
         options.approver_id = req.user.id;
       }
 
@@ -114,12 +151,17 @@ class LeaveController {
         return res.status(404).json({ message: '申請不存在' });
       }
 
-      const isSystemAdmin = req.user.is_system_admin;
-      const isDeptHead = req.user.is_dept_head;
-      const isApplicant = application.applicant_id === req.user.id;
-      const isApprover = [application.checker_id, application.approver_1_id, application.approver_2_id, application.approver_3_id].includes(req.user.id);
+      // 檢查權限
+      const isHRMember = await User.isHRMember(req.user.id);
+      const isApplicant = application.user_id === req.user.id;
+      const isApprover = [
+        application.checker_id, 
+        application.approver_1_id, 
+        application.approver_2_id, 
+        application.approver_3_id
+      ].includes(req.user.id);
 
-      if (!isSystemAdmin && !isDeptHead && !isApplicant && !isApprover) {
+      if (!isHRMember && !isApplicant && !isApprover) {
         return res.status(403).json({ message: '無權限查看此申請' });
       }
 
@@ -144,10 +186,10 @@ class LeaveController {
         return res.status(404).json({ message: '申請不存在' });
       }
 
-      const isApplicant = application.applicant_id === req.user.id;
-      const isAppliedBy = application.applied_by_id === req.user.id;
+      const isApplicant = application.user_id === req.user.id;
+      const isHRMember = await User.isHRMember(req.user.id);
 
-      if (!isApplicant && !isAppliedBy) {
+      if (!isApplicant && !isHRMember) {
         return res.status(403).json({ message: '無權限上載檔案到此申請' });
       }
 
@@ -190,10 +232,10 @@ class LeaveController {
       const userId = user_id || req.user.id;
       const currentYear = year || new Date().getFullYear();
 
-      const isSystemAdmin = req.user.is_system_admin;
-      const isDeptHead = req.user.is_dept_head;
+      // 檢查權限
+      const isHRMember = await User.isHRMember(req.user.id);
 
-      if (!isSystemAdmin && !isDeptHead && userId !== req.user.id.toString()) {
+      if (!isHRMember && userId !== req.user.id.toString()) {
         return res.status(403).json({ message: '無權限查看其他用戶的假期餘額' });
       }
 
@@ -203,6 +245,45 @@ class LeaveController {
     } catch (error) {
       console.error('Get balances error:', error);
       res.status(500).json({ message: '獲取假期餘額時發生錯誤' });
+    }
+  }
+
+  // 申請取消假期
+  async requestCancellation(req, res) {
+    try {
+      const { application_id, reason } = req.body;
+
+      if (!application_id || !reason) {
+        return res.status(400).json({ message: '請提供原始申請 ID 和取消原因' });
+      }
+
+      const cancellationRequest = await LeaveApplication.createCancellationRequest(
+        application_id,
+        req.user.id,
+        reason
+      );
+
+      res.status(201).json({
+        message: '取消假期申請已提交',
+        application: cancellationRequest
+      });
+    } catch (error) {
+      console.error('Request cancellation error:', error);
+      res.status(500).json({ 
+        message: error.message || '建立取消申請時發生錯誤',
+        error: error.message 
+      });
+    }
+  }
+
+  // 取得待批核的申請
+  async getPendingApprovals(req, res) {
+    try {
+      const applications = await LeaveApplication.getPendingApprovals(req.user.id);
+      res.json({ applications });
+    } catch (error) {
+      console.error('Get pending approvals error:', error);
+      res.status(500).json({ message: '獲取待批核申請時發生錯誤' });
     }
   }
 }

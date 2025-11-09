@@ -1,34 +1,62 @@
 exports.up = function(knex) {
   return knex.schema.createTable('leave_applications', function(table) {
     table.increments('id').primary();
-    table.string('transaction_id').notNullable().unique();
-    table.integer('applicant_id').unsigned().notNullable().references('id').inTable('users').onDelete('CASCADE');
-    table.integer('applied_by_id').unsigned().nullable().references('id').inTable('users').onDelete('SET NULL');
-    table.integer('leave_type_id').unsigned().notNullable().references('id').inTable('leave_types').onDelete('CASCADE');
+    table.integer('user_id').unsigned().notNullable()
+      .references('id').inTable('users').onDelete('CASCADE');
+    table.integer('leave_type_id').unsigned().notNullable()
+      .references('id').inTable('leave_types').onDelete('RESTRICT');
     table.date('start_date').notNullable();
     table.date('end_date').notNullable();
-    table.decimal('days', 10, 2).notNullable();
-    table.text('reason').nullable();
-    table.string('status').notNullable().defaultTo('pending');
-    table.integer('checker_id').unsigned().nullable().references('id').inTable('users').onDelete('SET NULL');
-    table.integer('approver_1_id').unsigned().nullable().references('id').inTable('users').onDelete('SET NULL');
-    table.integer('approver_2_id').unsigned().nullable().references('id').inTable('users').onDelete('SET NULL');
-    table.integer('approver_3_id').unsigned().nullable().references('id').inTable('users').onDelete('SET NULL');
-    table.text('checker_comment').nullable();
-    table.text('approver_1_comment').nullable();
-    table.text('approver_2_comment').nullable();
-    table.text('approver_3_comment').nullable();
-    table.timestamp('checked_at').nullable();
-    table.timestamp('approved_1_at').nullable();
-    table.timestamp('approved_2_at').nullable();
-    table.timestamp('approved_3_at').nullable();
-    table.timestamp('rejected_at').nullable();
-    table.integer('rejected_by_id').unsigned().nullable().references('id').inTable('users').onDelete('SET NULL');
-    table.text('rejection_reason').nullable();
+    table.decimal('total_days', 5, 2).notNullable();
+    table.text('reason');
+    table.enum('status', ['pending', 'approved', 'rejected', 'cancelled']).defaultTo('pending');
+    table.enum('flow_type', ['e-flow', 'paper-flow']).notNullable().defaultTo('e-flow');
+    
+    // 批核流程相關欄位
+    table.integer('checker_id').unsigned()
+      .references('id').inTable('users').onDelete('SET NULL');
+    table.timestamp('checker_at');
+    table.text('checker_remarks');
+    
+    table.integer('approver_1_id').unsigned()
+      .references('id').inTable('users').onDelete('SET NULL');
+    table.timestamp('approver_1_at');
+    table.text('approver_1_remarks');
+    
+    table.integer('approver_2_id').unsigned()
+      .references('id').inTable('users').onDelete('SET NULL');
+    table.timestamp('approver_2_at');
+    table.text('approver_2_remarks');
+    
+    table.integer('approver_3_id').unsigned()
+      .references('id').inTable('users').onDelete('SET NULL');
+    table.timestamp('approver_3_at');
+    table.text('approver_3_remarks');
+    
+    table.integer('rejected_by_id').unsigned()
+      .references('id').inTable('users').onDelete('SET NULL');
+    table.timestamp('rejected_at');
+    table.text('rejection_reason');
+    
+    // 取消假期相關欄位
+    table.boolean('is_cancellation_request').defaultTo(false);
+    table.integer('original_application_id').unsigned()
+      .references('id').inTable('leave_applications').onDelete('SET NULL');
+    table.integer('cancelled_by_id').unsigned()
+      .references('id').inTable('users').onDelete('SET NULL');
+    table.timestamp('cancelled_at');
+    table.text('cancellation_reason');
+    
     table.timestamps(true, true);
+    
+    table.index('user_id');
+    table.index('leave_type_id');
+    table.index('status');
+    table.index('start_date');
+    table.index('end_date');
   });
 };
 
 exports.down = function(knex) {
-  return knex.schema.dropTable('leave_applications');
+  return knex.schema.dropTableIfExists('leave_applications');
 };

@@ -9,6 +9,11 @@ class UserController {
         return res.status(404).json({ message: '用戶不存在' });
       }
 
+      // 取得使用者的群組資訊
+      const departmentGroups = await User.getDepartmentGroups(user.id);
+      const delegationGroups = await User.getDelegationGroups(user.id);
+      const isHRMember = await User.isHRMember(user.id);
+
       res.json({
         user: {
           id: user.id,
@@ -18,17 +23,15 @@ class UserController {
           alias: user.alias,
           name_zh: user.name_zh,
           email: user.email,
-          is_system_admin: user.is_system_admin,
-          is_dept_head: user.is_dept_head,
           department_id: user.department_id,
           department_name: user.department_name,
           department_name_zh: user.department_name_zh,
           position_id: user.position_id,
           position_name: user.position_name,
           position_name_zh: user.position_name_zh,
-          group_id: user.group_id,
-          group_name: user.group_name,
-          group_name_zh: user.group_name_zh
+          is_hr_member: isHRMember,
+          department_groups: departmentGroups,
+          delegation_groups: delegationGroups
         }
       });
     } catch (error) {
@@ -46,8 +49,7 @@ class UserController {
       }
 
       const users = await User.findAll({ 
-        department_id: departmentId,
-        is_active: true 
+        department_id: departmentId
       });
 
       res.json({ users });

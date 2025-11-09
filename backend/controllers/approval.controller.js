@@ -1,11 +1,12 @@
 const LeaveApplication = require('../database/models/LeaveApplication');
 const LeaveBalance = require('../database/models/LeaveBalance');
+const User = require('../database/models/User');
 
 class ApprovalController {
   async approve(req, res) {
     try {
       const { id } = req.params;
-      const { comment, action, stage } = req.body;
+      const { remarks, action, level } = req.body;
 
       const application = await LeaveApplication.findById(id);
       if (!application) {
@@ -16,88 +17,85 @@ class ApprovalController {
         return res.status(400).json({ message: '此申請已處理' });
       }
 
-      if (action === 'reject') {
-        await LeaveApplication.update(id, {
-          status: 'rejected',
-          rejected_at: new Date(),
-          rejected_by_id: req.user.id,
-          rejection_reason: comment || '已拒絕'
-        });
+      // 檢查使用者是否有權限批核
+      const canApprove = await User.canApprove(req.user.id, id);
+      if (!canApprove) {
+        return res.status(403).json({ message: '無權限進行此操作' });
+      }
 
+      // 拒絕申請
+      if (action === 'reject') {
+        await LeaveApplication.reject(id, req.user.id, remarks || '已拒絕');
         return res.json({ message: '申請已拒絕' });
       }
 
-      const currentYear = new Date().getFullYear();
-      let updateData = {};
+      // 批准申請
+      if (action === 'approve') {
+        // 檢查批核層級
+        if (!level || !['checker', 'approver_1', 'approver_2', 'approver_3'].includes(level)) {
+          return res.status(400).json({ message: '無效的批核層級' });
+        }
 
-      if (stage === 'checker') {
-        if (application.checker_id !== req.user.id) {
-          return res.status(403).json({ message: '無權限進行此操作' });
+        // 檢查使用者是否為該層級的批核者
+        if (application[`${level}_id`] !== req.user.id) {
+          return res.status(403).json({ message: '無權限在此層級進行批核' });
         }
-        updateData = {
-          checker_comment: comment || null,
-          checked_at: new Date(),
-          status: application.approver_1_id ? 'pending' : application.approver_2_id ? 'pending' : application.approver_3_id ? 'pending' : 'approved'
-        };
-      } else if (stage === 'approver_1') {
-        if (application.approver_1_id !== req.user.id) {
-          return res.status(403).json({ message: '無權限進行此操作' });
-        }
-        if (!application.checked_at) {
-          return res.status(400).json({ message: '尚未通過檢查階段' });
-        }
-        updateData = {
-          approver_1_comment: comment || null,
-          approved_1_at: new Date(),
-          status: application.approver_2_id ? 'pending' : application.approver_3_id ? 'pending' : 'approved'
-        };
-      } else if (stage === 'approver_2') {
-        if (application.approver_2_id !== req.user.id) {
-          return res.status(403).json({ message: '無權限進行此操作' });
-        }
-        if (!application.approved_1_at) {
-          return res.status(400).json({ message: '尚未通過第一批核階段' });
-        }
-        updateData = {
-          approver_2_comment: comment || null,
-          approved_2_at: new Date(),
-          status: application.approver_3_id ? 'pending' : 'approved'
-        };
-      } else if (stage === 'approver_3') {
-        if (application.approver_3_id !== req.user.id) {
-          return res.status(403).json({ message: '無權限進行此操作' });
-        }
-        if (!application.approved_2_at) {
-          return res.status(400).json({ message: '尚未通過第二批核階段' });
-        }
-        updateData = {
-          approver_3_comment: comment || null,
-          approved_3_at: new Date(),
-          status: 'approved'
-        };
-      } else {
-        return res.status(400).json({ message: '無效的批核階段' });
-      }
 
-      const updatedApplication = await LeaveApplication.update(id, updateData);
+        // 執行批核
+        const updatedApplication = await LeaveApplication.approve(id, req.user.id, level, remarks);
 
-      if (updatedApplication.status === 'approved') {
-        const leaveType = await require('../database/models/LeaveType').findById(application.leave_type_id);
-        
-        if (leaveType && leaveType.requires_balance) {
-          await LeaveBalance.decrementBalance(
-            application.applicant_id,
-            application.leave_type_id,
-            currentYear,
-            application.days
+        // 如果是取消假期的申請且已完全批准，更新原始申請的狀態
+        if (updatedApplication.status === 'approved' && updatedApplication.is_cancellation_request) {
+          await LeaveApplication.cancel(
+            updatedApplication.original_application_id,
+            req.user.id,
+            updatedApplication.reason
           );
+
+          // 退回假期餘額
+          const leaveType = await require('../database/models/LeaveType').findById(updatedApplication.leave_type_id);
+          if (leaveType && leaveType.requires_balance) {
+            const currentYear = new Date().getFullYear();
+            const balance = await LeaveBalance.findByUserAndType(
+              updatedApplication.user_id,
+              updatedApplication.leave_type_id,
+              currentYear
+            );
+            if (balance) {
+              await LeaveBalance.updateUsed(
+                balance.id,
+                Math.max(0, parseFloat(balance.used) - parseFloat(updatedApplication.total_days))
+              );
+            }
+          }
         }
+
+        // 如果是一般假期申請且已完全批准，扣除假期餘額
+        if (updatedApplication.status === 'approved' && !updatedApplication.is_cancellation_request) {
+          const leaveType = await require('../database/models/LeaveType').findById(updatedApplication.leave_type_id);
+          if (leaveType && leaveType.requires_balance) {
+            const currentYear = new Date().getFullYear();
+            const balance = await LeaveBalance.findByUserAndType(
+              updatedApplication.user_id,
+              updatedApplication.leave_type_id,
+              currentYear
+            );
+            if (balance) {
+              await LeaveBalance.updateUsed(
+                balance.id,
+                parseFloat(balance.used) + parseFloat(updatedApplication.total_days)
+              );
+            }
+          }
+        }
+
+        return res.json({
+          message: updatedApplication.status === 'approved' ? '申請已完全批准' : '批核成功，等待下一層級批核',
+          application: updatedApplication
+        });
       }
 
-      res.json({
-        message: '批核成功',
-        application: updatedApplication
-      });
+      return res.status(400).json({ message: '無效的操作' });
     } catch (error) {
       console.error('Approve error:', error);
       res.status(500).json({ message: '批核時發生錯誤', error: error.message });
@@ -106,15 +104,43 @@ class ApprovalController {
 
   async getPendingApprovals(req, res) {
     try {
-      const applications = await LeaveApplication.findAll({ 
-        status: 'pending',
-        approver_id: req.user.id 
-      });
-
+      const applications = await LeaveApplication.getPendingApprovals(req.user.id);
       res.json({ applications });
     } catch (error) {
       console.error('Get pending approvals error:', error);
       res.status(500).json({ message: '獲取待批核申請時發生錯誤' });
+    }
+  }
+
+  async getApprovalHistory(req, res) {
+    try {
+      const { status } = req.query;
+      const options = {
+        approver_id: req.user.id
+      };
+
+      if (status && status !== 'pending') {
+        options.status = status;
+      }
+
+      const applications = await LeaveApplication.findAll(options);
+      
+      // 過濾出已處理的申請
+      const processedApplications = applications.filter(app => {
+        if (app.status === 'pending') return false;
+        
+        // 檢查使用者是否參與了批核
+        return app.checker_id === req.user.id && app.checker_at ||
+               app.approver_1_id === req.user.id && app.approver_1_at ||
+               app.approver_2_id === req.user.id && app.approver_2_at ||
+               app.approver_3_id === req.user.id && app.approver_3_at ||
+               app.rejected_by_id === req.user.id;
+      });
+
+      res.json({ applications: processedApplications });
+    } catch (error) {
+      console.error('Get approval history error:', error);
+      res.status(500).json({ message: '獲取批核記錄時發生錯誤' });
     }
   }
 }

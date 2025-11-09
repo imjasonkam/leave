@@ -5,15 +5,12 @@ class User {
     return await knex('users')
       .leftJoin('departments', 'users.department_id', 'departments.id')
       .leftJoin('positions', 'users.position_id', 'positions.id')
-      .leftJoin('groups', 'users.group_id', 'groups.id')
       .select(
         'users.*',
         'departments.name as department_name',
         'departments.name_zh as department_name_zh',
         'positions.name as position_name',
-        'positions.name_zh as position_name_zh',
-        'groups.name as group_name',
-        'groups.name_zh as group_name_zh'
+        'positions.name_zh as position_name_zh'
       )
       .where('users.email', email)
       .first();
@@ -23,15 +20,12 @@ class User {
     return await knex('users')
       .leftJoin('departments', 'users.department_id', 'departments.id')
       .leftJoin('positions', 'users.position_id', 'positions.id')
-      .leftJoin('groups', 'users.group_id', 'groups.id')
       .select(
         'users.*',
         'departments.name as department_name',
         'departments.name_zh as department_name_zh',
         'positions.name as position_name',
-        'positions.name_zh as position_name_zh',
-        'groups.name as group_name',
-        'groups.name_zh as group_name_zh'
+        'positions.name_zh as position_name_zh'
       )
       .where('users.id', id)
       .first();
@@ -55,23 +49,16 @@ class User {
     let query = knex('users')
       .leftJoin('departments', 'users.department_id', 'departments.id')
       .leftJoin('positions', 'users.position_id', 'positions.id')
-      .leftJoin('groups', 'users.group_id', 'groups.id')
       .select(
         'users.*',
         'departments.name as department_name',
         'departments.name_zh as department_name_zh',
         'positions.name as position_name',
-        'positions.name_zh as position_name_zh',
-        'groups.name as group_name',
-        'groups.name_zh as group_name_zh'
+        'positions.name_zh as position_name_zh'
       );
 
     if (options.department_id) {
       query = query.where('users.department_id', options.department_id);
-    }
-
-    if (options.is_active !== undefined) {
-      query = query.where('users.is_active', options.is_active);
     }
 
     if (options.search) {
@@ -91,20 +78,64 @@ class User {
     return await knex('users')
       .leftJoin('departments', 'users.department_id', 'departments.id')
       .leftJoin('positions', 'users.position_id', 'positions.id')
-      .leftJoin('groups', 'users.group_id', 'groups.id')
       .select(
         'users.*',
         'departments.name as department_name',
         'departments.name_zh as department_name_zh',
         'positions.name as position_name',
-        'positions.name_zh as position_name_zh',
-        'groups.name as group_name',
-        'groups.name_zh as group_name_zh'
+        'positions.name_zh as position_name_zh'
       )
       .whereRaw('LOWER(users.employee_number) = LOWER(?)', [employeeNumber])
       .first();
   }
+
+  // 取得使用者所屬的部門群組
+  static async getDepartmentGroups(userId) {
+    const DepartmentGroup = require('./DepartmentGroup');
+    return await DepartmentGroup.findByUserId(userId);
+  }
+
+  // 取得使用者所屬的授權群組
+  static async getDelegationGroups(userId) {
+    return await knex('delegation_groups')
+      .whereRaw('? = ANY(delegation_groups.user_ids)', [Number(userId)])
+      .select('*');
+  }
+
+  // 檢查使用者是否為 HR 群組成員
+  static async isHRMember(userId) {
+    const hrGroup = await knex('delegation_groups')
+      .where('name', 'HR Group')
+      .first();
+    
+    if (!hrGroup || !Array.isArray(hrGroup.user_ids)) {
+      return false;
+    }
+    
+    const userIds = hrGroup.user_ids.map(id => Number(id));
+    return userIds.includes(Number(userId));
+  }
+
+  // 檢查使用者是否可以批核某個假期申請
+  static async canApprove(userId, leaveApplicationId) {
+    const application = await knex('leave_applications')
+      .where('id', leaveApplicationId)
+      .first();
+    
+    if (!application) {
+      return false;
+    }
+
+    // 檢查使用者是否為該申請的批核者
+    if (application.checker_id === userId ||
+        application.approver_1_id === userId ||
+        application.approver_2_id === userId ||
+        application.approver_3_id === userId) {
+      return true;
+    }
+
+    return false;
+  }
 }
 
 module.exports = User;
-

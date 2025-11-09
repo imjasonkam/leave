@@ -24,8 +24,4 @@ router.post('/positions', adminController.createPosition);
 router.put('/positions/:id', adminController.updatePosition);
 router.get('/positions', adminController.getPositions);
 
-router.post('/groups', adminController.createGroup);
-router.put('/groups/:id', adminController.updateGroup);
-router.get('/groups', adminController.getGroups);
-
 module.exports = router;

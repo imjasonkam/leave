@@ -19,20 +19,15 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem,
-  Switch,
-  FormControlLabel
+  MenuItem
 } from '@mui/material';
 import { Add as AddIcon, Edit as EditIcon } from '@mui/icons-material';
 import axios from 'axios';
-import { useAuth } from '../contexts/AuthContext';
 
 const AdminUsers = () => {
-  const { user } = useAuth();
   const [users, setUsers] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [positions, setPositions] = useState([]);
-  const [groups, setGroups] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [formData, setFormData] = useState({
@@ -45,21 +40,13 @@ const AdminUsers = () => {
     password: '',
     department_id: '',
     position_id: '',
-    group_id: '',
-    is_system_admin: false,
-    is_dept_head: false,
-    is_active: true,
-    checker_id: '',
-    approver_1_id: '',
-    approver_2_id: '',
-    approver_3_id: ''
+    hire_date: ''
   });
 
   useEffect(() => {
     fetchUsers();
     fetchDepartments();
     fetchPositions();
-    fetchGroups();
   }, []);
 
   const fetchUsers = async () => {
@@ -89,15 +76,6 @@ const AdminUsers = () => {
     }
   };
 
-  const fetchGroups = async () => {
-    try {
-      const response = await axios.get('/api/groups');
-      setGroups(response.data.groups || []);
-    } catch (error) {
-      console.error('Fetch groups error:', error);
-    }
-  };
-
   const handleOpen = () => {
     setEditing(null);
     setFormData({
@@ -110,14 +88,7 @@ const AdminUsers = () => {
       password: '',
       department_id: '',
       position_id: '',
-      group_id: '',
-      is_system_admin: false,
-      is_dept_head: false,
-      is_active: true,
-      checker_id: '',
-      approver_1_id: '',
-      approver_2_id: '',
-      approver_3_id: ''
+      hire_date: ''
     });
     setOpen(true);
   };
@@ -134,14 +105,7 @@ const AdminUsers = () => {
       password: '',
       department_id: userData.department_id || '',
       position_id: userData.position_id || '',
-      group_id: userData.group_id || '',
-      is_system_admin: userData.is_system_admin || false,
-      is_dept_head: userData.is_dept_head || false,
-      is_active: userData.is_active !== undefined ? userData.is_active : true,
-      checker_id: userData.checker_id || '',
-      approver_1_id: userData.approver_1_id || '',
-      approver_2_id: userData.approver_2_id || '',
-      approver_3_id: userData.approver_3_id || ''
+      hire_date: userData.hire_date ? userData.hire_date.split('T')[0] : ''
     });
     setOpen(true);
   };
@@ -189,7 +153,7 @@ const AdminUsers = () => {
                 <TableCell>電子郵件</TableCell>
                 <TableCell>部門</TableCell>
                 <TableCell>職位</TableCell>
-                <TableCell>狀態</TableCell>
+                <TableCell>入職日期</TableCell>
                 <TableCell>操作</TableCell>
               </TableRow>
             </TableHead>
@@ -201,7 +165,7 @@ const AdminUsers = () => {
                   <TableCell>{u.email}</TableCell>
                   <TableCell>{u.department_name_zh || '-'}</TableCell>
                   <TableCell>{u.position_name_zh || '-'}</TableCell>
-                  <TableCell>{u.is_active ? '啟用' : '停用'}</TableCell>
+                  <TableCell>{u.hire_date ? new Date(u.hire_date).toLocaleDateString('zh-TW') : '-'}</TableCell>
                   <TableCell>
                     <IconButton size="small" onClick={() => handleEdit(u)}>
                       <EditIcon />
@@ -290,107 +254,15 @@ const AdminUsers = () => {
                 ))}
               </Select>
             </FormControl>
-            <FormControl>
-              <InputLabel>群組</InputLabel>
-              <Select
-                value={formData.group_id}
-                label="群組"
-                onChange={(e) => setFormData(prev => ({ ...prev, group_id: e.target.value }))}
-              >
-                {groups.map((group) => (
-                  <MenuItem key={group.id} value={group.id}>
-                    {group.name_zh}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={formData.is_system_admin}
-                  onChange={(e) => setFormData(prev => ({ ...prev, is_system_admin: e.target.checked }))}
-                />
-              }
-              label="系統管理員"
+            <TextField
+              label="入職日期"
+              type="date"
+              value={formData.hire_date}
+              onChange={(e) => setFormData(prev => ({ ...prev, hire_date: e.target.value }))}
+              InputLabelProps={{
+                shrink: true
+              }}
             />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={formData.is_dept_head}
-                  onChange={(e) => setFormData(prev => ({ ...prev, is_dept_head: e.target.checked }))}
-                />
-              }
-              label="部門主管"
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={formData.is_active}
-                  onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
-                />
-              }
-              label="啟用"
-            />
-            <FormControl>
-              <InputLabel>檢查人</InputLabel>
-              <Select
-                value={formData.checker_id}
-                label="檢查人"
-                onChange={(e) => setFormData(prev => ({ ...prev, checker_id: e.target.value }))}
-              >
-                <MenuItem value="">無</MenuItem>
-                {users.filter(u => u.id !== (editing || null)).map((u) => (
-                  <MenuItem key={u.id} value={u.id}>
-                    {u.name_zh} ({u.employee_number})
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl>
-              <InputLabel>第一批核人</InputLabel>
-              <Select
-                value={formData.approver_1_id}
-                label="第一批核人"
-                onChange={(e) => setFormData(prev => ({ ...prev, approver_1_id: e.target.value }))}
-              >
-                <MenuItem value="">無</MenuItem>
-                {users.filter(u => u.id !== (editing || null)).map((u) => (
-                  <MenuItem key={u.id} value={u.id}>
-                    {u.name_zh} ({u.employee_number})
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl>
-              <InputLabel>第二批核人</InputLabel>
-              <Select
-                value={formData.approver_2_id}
-                label="第二批核人"
-                onChange={(e) => setFormData(prev => ({ ...prev, approver_2_id: e.target.value }))}
-              >
-                <MenuItem value="">無</MenuItem>
-                {users.filter(u => u.id !== (editing || null)).map((u) => (
-                  <MenuItem key={u.id} value={u.id}>
-                    {u.name_zh} ({u.employee_number})
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl>
-              <InputLabel>第三批核人 (HR)</InputLabel>
-              <Select
-                value={formData.approver_3_id}
-                label="第三批核人 (HR)"
-                onChange={(e) => setFormData(prev => ({ ...prev, approver_3_id: e.target.value }))}
-              >
-                <MenuItem value="">無</MenuItem>
-                {users.filter(u => u.id !== (editing || null)).map((u) => (
-                  <MenuItem key={u.id} value={u.id}>
-                    {u.name_zh} ({u.employee_number})
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
           </Box>
         </DialogContent>
         <DialogActions>
@@ -403,4 +275,3 @@ const AdminUsers = () => {
 };
 
 export default AdminUsers;
-
