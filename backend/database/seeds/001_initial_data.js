@@ -236,36 +236,36 @@ exports.seed = async function(knex) {
   ]).returning('*');
 
   // 建立測試用戶
-  const userPasswordHash = await bcrypt.hash('user123', 10);
-  const [john] = await knex('users').insert([
-    {
-      employee_number: '4240001',
-      surname: 'Chan',
-      given_name: 'John',
-      name_zh: '陳約翰',
-      alias: 'John',
-      email: 'john.chan@example.com',
-      password_hash: userPasswordHash,
-      department_id: hrDept.id,
-      position_id: staffPos.id,
-      hire_date: '2023-01-01'
-    }
-  ]).returning('*');
+  // const userPasswordHash = await bcrypt.hash('user123', 10);
+  // const [john] = await knex('users').insert([
+  //   {
+  //     employee_number: '4240001',
+  //     surname: 'Chan',
+  //     given_name: 'John',
+  //     name_zh: '陳約翰',
+  //     alias: 'John',
+  //     email: 'john.chan@example.com',
+  //     password_hash: userPasswordHash,
+  //     department_id: hrDept.id,
+  //     position_id: staffPos.id,
+  //     hire_date: '2023-01-01'
+  //   }
+  // ]).returning('*');
 
-  const [jason] = await knex('users').insert([
-    {
-      employee_number: '4240004',
-      surname: 'Kam',
-      given_name: 'Chun Kin Jason',
-      name_zh: '甘晉鍵',
-      alias: 'Jason',
-      email: 'jason.kam@bigchk.com',
-      password_hash: userPasswordHash,
-      department_id: hrDept.id,
-      position_id: staffPos.id,
-      hire_date: '2023-01-01'
-    }
-  ]).returning('*');
+  // const [jason] = await knex('users').insert([
+  //   {
+  //     employee_number: '4240004',
+  //     surname: 'Kam',
+  //     given_name: 'Chun Kin Jason',
+  //     name_zh: '甘晉鍵',
+  //     alias: 'Jason',
+  //     email: 'jason.kam@bigchk.com',
+  //     password_hash: userPasswordHash,
+  //     department_id: hrDept.id,
+  //     position_id: staffPos.id,
+  //     hire_date: '2023-01-01'
+  //   }
+  // ]).returning('*');
 
   // 更新 HR 授權群組，將管理員加入
   await knex('delegation_groups')
@@ -282,14 +282,14 @@ exports.seed = async function(knex) {
     });
 
   // 更新 Human Resources 部門群組，將所有 HR 員工加入
-  const hrDeptGroup = await knex('department_groups').where('name', 'Human Resources').first();
-  if (hrDeptGroup) {
-    await knex('department_groups')
-      .where('id', hrDeptGroup.id)
-      .update({
-        user_ids: knex.raw('ARRAY[?, ?, ?]::integer[]', [admin.id, john.id, jason.id])
-      });
-  }
+  // const hrDeptGroup = await knex('department_groups').where('name', 'Human Resources').first();
+  // if (hrDeptGroup) {
+  //   await knex('department_groups')
+  //     .where('id', hrDeptGroup.id)
+  //     .update({
+  //       user_ids: knex.raw('ARRAY[?, ?, ?]::integer[]', [admin.id, john.id, jason.id])
+  //     });
+  // }
 
   // 取得假期類型
   const leaveTypes = await knex('leave_types').select('*');
@@ -298,34 +298,34 @@ exports.seed = async function(knex) {
 
   // 為測試用戶建立假期餘額（使用 transaction 方式）
   // 注意：實際的餘額應該通過 leave_balances 表和 transactions 來管理
-  await knex('leave_balances').insert([
-    {
-      user_id: john.id,
-      leave_type_id: annualLeave.id,
-      year: 2025,
-      balance: 14.0,
-      taken: 0.0
-    },
-    {
-      user_id: john.id,
-      leave_type_id: sickLeave.id,
-      year: 2025,
-      balance: 12.0,
-      taken: 0.0
-    },
-    {
-      user_id: jason.id,
-      leave_type_id: annualLeave.id,
-      year: 2025,
-      balance: 14.0,
-      taken: 0.0
-    },
-    {
-      user_id: jason.id,
-      leave_type_id: sickLeave.id,
-      year: 2025,
-      balance: 12.0,
-      taken: 0.0
-    }
-  ]);
+  // await knex('leave_balances').insert([
+  //   {
+  //     user_id: john.id,
+  //     leave_type_id: annualLeave.id,
+  //     year: 2025,
+  //     balance: 14.0,
+  //     taken: 0.0
+  //   },
+  //   {
+  //     user_id: john.id,
+  //     leave_type_id: sickLeave.id,
+  //     year: 2025,
+  //     balance: 12.0,
+  //     taken: 0.0
+  //   },
+  //   {
+  //     user_id: jason.id,
+  //     leave_type_id: annualLeave.id,
+  //     year: 2025,
+  //     balance: 14.0,
+  //     taken: 0.0
+  //   },
+  //   {
+  //     user_id: jason.id,
+  //     leave_type_id: sickLeave.id,
+  //     year: 2025,
+  //     balance: 12.0,
+  //     taken: 0.0
+  //   }
+  // ]);
 };

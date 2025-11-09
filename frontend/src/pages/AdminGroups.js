@@ -146,6 +146,21 @@ const AdminGroups = () => {
     }
   };
 
+  const handleDeleteGroup = async (groupId, type) => {
+    const confirmed = window.confirm('確定要刪除此群組？');
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const endpoint = type === 'department' ? '/api/groups/department' : '/api/groups/delegation';
+      await axios.delete(`${endpoint}/${groupId}`);
+      fetchGroups();
+    } catch (error) {
+      alert(error.response?.data?.message || '刪除群組失敗');
+    }
+  };
+
   const handleOpenMembers = async (group, type) => {
     setSelectedGroup(group);
     setSelectedGroupType(type);
@@ -156,7 +171,8 @@ const AdminGroups = () => {
       setMembersDialogOpen(true);
     } catch (error) {
       console.error('Fetch members error:', error);
-      alert('無法載入成員列表');
+      const message = error.response?.data?.message || error.message || '無法載入成員列表';
+      alert(message);
     }
   };
 
@@ -235,6 +251,9 @@ const AdminGroups = () => {
                         <IconButton size="small" onClick={() => handleOpenMembers(group, 'department')}>
                           <GroupIcon />
                         </IconButton>
+                        <IconButton size="small" onClick={() => handleDeleteGroup(group.id, 'department')}>
+                          <DeleteIcon />
+                        </IconButton>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -280,6 +299,9 @@ const AdminGroups = () => {
                         </IconButton>
                         <IconButton size="small" onClick={() => handleOpenMembers(group, 'delegation')}>
                           <GroupIcon />
+                        </IconButton>
+                        <IconButton size="small" onClick={() => handleDeleteGroup(group.id, 'delegation')}>
+                          <DeleteIcon />
                         </IconButton>
                       </TableCell>
                     </TableRow>

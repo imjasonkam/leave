@@ -1,8 +1,42 @@
 const knex = require('../../config/database');
 
+const parseIntegerArray = (value) => {
+  if (!value) {
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((v) => Number(v)).filter((v) => !Number.isNaN(v));
+  }
+
+  if (typeof value === 'string') {
+    return value
+      .replace(/[{}]/g, '')
+      .replace(/"/g, '')
+      .split(',')
+      .map((v) => v.trim())
+      .filter((v) => v !== '')
+      .map((v) => Number(v))
+      .filter((v) => !Number.isNaN(v));
+  }
+
+  return [];
+};
+
+const formatGroupRecord = (record) => {
+  if (!record) {
+    return record;
+  }
+
+  return {
+    ...record,
+    user_ids: parseIntegerArray(record.user_ids),
+  };
+};
+
 class DepartmentGroup {
   static async findAll() {
-    return await knex('department_groups')
+    const groups = await knex('department_groups')
       .leftJoin('delegation_groups as checker', 'department_groups.checker_id', 'checker.id')
       .leftJoin('delegation_groups as approver_1', 'department_groups.approver_1_id', 'approver_1.id')
       .leftJoin('delegation_groups as approver_2', 'department_groups.approver_2_id', 'approver_2.id')
@@ -19,10 +53,12 @@ class DepartmentGroup {
         'approver_3.name_zh as approver_3_name_zh'
       )
       .orderBy('department_groups.name');
+
+    return groups.map(formatGroupRecord);
   }
 
   static async findById(id) {
-    return await knex('department_groups')
+    const group = await knex('department_groups')
       .leftJoin('delegation_groups as checker', 'department_groups.checker_id', 'checker.id')
       .leftJoin('delegation_groups as approver_1', 'department_groups.approver_1_id', 'approver_1.id')
       .leftJoin('delegation_groups as approver_2', 'department_groups.approver_2_id', 'approver_2.id')
@@ -40,6 +76,8 @@ class DepartmentGroup {
       )
       .where('department_groups.id', id)
       .first();
+
+    return formatGroupRecord(group);
   }
 
   static async create(groupData) {
@@ -62,15 +100,18 @@ class DepartmentGroup {
     if (!group) {
       throw new Error('部門群組不存在');
     }
-    
-    const userIds = group.user_ids || [];
-    if (!userIds.includes(userId)) {
-      userIds.push(userId);
+
+    const userIds = parseIntegerArray(group.user_ids);
+    const numericUserId = Number(userId);
+
+    if (!userIds.includes(numericUserId)) {
       await knex('department_groups')
         .where('id', groupId)
-        .update({ user_ids: userIds });
+        .update({
+          user_ids: knex.raw('array_append(user_ids, ?)', [numericUserId]),
+        });
     }
-    
+
     return await this.findById(groupId);
   }
 
@@ -80,24 +121,28 @@ class DepartmentGroup {
     if (!group) {
       throw new Error('部門群組不存在');
     }
-    
-    const userIds = (group.user_ids || []).filter(id => id !== userId);
+
+    const numericUserId = Number(userId);
+
     await knex('department_groups')
       .where('id', groupId)
-      .update({ user_ids: userIds });
-    
+      .update({
+        user_ids: knex.raw('array_remove(user_ids, ?)', [numericUserId]),
+      });
+
     return await this.findById(groupId);
   }
 
   // 取得部門群組的所有成員
   static async getMembers(groupId) {
     const group = await knex('department_groups').where('id', groupId).first();
-    if (!group || !group.user_ids || group.user_ids.length === 0) {
+    const parsedGroup = formatGroupRecord(group);
+
+    if (!parsedGroup || parsedGroup.user_ids.length === 0) {
       return [];
     }
-    
-    return await knex('users')
 
+    return await knex('users')
       .leftJoin('departments', 'users.department_id', 'departments.id')
       .leftJoin('positions', 'users.position_id', 'positions.id')
       .select(
@@ -106,7 +151,8 @@ class DepartmentGroup {
         'departments.name_zh as department_name_zh',
         'positions.name as position_name',
         'positions.name_zh as position_name_zh'
-      )      .whereIn('id', group.user_ids);
+      )
+      .whereIn('users.id', parsedGroup.user_ids);
   }
 
   // 取得使用者所屬的部門群組
