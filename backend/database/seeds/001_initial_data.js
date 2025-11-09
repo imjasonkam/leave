@@ -31,9 +31,88 @@ exports.seed = async function(knex) {
 
   // 建立職位
   await knex('positions').insert([
-    { name: 'Manager', name_zh: '經理', description: '管理層職位' },
-    { name: 'Staff', name_zh: '職員', description: '一般職員' },
-    { name: 'Head', name_zh: '主管', description: '部門主管' }
+    // { name: 'Manager', name_zh: '經理', description: '管理層職位' },
+    // { name: 'Staff', name_zh: '職員', description: '一般職員' },
+    // { name: 'Head', name_zh: '主管', description: '部門主管' },
+    { name: 'System', name_zh: '系統', description: '系統' },
+    { name: 'Managing Director', name_zh: 'Managing Director', description: 'Managing Director' },
+    { name: 'Financial Controller', name_zh: 'Financial Controller', description: ' Financial Controller' },
+    { name: 'Assistant Accounting Manager ', name_zh: 'Assistant Accounting Manager  ', description: 'Assistant Accounting Manager ' },
+    { name: 'Assistant Category Manager', name_zh: 'Assistant Category Manager ', description: 'Assistant Category Manager' },
+    { name: 'Project Executive', name_zh: 'Project Executive', description: 'Project Executive' },
+    { name: 'Senior Accounting Manager', name_zh: 'Senior Accounting Manager', description: 'Senior Accounting Manager' },
+    { name: 'Category Manager', name_zh: 'Category Manager', description: 'Category Manager' },
+    { name: 'Accounting Officer', name_zh: 'Accounting Officer', description: 'Accounting Officer' },
+    { name: 'Part-Time Accounting Clerk', name_zh: 'Part-Time Accounting Clerk', description: 'Part-Time Accounting Clerk' },
+    { name: 'Accountant', name_zh: 'Accountant', description: 'Accountant' },
+    { name: 'Senior Category Manager', name_zh: 'Senior Category Manager', description: 'Senior Category Manager' },
+    { name: 'Project Supervisor', name_zh: 'Project Supervisor', description: 'Project Supervisor' },
+    { name: 'Senior Merchandiser', name_zh: 'Senior Merchandiser', description: 'Senior Merchandiser' },
+    { name: 'Business Analyst', name_zh: 'Business Analyst', description: 'Business Analyst' },
+    { name: 'Technician', name_zh: 'Technician', description: 'Technician' },
+    { name: 'Product Development Manager', name_zh: 'Product Development Manager', description: 'Product Development Manager' },
+    { name: 'Senior Accounts Clerk', name_zh: 'Senior Accounts Clerk', description: 'Senior Accounts Clerk' },
+    { name: 'Commercial Manager', name_zh: 'Commercial Manager', description: 'Commercial Manager' },
+    { name: 'Assistant Merchandising Admin Manager', name_zh: 'Assistant Merchandising Admin Manager', description: 'Assistant Merchandising Admin Manager' },
+    { name: 'Senior Merchandising Manager', name_zh: 'Senior Merchandising Manager', description: 'Senior Merchandising Manager' },
+    { name: 'Senior Buyer', name_zh: 'Senior Buyer', description: 'Senior Buyer' },
+    { name: 'Head of Merchandising', name_zh: 'Head of Merchandising', description: 'Head of Merchandising' },
+    { name: 'Office Assistant', name_zh: 'Office Assistant', description: 'Office Assistant' },
+    { name: 'General Administration Manager', name_zh: 'General Administration Manager', description: 'General Administration Manager' },
+    { name: 'Administration Officer', name_zh: 'Administration Officer', description: 'Administration Officer' },
+    { name: 'Assistant Business Development Manager', name_zh: 'Assistant Business Development Manager', description: 'Assistant Business Development Manager' },
+    { name: 'Human Resources Manager', name_zh: 'Human Resources Manager', description: 'Human Resources Manager' },
+    { name: 'Assistant Merchandiser', name_zh: 'Assistant Merchandiser', description: 'Assistant Merchandiser' },
+    { name: 'Senior HR Officer', name_zh: 'Senior HR Officer', description: 'Senior HR Officer' },
+    { name: 'Assistant Manager (E-Business & IT)', name_zh: 'Assistant Manager (E-Business & IT)', description: 'Assistant Manager (E-Business & IT)' },
+    { name: 'Promoter', name_zh: 'Promoter', description: 'Promoter' },
+    { name: 'Store Manager', name_zh: 'Store Manager', description: 'Store Manager' },
+    { name: 'Senior Customer Service Associate', name_zh: 'Senior Customer Service Associate', description: 'Senior Customer Service Associate' },
+    { name: 'Assistant Area Manager', name_zh: 'Assistant Area Manager', description: 'Assistant Area Manager' },
+    { name: 'Store Supervisor', name_zh: 'Store Supervisor', description: 'Store Supervisor' },
+    { name: 'Senior Store Manager', name_zh: 'Senior Store Manager', description: 'Senior Store Manager' },
+    { name: 'Customer Service Associate', name_zh: 'Customer Service Associate', description: 'Customer Service Associate' },
+    { name: 'COO - International Business North Asia & Managing Director of BigC (HK)', name_zh: 'COO - International Business North Asia & Managing Director of BigC (HK) ', description: ' COO - International Business North Asia & Managing Director of BigC (HK)' },
+    { name: 'Store Keeper', name_zh: 'Store Keeper', description: 'Store Keeper' },
+    { name: 'Part Time Promoter', name_zh: 'Part Time Promoter', description: 'Part Time Promoter' },
+    { name: 'Part Time Store Supervisor', name_zh: 'Part Time Store Supervisor', description: 'Part Time Store Supervisor' },
+    { name: 'Part Time Customer Service Associate', name_zh: 'Part Time Customer Service Associate', description: 'Part Time Customer Service Associate' },
+    { name: 'Part Time Store Keeper', name_zh: 'Part Time Store Keeper', description: 'Part Time Store Keeper' },
+    { name: 'Creative Manager', name_zh: 'Creative Manager', description: 'Creative Manager' },
+    { name: 'Retail Operation Executive', name_zh: 'Retail Operation Executive', description: 'Retail Operation Executive' },
+    { name: 'Merchandising Assistant', name_zh: 'Merchandising Assistant ', description: 'Merchandising Assistant' },
+    { name: 'Project Manager ', name_zh: 'Project Manager', description: 'Project Manager' },
+    { name: 'Accounts Clerk', name_zh: 'Accounts Clerk', description: 'Accounts Clerk' },
+    { name: 'IT Manager', name_zh: 'IT Manager', description: 'IT Manager' },
+    { name: 'Sales Admin Assistant', name_zh: 'Sales Admin Assistant', description: 'Sales Admin Assistant' },
+    { name: 'Training Manager', name_zh: 'Training Manager', description: 'Training Manager' },
+    { name: 'Senior Retail Operation Executive', name_zh: 'Senior Retail Operation Executive', description: 'Senior Retail Operation Executive' },
+    { name: 'Senior IT Officer', name_zh: 'Senior IT Officer', description: 'Senior IT Officer' },
+    { name: 'Assistant Head of Operation', name_zh: 'Assistant Head of Operation', description: 'Assistant Head of Operation' },
+    { name: 'Retail Operation Manager', name_zh: 'Retail Operation Manager', description: 'Retail Operation Manager' },
+    { name: 'Assistant Vice President of Retail Operation', name_zh: 'Assistant Vice President of Retail Operation', description: 'Assistant Vice President of Retail Operation' },
+    { name: 'Inventory Planning Manager', name_zh: 'Inventory Planning Manager', description: 'Inventory Planning Manager' },
+    { name: 'Assistant Inventory Control Manager', name_zh: 'Assistant Inventory Control Manager', description: 'Assistant Inventory Control Manager' },
+    { name: 'IT Officer', name_zh: 'IT Officer', description: ' IT Officer' },
+    { name: 'Inventory Planning Manager ', name_zh: 'Inventory Planning Manager  ', description: 'Inventory Planning Manager ' },
+    { name: 'Assistant Inventory Management Manager', name_zh: 'Assistant Inventory Management Manager', description: 'Assistant Inventory Management Manager ' },
+    { name: 'Assistant Inventory Management Manager', name_zh: 'Assistant Inventory Management Manager', description: 'Assistant Inventory Management Manager' },
+    { name: 'IT Support Officer', name_zh: 'IT Support Officer', description: 'IT Support Officer' },
+    { name: 'Assistant Property Manager', name_zh: 'Assistant Property Manager', description:  'Assistant Property Manager' },
+    { name: 'E-Commerce & Business Development Manager', name_zh: 'E-Commerce & Business Development Manager', description: 'E-Commerce & Business Development Manager' },
+    { name: 'Assistant Finance Manager', name_zh: 'Assistant Finance Manager', description: 'Assistant Finance Manager' },
+    { name: 'Driver', name_zh: 'Driver', description: 'Driver' },
+    { name: 'Assistant Project Manager', name_zh: 'Assistant Project Manager', description: 'Assistant Project Manager' },
+    { name: 'Part Time Retail Operation Assistant', name_zh: 'Part Time Retail Operation Assistant', description: 'Part Time Retail Operation Assistant' },
+    { name: 'Senior Supply Chain Manager', name_zh: 'Senior Supply Chain Manager', description: 'Senior Supply Chain Manager' },
+    { name: 'Intern Part Time Customer Service Associate', name_zh: 'Intern Part Time Customer Service Associate', description: 'Intern Part Time Customer Service Associate' },
+    { name: 'Intern Customer Service Associate', name_zh: 'Intern Customer Service Associate', description: 'Intern Customer Service Associate' },
+    { name: 'Sales Manager', name_zh: 'Sales Manager', description: 'Sales Manager' },
+    { name: 'Marketing Specialist', name_zh: 'Marketing Specialist', description: 'Marketing Specialist' },
+    { name: 'Assistant Accountant', name_zh: 'Assistant Accountant', description: 'Assistant Accountant' },
+    { name: 'Sales Executive', name_zh: 'Sales Executive', description: 'Sales Executive' },
+    { name: 'Area Supervisor', name_zh: 'Area Supervisor', description: 'Area Supervisor' },
+    { name: 'Office Intern', name_zh: 'Office Intern', description: 'Office Intern' }
   ]);
 
   // 建立授權群組 (Delegation Groups)
@@ -192,6 +271,26 @@ exports.seed = async function(knex) {
       approver_1_id: scDelegId,
       approver_2_id: null,
       approver_3_id: hrGroupId
+    },
+    {
+      name: 'Property',
+      name_zh: '物業部群組',
+      description: '供物業部門群組',
+      user_ids: [],
+      checker_id: null,
+      approver_1_id: scDelegId,
+      approver_2_id: null,
+      approver_3_id: hrGroupId
+    },
+    {
+      name: 'Mangagement',
+      name_zh: '管理層群組',
+      description: '管理層部門群組',
+      user_ids: [],
+      checker_id: null,
+      approver_1_id: scDelegId,
+      approver_2_id: null,
+      approver_3_id: hrGroupId
     }
   ]);
 
@@ -215,7 +314,7 @@ exports.seed = async function(knex) {
   const departments = await knex('departments').select('*');
   const positions = await knex('positions').select('*');
   const hrDept = departments.find(d => d.name === 'Human Resources');
-  const managerPos = positions.find(p => p.name === 'Manager');
+  const managerPos = positions.find(p => p.name === 'System');
   const staffPos = positions.find(p => p.name === 'Staff');
 
   // 建立系統管理員（HR 群組成員）
