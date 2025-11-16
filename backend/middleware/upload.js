@@ -26,16 +26,60 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-  allowedTypes.includes(file.mimetype) ? cb(null, true) : cb(new Error('不支援的檔案類型'), false);
+  // 允許的檔案類型：pdf、jpeg、jpg、tiff 和其他圖片格式
+  const allowedTypes = [
+    'image/jpeg', 
+    'image/jpg', 
+    'image/png', 
+    'image/gif', 
+    'image/bmp', 
+    'image/webp',
+    'image/tiff',
+    'image/tif',
+    'application/pdf'
+  ];
+  
+  // 檢查 mimetype 或副檔名
+  const fileExt = path.extname(file.originalname).toLowerCase();
+  const allowedExtensions = ['.pdf', '.jpeg', '.jpg', '.png', '.gif', '.bmp', '.webp', '.tiff', '.tif'];
+  
+  // 檢查檔案大小（10MB）
+  const maxSize = 10 * 1024 * 1024; // 10MB
+  
+  // 檢查檔案類型
+  const isValidType = allowedTypes.includes(file.mimetype) || allowedExtensions.includes(fileExt);
+  
+  if (!isValidType) {
+    return cb(new Error(`不支援的檔案類型。只允許：${allowedExtensions.join(', ')}`), false);
+  }
+  
+  cb(null, true);
 };
 
-const upload = multer({
+// 單檔案上傳（用於創建申請時）
+const uploadSingle = multer({
   storage: storage,
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 5242880
+    fileSize: 10 * 1024 * 1024 // 10MB
   },
   fileFilter: fileFilter
 });
 
-module.exports = upload;
+// 多檔案上傳（用於一次上傳多個檔案）
+const uploadMultiple = multer({
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB per file
+    files: 100 // 最多 100 個檔案（不限制數量，但設置一個合理的上限）
+  },
+  fileFilter: fileFilter
+});
+
+// 預設導出 uploadMultiple，支持多文件上傳
+const upload = uploadMultiple;
+
+module.exports = {
+  upload,
+  uploadSingle,
+  uploadMultiple
+};

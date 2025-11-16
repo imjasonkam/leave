@@ -9,8 +9,9 @@ exports.up = function(knex) {
     table.date('end_date').notNullable();
     table.decimal('total_days', 5, 2).notNullable();
     table.text('reason');
+    // table.jsonb('document_urls').defaultTo('[]'); // 存儲上傳文件的路由陣列，格式：["/api/leaves/documents/1/download", "/api/leaves/documents/2/download"]
     table.enum('status', ['pending', 'approved', 'rejected', 'cancelled']).defaultTo('pending');
-    table.enum('flow_type', ['e-flow', 'paper-flow']).notNullable().defaultTo('e-flow');
+    table.enum('flow_type', ['e-flow', 'paper-flow']).defaultTo('e-flow');
     
     // 批核流程相關欄位
     table.integer('checker_id').unsigned()

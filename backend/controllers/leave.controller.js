@@ -106,6 +106,25 @@ class LeaveController {
 
       const application = await LeaveApplication.create(applicationData);
 
+      // 處理上傳的檔案（如果有的話）
+      // 注意：檔案上傳需要在創建申請後進行，因為需要 application.id
+      // 檔案應該在請求中作為 files 陣列傳遞
+      const uploadedDocuments = [];
+      if (req.files && req.files.length > 0) {
+        for (const file of req.files) {
+          const documentData = {
+            leave_application_id: application.id,
+            file_name: file.originalname,
+            file_path: file.path,
+            file_type: file.mimetype,
+            file_size: file.size,
+            uploaded_by_id: req.user.id
+          };
+          const document = await LeaveDocument.create(documentData);
+          uploadedDocuments.push(document);
+        }
+      }
+
       // 如果是 paper-flow 已批准的申請，立即更新假期餘額
       if (application.status === 'approved' && actualFlowType === 'paper-flow' && leaveType.requires_balance) {
         if (!balanceRecord) {
@@ -124,7 +143,8 @@ class LeaveController {
 
       res.status(201).json({
         message: '假期申請已提交',
-        application
+        application,
+        documents: uploadedDocuments
       });
     } catch (error) {
       console.error('Create application error:', error);
@@ -278,9 +298,9 @@ class LeaveController {
   async uploadDocument(req, res) {
     try {
       const { id } = req.params;
-      const file = req.file;
+      const files = req.files || (req.file ? [req.file] : []);
 
-      if (!file) {
+      if (!files || files.length === 0) {
         return res.status(400).json({ message: '請選擇檔案' });
       }
 
@@ -289,31 +309,36 @@ class LeaveController {
         return res.status(404).json({ message: '申請不存在' });
       }
 
+      // 只有申請人或批核者可以上傳檔案
       const isApplicant = application.user_id === req.user.id;
-      const isHRMember = await User.isHRMember(req.user.id);
+      const canApprove = await User.canApprove(req.user.id, id);
 
-      if (!isApplicant && !isHRMember) {
+      if (!isApplicant && !canApprove && application.status !== 'pending') {
         return res.status(403).json({ message: '無權限上載檔案到此申請' });
       }
 
-      const documentData = {
-        leave_application_id: id,
-        file_name: file.originalname,
-        file_path: file.path,
-        file_type: file.mimetype,
-        file_size: file.size,
-        uploaded_by_id: req.user.id
-      };
+      const uploadedDocuments = [];
+      for (const file of files) {
+        const documentData = {
+          leave_application_id: id,
+          file_name: file.originalname,
+          file_path: file.path,
+          file_type: file.mimetype,
+          file_size: file.size,
+          uploaded_by_id: req.user.id
+        };
 
-      const document = await LeaveDocument.create(documentData);
+        const document = await LeaveDocument.create(documentData);
+        uploadedDocuments.push(document);
+      }
 
       res.status(201).json({
-        message: '檔案上載成功',
-        document
+        message: `成功上載 ${uploadedDocuments.length} 個檔案`,
+        documents: uploadedDocuments
       });
     } catch (error) {
       console.error('Upload document error:', error);
-      res.status(500).json({ message: '上載檔案時發生錯誤' });
+      res.status(500).json({ message: '上載檔案時發生錯誤', error: error.message });
     }
   }
 
@@ -322,23 +347,87 @@ class LeaveController {
       const { id } = req.params;
       const documents = await LeaveDocument.findByApplicationId(id);
 
-      res.json({ documents });
+      // 將檔案路徑轉換為可訪問的 URL
+      const documentsWithUrl = documents.map(doc => ({
+        ...doc,
+        file_url: `/api/leaves/documents/${doc.id}/download`
+      }));
+
+      res.json({ documents: documentsWithUrl });
     } catch (error) {
       console.error('Get documents error:', error);
       res.status(500).json({ message: '獲取檔案列表時發生錯誤' });
     }
   }
 
+  async downloadDocument(req, res) {
+    try {
+      const { id } = req.params;
+      const { view } = req.query; // 如果 view=true，在瀏覽器中查看；否則下載
+      const document = await LeaveDocument.findById(id);
+
+      if (!document) {
+        return res.status(404).json({ message: '檔案不存在' });
+      }
+
+      // 檢查權限：只有申請人或批核者可以查看
+      const application = await LeaveApplication.findById(document.leave_application_id);
+      if (!application) {
+        return res.status(404).json({ message: '申請不存在' });
+      }
+
+      const isApplicant = application.user_id === req.user.id;
+      const canApprove = await User.canApprove(req.user.id, application.id);
+      const isHRMember = await User.isHRMember(req.user.id);
+      const isSystemAdmin = req.user.is_system_admin;
+      const isDeptHead = req.user.is_dept_head;
+
+      // 允許申請人、批核者、HR 成員、系統管理員和部門主管查看
+      if (!isApplicant && !canApprove && !isHRMember && !isSystemAdmin && !isDeptHead) {
+        return res.status(403).json({ message: '無權限查看此檔案' });
+      }
+
+      const fs = require('fs');
+      const filePath = document.file_path;
+
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ message: '檔案不存在於伺服器' });
+      }
+
+      // 如果是圖片或 PDF，在瀏覽器中查看；否則下載
+      const isImage = document.file_type && document.file_type.startsWith('image/');
+      const isPDF = document.file_type === 'application/pdf' || document.file_name?.toLowerCase().endsWith('.pdf');
+      
+      if (view === 'true' || isImage || isPDF) {
+        // 設置適當的 Content-Type
+        const contentType = document.file_type || 'application/octet-stream';
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(document.file_name)}"`);
+        
+        // 讀取並發送文件
+        const fileStream = fs.createReadStream(filePath);
+        fileStream.pipe(res);
+      } else {
+        // 下載文件
+        res.download(filePath, document.file_name);
+      }
+    } catch (error) {
+      console.error('Download document error:', error);
+      res.status(500).json({ message: '查看檔案時發生錯誤' });
+    }
+  }
+
   async getBalances(req, res) {
     try {
       const { user_id, year } = req.query;
-      const userId = user_id || req.user.id;
+      const userId = user_id ? parseInt(user_id) : req.user.id;
       const currentYear = year || new Date().getFullYear();
 
-      // 檢查權限
+      // 檢查權限：只有 HR 成員可以查看其他用戶的餘額，一般用戶只能查看自己的
       const isHRMember = await User.isHRMember(req.user.id);
+      const isSystemAdmin = req.user.is_system_admin;
 
-      if (!isHRMember && userId !== req.user.id.toString()) {
+      if (!isHRMember && !isSystemAdmin && userId !== req.user.id) {
         return res.status(403).json({ message: '無權限查看其他用戶的假期餘額' });
       }
 

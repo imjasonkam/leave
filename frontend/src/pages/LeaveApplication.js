@@ -12,19 +12,24 @@ import {
   InputLabel,
   Select,
   FormControl,
-  Chip
+  Chip,
+  List,
+  ListItem,
+  ListItemText,
+  IconButton,
+  LinearProgress
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { Delete as DeleteIcon, AttachFile as AttachFileIcon, CameraAlt as CameraIcon } from '@mui/icons-material';
 import dayjs from 'dayjs';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 
 const LeaveApplication = () => {
-  const { user, isDeptHead } = useAuth();
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
-    applicant_id: '',
     leave_type_id: '',
     start_date: null,
     end_date: null,
@@ -32,26 +37,21 @@ const LeaveApplication = () => {
     reason: ''
   });
   const [leaveTypes, setLeaveTypes] = useState([]);
-  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [balance, setBalance] = useState(null);
+  const [files, setFiles] = useState([]);
 
   useEffect(() => {
     fetchLeaveTypes();
-    if (isDeptHead) {
-      fetchUsers();
-    }
-  }, [isDeptHead]);
+  }, []);
 
   useEffect(() => {
-    if (formData.leave_type_id && formData.applicant_id) {
-      fetchBalance(formData.applicant_id, formData.leave_type_id);
-    } else if (formData.leave_type_id && !isDeptHead) {
+    if (formData.leave_type_id) {
       fetchBalance(user.id, formData.leave_type_id);
     }
-  }, [formData.leave_type_id, formData.applicant_id, user.id, isDeptHead]);
+  }, [formData.leave_type_id, user.id]);
 
   useEffect(() => {
     if (formData.start_date && formData.end_date) {
@@ -66,17 +66,6 @@ const LeaveApplication = () => {
       setLeaveTypes(response.data.leaveTypes);
     } catch (error) {
       console.error('Fetch leave types error:', error);
-    }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      const response = isDeptHead 
-        ? await axios.get('/api/users/department')
-        : await axios.get('/api/admin/users');
-      setUsers(response.data.users);
-    } catch (error) {
-      console.error('Fetch users error:', error);
     }
   };
 
@@ -95,6 +84,66 @@ const LeaveApplication = () => {
     }
   };
 
+  const handleFileChange = (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    
+    // 驗證文件類型和大小
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp', 'image/webp', 'image/tiff', 'image/tif', 'application/pdf'];
+    const allowedExtensions = ['.pdf', '.jpeg', '.jpg', '.png', '.gif', '.bmp', '.webp', '.tiff', '.tif'];
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    
+    const validFiles = [];
+    const errors = [];
+    
+    selectedFiles.forEach((file) => {
+      const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+      const isValidType = allowedTypes.includes(file.type) || allowedExtensions.includes(fileExt);
+      const isValidSize = file.size <= maxSize;
+      
+      if (!isValidType) {
+        errors.push(`${file.name}: 不支援的檔案類型。只允許：${allowedExtensions.join(', ')}`);
+      } else if (!isValidSize) {
+        errors.push(`${file.name}: 檔案大小超過 10MB`);
+      } else {
+        validFiles.push(file);
+      }
+    });
+    
+    if (errors.length > 0) {
+      setError(errors.join('\n'));
+      setTimeout(() => setError(''), 5000);
+    }
+    
+    if (validFiles.length > 0) {
+      setFiles(prev => [...prev, ...validFiles]);
+    }
+  };
+
+  const handleCameraCapture = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment'; // 使用後置攝像頭
+    input.onchange = (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        handleFileChange(e);
+      }
+    };
+    input.click();
+  };
+
+  const handleRemoveFile = (index) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -108,25 +157,36 @@ const LeaveApplication = () => {
     }
 
     try {
-      const submitData = {
-        user_id: formData.applicant_id || user.id,
-        leave_type_id: formData.leave_type_id,
-        start_date: formData.start_date.format('YYYY-MM-DD'),
-        end_date: formData.end_date.format('YYYY-MM-DD'),
-        total_days: parseFloat(formData.days),
-        reason: formData.reason || undefined
-      };
+      const formDataToSend = new FormData();
+      formDataToSend.append('user_id', user.id);
+      formDataToSend.append('leave_type_id', formData.leave_type_id);
+      formDataToSend.append('start_date', formData.start_date.format('YYYY-MM-DD'));
+      formDataToSend.append('end_date', formData.end_date.format('YYYY-MM-DD'));
+      formDataToSend.append('total_days', parseFloat(formData.days));
+      if (formData.reason) {
+        formDataToSend.append('reason', formData.reason);
+      }
+      
+      // 添加文件
+      files.forEach((file) => {
+        formDataToSend.append('files', file);
+      });
 
-      const response = await axios.post('/api/leaves', submitData);
+      const response = await axios.post('/api/leaves', formDataToSend, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
       setSuccess(`申請已提交，交易編號：${response.data.application.transaction_id}`);
       setFormData({
-        applicant_id: '',
         leave_type_id: '',
         start_date: null,
         end_date: null,
         days: '',
         reason: ''
       });
+      setFiles([]);
       setBalance(null);
     } catch (error) {
       setError(error.response?.data?.message || '提交申請時發生錯誤');
@@ -157,23 +217,6 @@ const LeaveApplication = () => {
         )}
 
         <Box component="form" onSubmit={handleSubmit}>
-          {isDeptHead && (
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <InputLabel>申請人</InputLabel>
-              <Select
-                value={formData.applicant_id}
-                label="申請人"
-                onChange={(e) => setFormData(prev => ({ ...prev, applicant_id: e.target.value }))}
-              >
-                {users.map((u) => (
-                  <MenuItem key={u.id} value={u.id}>
-                    {u.name_zh} ({u.employee_number})
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          )}
-
           <FormControl fullWidth sx={{ mb: 2 }}>
             <InputLabel>假期類型</InputLabel>
             <Select
@@ -242,6 +285,62 @@ const LeaveApplication = () => {
             onChange={(e) => setFormData(prev => ({ ...prev, reason: e.target.value }))}
             sx={{ mb: 2 }}
           />
+
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              附件（可選，支持 PDF、JPEG、JPG、TIFF 及其他圖片格式，每個文件不超過 10MB）
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+              <Button
+                variant="outlined"
+                component="label"
+                startIcon={<AttachFileIcon />}
+              >
+                選擇文件
+                <input
+                  type="file"
+                  hidden
+                  multiple
+                  accept=".pdf,.jpeg,.jpg,.png,.gif,.bmp,.webp,.tiff,.tif,image/*"
+                  onChange={handleFileChange}
+                />
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<CameraIcon />}
+                onClick={handleCameraCapture}
+              >
+                拍照
+              </Button>
+            </Box>
+            {files.length > 0 && (
+              <List dense>
+                {files.map((file, index) => (
+                  <ListItem
+                    key={index}
+                    secondaryAction={
+                      <IconButton
+                        edge="end"
+                        aria-label="刪除"
+                        onClick={() => handleRemoveFile(index)}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    }
+                  >
+                    <ListItemText
+                      primary={file.name}
+                      secondary={formatFileSize(file.size)}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            )}
+          </Box>
+
+          {loading && (
+            <LinearProgress sx={{ mb: 2 }} />
+          )}
 
           <Button
             type="submit"

@@ -14,8 +14,18 @@ import {
   ListItem,
   ListItemText,
   Card,
-  CardContent
+  CardContent,
+  IconButton,
+  Link,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  CircularProgress,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
+import { Visibility as VisibilityIcon, GetApp as GetAppIcon, Description as DescriptionIcon, Image as ImageIcon, Close as CloseIcon } from '@mui/icons-material';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -23,6 +33,8 @@ const ApprovalDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [application, setApplication] = useState(null);
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState(false);
@@ -33,6 +45,14 @@ const ApprovalDetail = () => {
   const [canApproveThis, setCanApproveThis] = useState(false);
   const [canRejectThis, setCanRejectThis] = useState(false);
   const [userApprovalStage, setUserApprovalStage] = useState(null);
+  const [documents, setDocuments] = useState([]);
+  const [viewingDocument, setViewingDocument] = useState(null);
+  const [documentUrl, setDocumentUrl] = useState(null);
+  const [loadingDocument, setLoadingDocument] = useState(false);
+  const [fileDialogOpen, setFileDialogOpen] = useState(false);
+  const [viewingFile, setViewingFile] = useState(null);
+  const [fileBlobUrl, setFileBlobUrl] = useState(null);
+  const [loadingFile, setLoadingFile] = useState(false);
 
   useEffect(() => {
     fetchApplication();
@@ -44,6 +64,12 @@ const ApprovalDetail = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [application, user, id]);
+
+  useEffect(() => {
+    if (application) {
+      fetchDocuments();
+    }
+  }, [application, id]);
 
   const fetchApplication = async () => {
     try {
@@ -66,6 +92,34 @@ const ApprovalDetail = () => {
     }
   };
 
+  const fetchDocuments = async () => {
+    try {
+      const response = await axios.get(`/api/leaves/${id}/documents`);
+      setDocuments(response.data.documents || []);
+    } catch (error) {
+      console.error('Fetch documents error:', error);
+    }
+  };
+
+  const formatFileSize = (bytes) => {
+    if (!bytes) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  const getFileIcon = (fileType, fileName) => {
+    if (fileType && fileType.startsWith('image/')) {
+      return <ImageIcon />;
+    }
+    const ext = fileName?.split('.').pop()?.toLowerCase();
+    if (ext === 'pdf') {
+      return <DescriptionIcon />;
+    }
+    return <DescriptionIcon />;
+  };
+
   const getCurrentStage = (app) => {
     if (!app.checker_at && app.checker_id) return { stage: 'checker', text: '檢查' };
     if (!app.approver_1_at && app.approver_1_id) return { stage: 'approver_1', text: '第一批核' };
@@ -85,7 +139,7 @@ const ApprovalDetail = () => {
     // 確定當前申請處於哪個階段（必須按順序：checker -> approver_1 -> approver_2 -> approver_3）
     const { stage } = getCurrentStage(application);
     
-    // 檢查是否為 HR Group 成員（HR Group 成員可以隨時拒絕申請）
+    // 檢查是否為 HR Group 成員
     const isHRMember = user?.is_hr_member || user?.is_system_admin;
     
     // 檢查用戶是否屬於當前階段的批核者（直接設置或通過授權群組）
@@ -119,33 +173,30 @@ const ApprovalDetail = () => {
       }
     }
     
-    // HR Group 成員的特殊處理：可以隨時拒絕申請（即使不是當前階段）
-    // 但只有當申請處於 approver_3 階段時，HR Group 成員才能批准
-    if (isHRMember) {
-      // HR Group 成員可以隨時拒絕申請（只要申請尚未完成）
+    // 如果用戶是當前階段的批核者，按照正常流程處理
+    // 這包括：直接設置為批核者，或通過授權群組屬於當前階段的批核者
+    // 無論用戶是否是 HR Group 成員，只要是用戶是當前階段的批核者，就可以批准和拒絕
+    if (isCurrentStageApprover) {
+      setCanApproveThis(true);
       setCanRejectThis(true);
-      // 只有當申請處於 approver_3 階段時，HR Group 成員才能批准
-      if (stage === 'approver_3' && isCurrentStageApprover) {
-        setCanApproveThis(true);
-        setUserApprovalStage('approver_3');
-      } else {
-        setCanApproveThis(false);
-        setUserApprovalStage(null);
-      }
+      setUserApprovalStage(stage);
       return;
     }
     
-    // 對於非 HR Group 成員，只有當前階段的批核者才能看到批核按鈕
-    if (isCurrentStageApprover) {
-      setCanApproveThis(true);
-      setCanRejectThis(true); // 當前階段的批核者可以批准或拒絕
-      setUserApprovalStage(stage);
-    } else {
-      // 未輪到的批核者只能查看申請資料，不能批核
+    // 如果用戶不是當前階段的批核者，但用戶是 HR Group 成員
+    // 且申請處於 approver_3 階段，可以拒絕（但不允許批准）
+    // 這個邏輯只用於特殊情況，例如 HR Group 成員需要緊急拒絕不符合政策的申請
+    if (isHRMember && stage === 'approver_3') {
+      setCanRejectThis(true);
       setCanApproveThis(false);
-      setCanRejectThis(false);
       setUserApprovalStage(null);
+      return;
     }
+    
+    // 未輪到的批核者只能查看申請資料，不能批核
+    setCanApproveThis(false);
+    setCanRejectThis(false);
+    setUserApprovalStage(null);
   };
 
   const handleSubmit = async () => {
@@ -170,6 +221,55 @@ const ApprovalDetail = () => {
     } finally {
       setApproving(false);
     }
+  };
+
+  const handleOpenFile = async (doc) => {
+    try {
+      setLoadingFile(true);
+      setViewingFile(doc);
+      setFileDialogOpen(true);
+
+      const isImage = doc.file_type && doc.file_type.startsWith('image/');
+      const isPDF = doc.file_type === 'application/pdf' || doc.file_name?.toLowerCase().endsWith('.pdf');
+      const url = `/api/leaves/documents/${doc.id}/download${isImage || isPDF ? '?view=true' : ''}`;
+      
+      // 使用 axios 下載文件，確保認證 header 被包含
+      const response = await axios.get(url, {
+        responseType: 'blob',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      // 從響應中獲取正確的 MIME 類型
+      const contentType = response.headers['content-type'] || doc.file_type || 'application/octet-stream';
+      
+      // 創建 blob URL（使用正確的 MIME 類型）
+      const blob = new Blob([response.data], { type: contentType });
+      const blobUrl = window.URL.createObjectURL(blob);
+      setFileBlobUrl(blobUrl);
+    } catch (error) {
+      console.error('下載文件錯誤:', error);
+      setFileDialogOpen(false);
+      setViewingFile(null);
+      if (error.response?.status === 403 || error.response?.status === 401) {
+        setError('無權限查看此文件');
+      } else {
+        setError('無法打開文件，請檢查權限');
+      }
+      setTimeout(() => setError(''), 5000);
+    } finally {
+      setLoadingFile(false);
+    }
+  };
+
+  const handleCloseFileDialog = () => {
+    if (fileBlobUrl) {
+      window.URL.revokeObjectURL(fileBlobUrl);
+      setFileBlobUrl(null);
+    }
+    setFileDialogOpen(false);
+    setViewingFile(null);
   };
 
   if (loading) {
@@ -330,6 +430,52 @@ const ApprovalDetail = () => {
                 </ListItem>
               )}
             </List>
+
+            {documents.length > 0 && (
+              <>
+                <Divider sx={{ my: 2 }} />
+                <Typography variant="h6" gutterBottom>
+                  附件
+                </Typography>
+                <List dense>
+                  {documents.map((doc) => (
+                    <ListItem
+                      key={doc.id}
+                      secondaryAction={
+                        <IconButton
+                          edge="end"
+                          aria-label="查看"
+                          onClick={async () => {
+                            await handleOpenFile(doc);
+                          }}
+                        >
+                          <VisibilityIcon />
+                        </IconButton>
+                      }
+                    >
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            {getFileIcon(doc.file_type, doc.file_name)}
+                            <Link
+                              component="button"
+                              variant="body2"
+                              onClick={async () => {
+                                await handleOpenFile(doc);
+                              }}
+                              sx={{ textDecoration: 'none', cursor: 'pointer' }}
+                            >
+                              {doc.file_name}
+                            </Link>
+                          </Box>
+                        }
+                        secondary={doc.file_size ? formatFileSize(doc.file_size) : ''}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              </>
+            )}
           </Paper>
         </Grid>
 
@@ -398,6 +544,92 @@ const ApprovalDetail = () => {
           </Grid>
         )}
       </Grid>
+
+      {/* 文件查看 Dialog */}
+      <Dialog
+        open={fileDialogOpen}
+        onClose={handleCloseFileDialog}
+        maxWidth="lg"
+        fullWidth
+        fullScreen={isMobile} // 手機上全屏顯示
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">
+              {viewingFile?.file_name || '查看文件'}
+            </Typography>
+            <IconButton onClick={handleCloseFileDialog}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {loadingFile ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+              <CircularProgress />
+              <Typography variant="body2" sx={{ ml: 2 }}>
+                載入中...
+              </Typography>
+            </Box>
+          ) : fileBlobUrl && viewingFile ? (
+            <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              {viewingFile.file_type?.startsWith('image/') ? (
+                <img
+                  src={fileBlobUrl}
+                  alt={viewingFile.file_name}
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '80vh',
+                    objectFit: 'contain'
+                  }}
+                />
+              ) : viewingFile.file_type === 'application/pdf' || viewingFile.file_name?.toLowerCase().endsWith('.pdf') ? (
+                <iframe
+                  src={fileBlobUrl}
+                  title={viewingFile.file_name}
+                  style={{
+                    width: '100%',
+                    height: '80vh',
+                    border: 'none'
+                  }}
+                />
+              ) : (
+                <Box sx={{ textAlign: 'center', p: 4 }}>
+                  <Typography variant="body1" gutterBottom>
+                    無法在瀏覽器中預覽此文件類型
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    component="a"
+                    href={fileBlobUrl}
+                    download={viewingFile.file_name}
+                    sx={{ mt: 2 }}
+                  >
+                    <GetAppIcon sx={{ mr: 1 }} />
+                    下載文件
+                  </Button>
+                </Box>
+              )}
+            </Box>
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          {fileBlobUrl && !viewingFile?.file_type?.startsWith('image/') && viewingFile?.file_type !== 'application/pdf' && !viewingFile?.file_name?.toLowerCase().endsWith('.pdf') && (
+            <Button
+              component="a"
+              href={fileBlobUrl}
+              download={viewingFile?.file_name}
+              variant="contained"
+              startIcon={<GetAppIcon />}
+            >
+              下載
+            </Button>
+          )}
+          <Button onClick={handleCloseFileDialog} variant="outlined">
+            關閉
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
