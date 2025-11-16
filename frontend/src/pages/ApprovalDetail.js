@@ -27,10 +27,11 @@ const ApprovalDetail = () => {
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState(false);
   const [comment, setComment] = useState('');
-  const [action, setAction] = useState('approve');
+  const [action, setAction] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [canApproveThis, setCanApproveThis] = useState(false);
+  const [canRejectThis, setCanRejectThis] = useState(false);
   const [userApprovalStage, setUserApprovalStage] = useState(null);
 
   useEffect(() => {
@@ -76,59 +77,73 @@ const ApprovalDetail = () => {
   const checkCanApprove = async () => {
     if (!application || application.status !== 'pending') {
       setCanApproveThis(false);
+      setCanRejectThis(false);
       setUserApprovalStage(null);
       return;
     }
     
-    // 檢查是否直接設置為批核者
+    // 確定當前申請處於哪個階段（必須按順序：checker -> approver_1 -> approver_2 -> approver_3）
     const { stage } = getCurrentStage(application);
-    const isDirectApprover = 
-      (stage === 'checker' && application.checker_id === user?.id) ||
-      (stage === 'approver_1' && application.approver_1_id === user?.id) ||
-      (stage === 'approver_2' && application.approver_2_id === user?.id) ||
-      (stage === 'approver_3' && application.approver_3_id === user?.id);
     
-    if (isDirectApprover) {
-      setCanApproveThis(true);
-      setUserApprovalStage(stage);
+    // 檢查是否為 HR Group 成員（HR Group 成員可以隨時拒絕申請）
+    const isHRMember = user?.is_hr_member || user?.is_system_admin;
+    
+    // 檢查用戶是否屬於當前階段的批核者（直接設置或通過授權群組）
+    let isCurrentStageApprover = false;
+    
+    // 方法1：檢查是否直接設置為當前階段的批核者
+    if (stage === 'checker' && application.checker_id === user?.id) {
+      isCurrentStageApprover = true;
+    } else if (stage === 'approver_1' && application.approver_1_id === user?.id) {
+      isCurrentStageApprover = true;
+    } else if (stage === 'approver_2' && application.approver_2_id === user?.id) {
+      isCurrentStageApprover = true;
+    } else if (stage === 'approver_3' && application.approver_3_id === user?.id) {
+      isCurrentStageApprover = true;
+    }
+    
+    // 方法2：如果不是直接批核者，檢查是否通過授權群組屬於當前階段的批核者
+    if (!isCurrentStageApprover) {
+      try {
+        // 調用後端 API 檢查用戶是否有權限批核當前階段
+        // 後端的 can-approve 現在只返回當前階段的權限
+        const response = await axios.get(`/api/users/can-approve/${id}`);
+        const canApproveFromBackend = response.data.canApprove || false;
+        
+        if (canApproveFromBackend) {
+          // 後端返回可以批核，說明用戶是當前階段的批核者
+          isCurrentStageApprover = true;
+        }
+      } catch (error) {
+        console.error('Check approval permission error:', error);
+      }
+    }
+    
+    // HR Group 成員的特殊處理：可以隨時拒絕申請（即使不是當前階段）
+    // 但只有當申請處於 approver_3 階段時，HR Group 成員才能批准
+    if (isHRMember) {
+      // HR Group 成員可以隨時拒絕申請（只要申請尚未完成）
+      setCanRejectThis(true);
+      // 只有當申請處於 approver_3 階段時，HR Group 成員才能批准
+      if (stage === 'approver_3' && isCurrentStageApprover) {
+        setCanApproveThis(true);
+        setUserApprovalStage('approver_3');
+      } else {
+        setCanApproveThis(false);
+        setUserApprovalStage(null);
+      }
       return;
     }
     
-    // 優先檢查：如果用戶是 HR Group 成員，且申請已設置 approver_3_id 但尚未批核
-    // HR Group 成員應該能夠批核所有申請的 approver_3 階段
-    if (application.approver_3_id && !application.approver_3_at) {
-      const isHRMember = user?.is_hr_member || user?.is_system_admin;
-      if (isHRMember) {
-        setCanApproveThis(true);
-        setUserApprovalStage('approver_3');
-        return;
-      }
-    }
-    
-    // 如果直接檢查不通過，通過後端 API 檢查（包括授權群組成員的情況）
-    // 這個 API 會檢查用戶是否屬於任何階段的授權群組，包括 approver_3
-    // 後端已經處理了所有情況，包括 HR 群組（approver_3）的特殊情況
-    try {
-      const response = await axios.get(`/api/users/can-approve/${id}`);
-      const canApprove = response.data.canApprove || false;
-      setCanApproveThis(canApprove);
-      
-      // 如果用戶可以批核，確定用戶應該批核的階段
-      if (canApprove) {
-        // 如果申請已設置 approver_3_id 且尚未批核，且用戶不是直接設置的批核者，
-        // 那麼用戶可能是 approver_3 群組成員
-        if (application.approver_3_id && !application.approver_3_at && application.approver_3_id !== user?.id) {
-          setUserApprovalStage('approver_3');
-        } else {
-          // 否則使用當前階段
-          setUserApprovalStage(stage);
-        }
-      } else {
-        setUserApprovalStage(null);
-      }
-    } catch (error) {
-      console.error('Check approval permission error:', error);
+    // 對於非 HR Group 成員，只有當前階段的批核者才能看到批核按鈕
+    if (isCurrentStageApprover) {
+      setCanApproveThis(true);
+      setCanRejectThis(true); // 當前階段的批核者可以批准或拒絕
+      setUserApprovalStage(stage);
+    } else {
+      // 未輪到的批核者只能查看申請資料，不能批核
       setCanApproveThis(false);
+      setCanRejectThis(false);
       setUserApprovalStage(null);
     }
   };
@@ -244,7 +259,11 @@ const ApprovalDetail = () => {
               <ListItem>
                 <ListItemText
                   primary="檢查"
-                  secondary={application.checker_at ? `已檢查於 ${application.checker_at}` : '待檢查'}
+                  secondary={
+                    application.checker_at 
+                      ? `已檢查於 ${application.checker_at}${application.checker_name ? ` - ${application.checker_name}` : ''}` 
+                      : '待檢查'
+                  }
                 />
                 {application.checker_remarks && (
                   <Typography variant="body2" color="text.secondary">
@@ -255,7 +274,11 @@ const ApprovalDetail = () => {
               <ListItem>
                 <ListItemText
                   primary="第一批核"
-                  secondary={application.approver_1_at ? `已批核於 ${application.approver_1_at}` : '待批核'}
+                  secondary={
+                    application.approver_1_at 
+                      ? `已批核於 ${application.approver_1_at}${application.approver_1_name ? ` - ${application.approver_1_name}` : ''}` 
+                      : application.checker_at ? '待批核' : '未開始'
+                  }
                 />
                 {application.approver_1_remarks && (
                   <Typography variant="body2" color="text.secondary">
@@ -266,7 +289,11 @@ const ApprovalDetail = () => {
               <ListItem>
                 <ListItemText
                   primary="第二批核"
-                  secondary={application.approver_2_at ? `已批核於 ${application.approver_2_at}` : application.approver_1_at ? '待批核' : '未開始'}
+                  secondary={
+                    application.approver_2_at 
+                      ? `已批核於 ${application.approver_2_at}${application.approver_2_name ? ` - ${application.approver_2_name}` : ''}` 
+                      : application.approver_1_at ? '待批核' : '未開始'
+                  }
                 />
                 {application.approver_2_remarks && (
                   <Typography variant="body2" color="text.secondary">
@@ -277,7 +304,11 @@ const ApprovalDetail = () => {
               <ListItem>
                 <ListItemText
                   primary="第三批核 (HR)"
-                  secondary={application.approver_3_at ? `已批核於 ${application.approver_3_at}` : application.approver_2_at ? '待批核' : '未開始'}
+                  secondary={
+                    application.approver_3_at 
+                      ? `已批核於 ${application.approver_3_at}${application.approver_3_name ? ` - ${application.approver_3_name}` : ''}` 
+                      : application.approver_2_at ? '待批核' : '未開始'
+                  }
                 />
                 {application.approver_3_remarks && (
                   <Typography variant="body2" color="text.secondary">
@@ -285,11 +316,24 @@ const ApprovalDetail = () => {
                   </Typography>
                 )}
               </ListItem>
+              {application.status === 'rejected' && application.rejected_by_name && (
+                <ListItem>
+                  <ListItemText
+                    primary="拒絕"
+                    secondary={`已拒絕於 ${application.rejected_at || ''} - ${application.rejected_by_name}`}
+                  />
+                  {application.rejection_reason && (
+                    <Typography variant="body2" color="text.secondary">
+                      {application.rejection_reason}
+                    </Typography>
+                  )}
+                </ListItem>
+              )}
             </List>
           </Paper>
         </Grid>
 
-        {canApproveThis && application.status === 'pending' && (
+        {(canApproveThis || canRejectThis) && application.status === 'pending' && (
           <Grid item xs={12} md={4}>
             <Card>
               <CardContent>
@@ -311,31 +355,43 @@ const ApprovalDetail = () => {
                 />
 
                 <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                  <Button
-                    variant={action === 'approve' ? 'contained' : 'outlined'}
-                    color="success"
-                    onClick={() => setAction('approve')}
-                    fullWidth
-                  >
-                    批准
-                  </Button>
-                  <Button
-                    variant={action === 'reject' ? 'contained' : 'outlined'}
-                    color="error"
-                    onClick={() => setAction('reject')}
-                    fullWidth
-                  >
-                    拒絕
-                  </Button>
+                  {canApproveThis && (
+                    <Button
+                      variant={action === 'approve' ? 'contained' : 'outlined'}
+                      color="success"
+                      onClick={() => setAction('approve')}
+                      fullWidth
+                    >
+                      批准
+                    </Button>
+                  )}
+                  {canRejectThis && (
+                    <Button
+                      variant={action === 'reject' ? 'contained' : 'outlined'}
+                      color="error"
+                      onClick={() => setAction('reject')}
+                      fullWidth
+                    >
+                      拒絕
+                    </Button>
+                  )}
                 </Box>
 
                 <Button
                   variant="contained"
                   fullWidth
                   onClick={handleSubmit}
-                  disabled={approving}
+                  disabled={approving || !action}
+                  sx={{
+                    opacity: !action ? 0.5 : 1,
+                    cursor: !action ? 'not-allowed' : 'pointer',
+                    '&:disabled': {
+                      backgroundColor: 'rgba(0, 0, 0, 0.12)',
+                      color: 'rgba(0, 0, 0, 0.26)'
+                    }
+                  }}
                 >
-                  {approving ? '處理中...' : '提交'}
+                  {approving ? '處理中...' : !action ? '請選擇批准或拒絕' : '提交'}
                 </Button>
               </CardContent>
             </Card>

@@ -18,16 +18,25 @@ class ApprovalController {
         return res.status(400).json({ message: '此申請已處理' });
       }
 
-      // 檢查使用者是否有權限批核
+      // 拒絕申請
+      if (action === 'reject') {
+        // HR Group 成員可以隨時拒絕申請（即使不是當前階段）
+        const isHRMember = await User.isHRMember(req.user.id);
+        if (!isHRMember) {
+          // 非 HR Group 成員需要檢查是否有權限批核（只有當前階段的批核者才能拒絕）
+          const canApprove = await User.canApprove(req.user.id, id);
+          if (!canApprove) {
+            return res.status(403).json({ message: '無權限進行此操作' });
+          }
+        }
+        await LeaveApplication.reject(id, req.user.id, remarks || '已拒絕');
+        return res.json({ message: '申請已拒絕' });
+      }
+
+      // 批准申請：檢查使用者是否有權限批核
       const canApprove = await User.canApprove(req.user.id, id);
       if (!canApprove) {
         return res.status(403).json({ message: '無權限進行此操作' });
-      }
-
-      // 拒絕申請
-      if (action === 'reject') {
-        await LeaveApplication.reject(id, req.user.id, remarks || '已拒絕');
-        return res.json({ message: '申請已拒絕' });
       }
 
       // 批准申請
@@ -158,29 +167,107 @@ class ApprovalController {
   async getApprovalHistory(req, res) {
     try {
       const { status } = req.query;
-      const options = {
-        approver_id: req.user.id
-      };
+      const userId = req.user.id;
+      
+      // 獲取所有已處理的申請（不包括待批核的）
+      let query = knex('leave_applications')
+        .leftJoin('users', 'leave_applications.user_id', 'users.id')
+        .leftJoin('leave_types', 'leave_applications.leave_type_id', 'leave_types.id')
+        .select(
+          'leave_applications.*',
+          knex.raw('leave_applications.total_days as days'),
+          knex.raw('leave_applications.id as transaction_id'),
+          'users.employee_number as user_employee_number',
+          'users.employee_number as applicant_employee_number',
+          'users.surname as user_surname',
+          'users.given_name as user_given_name',
+          'users.name_zh as user_name_zh',
+          'users.name_zh as applicant_name_zh',
+          'leave_types.code as leave_type_code',
+          'leave_types.name as leave_type_name',
+          'leave_types.name_zh as leave_type_name_zh',
+          'leave_types.requires_balance as leave_type_requires_balance'
+        )
+        .where('leave_applications.status', '!=', 'pending');
 
-      if (status && status !== 'pending') {
-        options.status = status;
+      if (status && status !== 'all') {
+        query = query.where('leave_applications.status', status);
       }
 
-      const applications = await LeaveApplication.findAll(options);
+      const allApplications = await query.orderBy('leave_applications.created_at', 'desc');
       
-      // 過濾出已處理的申請
-      const processedApplications = applications.filter(app => {
-        if (app.status === 'pending') return false;
+      // 獲取用戶所屬的授權群組
+      const userDelegationGroups = await knex('delegation_groups')
+        .whereRaw('? = ANY(delegation_groups.user_ids)', [Number(userId)])
+        .select('id');
+      
+      const userDelegationGroupIds = userDelegationGroups.map(g => Number(g.id));
+      
+      // 過濾出用戶批核過的申請
+      const DepartmentGroup = require('../database/models/DepartmentGroup');
+      const processedApplications = [];
+      
+      for (const app of allApplications) {
+        let isApprover = false;
         
-        // 檢查使用者是否參與了批核
-        return app.checker_id === req.user.id && app.checker_at ||
-               app.approver_1_id === req.user.id && app.approver_1_at ||
-               app.approver_2_id === req.user.id && app.approver_2_at ||
-               app.approver_3_id === req.user.id && app.approver_3_at ||
-               app.rejected_by_id === req.user.id;
+        // 方法1：檢查是否直接設置為批核者
+        if ((app.checker_id === userId && app.checker_at) ||
+            (app.approver_1_id === userId && app.approver_1_at) ||
+            (app.approver_2_id === userId && app.approver_2_at) ||
+            (app.approver_3_id === userId && app.approver_3_at) ||
+            app.rejected_by_id === userId) {
+          isApprover = true;
+        }
+        
+        // 方法2：檢查是否通過授權群組批核過
+        if (!isApprover && userDelegationGroupIds.length > 0) {
+          const departmentGroups = await DepartmentGroup.findByUserId(app.user_id);
+          if (departmentGroups && departmentGroups.length > 0) {
+            const deptGroup = departmentGroups[0];
+            const approvalFlow = await DepartmentGroup.getApprovalFlow(deptGroup.id);
+            
+            for (const step of approvalFlow) {
+              if (step.delegation_group_id && userDelegationGroupIds.includes(Number(step.delegation_group_id))) {
+                // 檢查該階段是否已批核
+                let stepApproved = false;
+                if (step.level === 'checker' && app.checker_at) {
+                  stepApproved = true;
+                } else if (step.level === 'approver_1' && app.approver_1_at) {
+                  stepApproved = true;
+                } else if (step.level === 'approver_2' && app.approver_2_at) {
+                  stepApproved = true;
+                } else if (step.level === 'approver_3' && app.approver_3_at) {
+                  stepApproved = true;
+                }
+                
+                if (stepApproved) {
+                  isApprover = true;
+                  break;
+                }
+              }
+            }
+          }
+        }
+        
+        if (isApprover) {
+          processedApplications.push(app);
+        }
+      }
+
+      // 格式化申請數據（使用 LeaveApplication 的 formatApplication 函數）
+      const LeaveApplicationModel = require('../database/models/LeaveApplication');
+      const formattedApplications = processedApplications.map(app => {
+        // formatApplication 是模塊級函數，需要通過其他方式訪問
+        // 暫時直接返回，因為數據已經包含所需字段
+        return {
+          ...app,
+          transaction_id: app.transaction_id || `LA-${String(app.id).padStart(6, '0')}`,
+          applicant_name_zh: app.applicant_name_zh || app.user_name_zh,
+          days: app.days !== undefined && app.days !== null ? app.days : app.total_days
+        };
       });
 
-      res.json({ applications: processedApplications });
+      res.json({ applications: formattedApplications });
     } catch (error) {
       console.error('Get approval history error:', error);
       res.status(500).json({ message: '獲取批核記錄時發生錯誤' });

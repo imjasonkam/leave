@@ -11,6 +11,7 @@ import LeaveHistory from './pages/LeaveHistory';
 import LeaveBalance from './pages/LeaveBalance';
 import ApprovalList from './pages/ApprovalList';
 import ApprovalDetail from './pages/ApprovalDetail';
+import ApprovalHistory from './pages/ApprovalHistory';
 import AdminUsers from './pages/AdminUsers';
 import AdminLeaveTypes from './pages/AdminLeaveTypes';
 import AdminBalances from './pages/AdminBalances';
@@ -44,6 +45,7 @@ function App() {
             <Route path="/leave/history" element={<PrivateRoute><LeaveHistory /></PrivateRoute>} />
             <Route path="/leave/balance" element={<PrivateRoute><LeaveBalance /></PrivateRoute>} />
             <Route path="/approval/list" element={<PrivateRoute><ApprovalList /></PrivateRoute>} />
+            <Route path="/approval/history" element={<PrivateRoute><ApprovalHistory /></PrivateRoute>} />
             <Route path="/approval/:id" element={<PrivateRoute><ApprovalDetail /></PrivateRoute>} />
             <Route path="/admin/paper-flow" element={<PrivateRoute><AdminPaperFlow /></PrivateRoute>} />
             <Route path="/admin/users" element={<PrivateRoute><AdminUsers /></PrivateRoute>} />

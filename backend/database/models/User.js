@@ -179,37 +179,41 @@ class User {
         currentLevel = 'approver_3';
       }
       
-      // 檢查用戶是否屬於申請流程中任何階段的授權群組，且該階段尚未批核
-      // 這樣可以讓所有授權群組成員都能批核他們有權限的申請
-      for (const step of approvalFlow) {
-        if (step.delegation_group_id) {
-          // 檢查用戶是否屬於該階段的授權群組
+      // 檢查用戶是否屬於當前階段的授權群組，且該階段尚未批核
+      // 只有當前階段的批核者才能批核，未輪到的批核者不能批核
+      if (currentLevel) {
+        const currentStep = approvalFlow.find(step => step.level === currentLevel);
+        if (currentStep && currentStep.delegation_group_id) {
+          // 檢查用戶是否屬於當前階段的授權群組
           const isInDelegationGroup = await knex('delegation_groups')
-            .where('id', step.delegation_group_id)
+            .where('id', currentStep.delegation_group_id)
             .whereRaw('? = ANY(delegation_groups.user_ids)', [Number(userId)])
             .first();
           
           if (isInDelegationGroup) {
-            // 檢查該階段是否已設置且尚未批核
+            // 檢查當前階段是否已設置且尚未批核
             let stepIsPending = false;
             
-            if (step.level === 'checker') {
+            if (currentStep.level === 'checker') {
               stepIsPending = !!(application.checker_id && application.checker_at == null && application.checked_at == null);
-            } else if (step.level === 'approver_1') {
+            } else if (currentStep.level === 'approver_1') {
               stepIsPending = !!(application.approver_1_id && application.approver_1_at == null && application.approved_1_at == null);
-            } else if (step.level === 'approver_2') {
+            } else if (currentStep.level === 'approver_2') {
               stepIsPending = !!(application.approver_2_id && application.approver_2_at == null && application.approved_2_at == null);
-            } else if (step.level === 'approver_3') {
+            } else if (currentStep.level === 'approver_3') {
               stepIsPending = !!(application.approver_3_id && application.approver_3_at == null && application.approved_3_at == null);
             }
             
-            // 如果用戶屬於該階段的授權群組，且該階段尚未批核，允許批核
+            // 如果用戶屬於當前階段的授權群組，且該階段尚未批核，允許批核
             if (stepIsPending) {
               return true;
             }
           }
         }
       }
+      
+      // 特別處理 HR Group（approver_3）：即使當前階段不是 approver_3，HR Group 成員也可以批核
+      // 但這已經在方法2中處理了，所以這裡不需要重複檢查
     }
 
     return false;
