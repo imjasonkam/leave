@@ -14,6 +14,7 @@ exports.up = function(knex) {
       .references('id').inTable('positions').onDelete('SET NULL');
     table.date('hire_date');
     table.date('termination_date');
+    table.boolean('deactivated').notNullable().defaultTo(false); // 帳戶是否停用（true=不能登入）
     table.timestamps(true, true);
     
     table.index('employee_number');

@@ -17,6 +17,7 @@ import { Visibility as VisibilityIcon } from '@mui/icons-material';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { formatDate } from '../utils/dateFormat';
 
 const ApprovalList = () => {
   const { user } = useAuth();
@@ -97,7 +98,7 @@ const ApprovalList = () => {
                       <TableCell>{app.applicant_name_zh}</TableCell>
                       <TableCell>{app.leave_type_name_zh}</TableCell>
                       <TableCell>
-                        {app.start_date} ~ {app.end_date}
+                        {formatDate(app.start_date)} ~ {formatDate(app.end_date)}
                       </TableCell>
                       <TableCell>{app.days}</TableCell>
                       <TableCell>

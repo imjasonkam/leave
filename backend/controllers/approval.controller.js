@@ -205,7 +205,23 @@ class ApprovalController {
       
       // 過濾出用戶批核過的申請
       const DepartmentGroup = require('../database/models/DepartmentGroup');
+      const User = require('../database/models/User');
+      const isHRMember = await User.isHRMember(userId);
       const processedApplications = [];
+      
+      console.log(`[getApprovalHistory] 開始處理，總申請數: ${allApplications.length}, 用戶ID: ${userId}, 是否HR成員: ${isHRMember}`);
+      
+      // 調試：檢查是否有 paper-flow 申請
+      const paperFlowApps = allApplications.filter(app => app.is_paper_flow === true || app.flow_type === 'paper-flow');
+      console.log(`[getApprovalHistory] 發現 ${paperFlowApps.length} 個 paper-flow 申請:`, 
+        paperFlowApps.map(app => ({
+          id: app.id,
+          transaction_id: app.transaction_id,
+          is_paper_flow: app.is_paper_flow,
+          flow_type: app.flow_type,
+          status: app.status
+        }))
+      );
       
       for (const app of allApplications) {
         let isApprover = false;
@@ -219,7 +235,39 @@ class ApprovalController {
           isApprover = true;
         }
         
-        // 方法2：檢查是否通過授權群組批核過
+        // 方法2：檢查是否為 paper-flow 且用戶是 HR Group 成員
+        // paper-flow 申請由 HR Group 獲授權人提交後自動批准，應該顯示在批核記錄中
+        // 同時檢查 is_paper_flow 欄位和 flow_type 欄位（以防欄位未正確設置）
+        const isPaperFlow = app.is_paper_flow === true || app.flow_type === 'paper-flow';
+        
+        // 調試：記錄所有 paper-flow 申請
+        if (isPaperFlow) {
+          console.log(`[getApprovalHistory] 發現 paper-flow 申請:`, {
+            applicationId: app.id,
+            transaction_id: app.transaction_id,
+            is_paper_flow: app.is_paper_flow,
+            flow_type: app.flow_type,
+            status: app.status,
+            userId,
+            isHRMember,
+            currentIsApprover: isApprover
+          });
+        }
+        
+        if (!isApprover && isPaperFlow && app.status === 'approved' && isHRMember) {
+          isApprover = true;
+          console.log(`[getApprovalHistory] Paper-flow 申請匹配並加入批核記錄:`, {
+            applicationId: app.id,
+            transaction_id: app.transaction_id,
+            is_paper_flow: app.is_paper_flow,
+            flow_type: app.flow_type,
+            status: app.status,
+            userId,
+            isHRMember
+          });
+        }
+        
+        // 方法3：檢查是否通過授權群組批核過
         if (!isApprover && userDelegationGroupIds.length > 0) {
           const departmentGroups = await DepartmentGroup.findByUserId(app.user_id);
           if (departmentGroups && departmentGroups.length > 0) {
@@ -259,13 +307,17 @@ class ApprovalController {
       const formattedApplications = processedApplications.map(app => {
         // formatApplication 是模塊級函數，需要通過其他方式訪問
         // 暫時直接返回，因為數據已經包含所需字段
+        const isPaperFlow = app.is_paper_flow === true || app.flow_type === 'paper-flow';
         return {
           ...app,
           transaction_id: app.transaction_id || `LA-${String(app.id).padStart(6, '0')}`,
           applicant_name_zh: app.applicant_name_zh || app.user_name_zh,
-          days: app.days !== undefined && app.days !== null ? app.days : app.total_days
+          days: app.days !== undefined && app.days !== null ? app.days : app.total_days,
+          is_paper_flow: isPaperFlow // 確保前端能正確識別
         };
       });
+
+      console.log(`[getApprovalHistory] 最終返回 ${formattedApplications.length} 個申請，其中 paper-flow: ${formattedApplications.filter(a => a.is_paper_flow).length} 個`);
 
       res.json({ applications: formattedApplications });
     } catch (error) {

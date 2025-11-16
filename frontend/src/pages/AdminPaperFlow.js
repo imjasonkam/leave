@@ -37,6 +37,7 @@ const AdminPaperFlow = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [balance, setBalance] = useState(null);
+  const [files, setFiles] = useState([]);
 
   useEffect(() => {
     fetchLeaveTypes();
@@ -68,7 +69,14 @@ const AdminPaperFlow = () => {
   const fetchUsers = async () => {
     try {
       const response = await axios.get('/api/admin/users');
-      setUsers(response.data.users || []);
+      const usersList = response.data.users || [];
+      // 按 employee_number 排序
+      usersList.sort((a, b) => {
+        const aNum = a.employee_number || '';
+        const bNum = b.employee_number || '';
+        return aNum.localeCompare(bNum, undefined, { numeric: true, sensitivity: 'base' });
+      });
+      setUsers(usersList);
     } catch (error) {
       console.error('Fetch users error:', error);
     }
@@ -102,17 +110,29 @@ const AdminPaperFlow = () => {
     }
 
     try {
-      const submitData = {
-        user_id: formData.user_id,
-        leave_type_id: formData.leave_type_id,
-        start_date: formData.start_date.format('YYYY-MM-DD'),
-        end_date: formData.end_date.format('YYYY-MM-DD'),
-        total_days: parseFloat(formData.days),
-        reason: formData.reason || undefined,
-        flow_type: 'paper-flow'
-      };
+      const submitData = new FormData();
+      submitData.append('user_id', formData.user_id);
+      submitData.append('leave_type_id', formData.leave_type_id);
+      submitData.append('start_date', formData.start_date.format('YYYY-MM-DD'));
+      submitData.append('end_date', formData.end_date.format('YYYY-MM-DD'));
+      submitData.append('total_days', parseFloat(formData.days));
+      if (formData.reason) {
+        submitData.append('reason', formData.reason);
+      }
+      submitData.append('flow_type', 'paper-flow');
 
-      const response = await axios.post('/api/leaves', submitData);
+      // 附加檔案（包括拍照取得的圖片）
+      if (files && files.length > 0) {
+        files.forEach((file) => {
+          submitData.append('files', file);
+        });
+      }
+
+      const response = await axios.post('/api/leaves', submitData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
       setSuccess(`Paper Flow 申請已提交並批准，交易編號：${response.data.application.transaction_id}`);
       setFormData({
         user_id: '',
@@ -123,6 +143,7 @@ const AdminPaperFlow = () => {
         reason: ''
       });
       setBalance(null);
+      setFiles([]);
     } catch (error) {
       setError(error.response?.data?.message || '提交申請時發生錯誤');
     } finally {
@@ -165,7 +186,7 @@ const AdminPaperFlow = () => {
             >
               {users.map((u) => (
                 <MenuItem key={u.id} value={u.id}>
-                  {u.name_zh} ({u.employee_number})
+                  {u.employee_number} ({u.name_zh})
                 </MenuItem>
               ))}
             </Select>
@@ -203,6 +224,7 @@ const AdminPaperFlow = () => {
                   label="開始日期"
                   value={formData.start_date}
                   onChange={(date) => setFormData(prev => ({ ...prev, start_date: date }))}
+                  format="DD/MM/YYYY"
                   slotProps={{ textField: { fullWidth: true, required: true } }}
                 />
               </Grid>
@@ -211,6 +233,7 @@ const AdminPaperFlow = () => {
                   label="結束日期"
                   value={formData.end_date}
                   onChange={(date) => setFormData(prev => ({ ...prev, end_date: date }))}
+                  format="DD/MM/YYYY"
                   slotProps={{ textField: { fullWidth: true, required: true } }}
                   minDate={formData.start_date}
                 />
@@ -228,6 +251,76 @@ const AdminPaperFlow = () => {
             sx={{ mb: 2 }}
             inputProps={{ min: 0.5, step: 0.5 }}
           />
+
+          {/* 檔案 / 拍照上載區塊 */}
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle1" sx={{ mb: 1 }}>
+              上載紙本申請或拍照檔案（選填）
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+              <Button
+                variant="outlined"
+                component="label"
+              >
+                上載檔案
+                <input
+                  hidden
+                  type="file"
+                  multiple
+                  onChange={(e) => {
+                    const selectedFiles = Array.from(e.target.files || []);
+                    setFiles(prev => [...prev, ...selectedFiles]);
+                  }}
+                />
+              </Button>
+              <Button
+                variant="outlined"
+                component="label"
+              >
+                拍照上載
+                <input
+                  hidden
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  multiple={false}
+                  onChange={(e) => {
+                    const selectedFiles = Array.from(e.target.files || []);
+                    setFiles(prev => [...prev, ...selectedFiles]);
+                  }}
+                />
+              </Button>
+            </Box>
+
+            {files.length > 0 && (
+              <Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                  已選擇檔案：
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                  {files.map((file, index) => (
+                    <Box
+                      key={`${file.name}-${index}`}
+                      sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                    >
+                      <Typography variant="body2" noWrap sx={{ maxWidth: '70%' }}>
+                        {file.name}
+                      </Typography>
+                      <Button
+                        size="small"
+                        color="error"
+                        onClick={() => {
+                          setFiles(prev => prev.filter((_, i) => i !== index));
+                        }}
+                      >
+                        移除
+                      </Button>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            )}
+          </Box>
 
           <TextField
             fullWidth

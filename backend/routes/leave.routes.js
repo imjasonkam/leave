@@ -9,16 +9,19 @@ router.post('/', authenticate, upload.array('files', 50), leaveController.create
 router.get('/', authenticate, leaveController.getApplications);
 router.get('/balances', authenticate, leaveController.getBalances);
 router.get('/pending-approvals', authenticate, leaveController.getPendingApprovals);
-router.get('/:id', authenticate, leaveController.getApplicationById);
+
+// 文件相關路由（必須在 /:id 之前，按順序匹配）
+router.get('/documents/:id/download', authenticate, leaveController.downloadDocument);
+router.delete('/documents/:id', authenticate, leaveController.deleteDocument);
 
 // 文件上傳（支援多檔案）
 router.post('/:id/documents', authenticate, upload.array('files', 50), leaveController.uploadDocument);
 router.get('/:id/documents', authenticate, leaveController.getDocuments);
 
-// 文件下載
-router.get('/documents/:id/download', authenticate, leaveController.downloadDocument);
-
-// 取消假期
+// 取消假期（必須在 /:id 之前）
 router.post('/cancel', authenticate, leaveController.requestCancellation);
+
+// 獲取單個申請（必須在最後，因為會匹配所有 /:id 路徑）
+router.get('/:id', authenticate, leaveController.getApplicationById);
 
 module.exports = router;

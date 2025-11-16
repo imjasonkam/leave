@@ -19,10 +19,13 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  FormControlLabel,
+  Switch
 } from '@mui/material';
 import { Add as AddIcon, Edit as EditIcon } from '@mui/icons-material';
 import axios from 'axios';
+import { formatDate } from '../utils/dateFormat';
 
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
@@ -41,7 +44,8 @@ const AdminUsers = () => {
     password: '',
     department_id: '',
     position_id: '',
-    hire_date: ''
+    hire_date: '',
+    deactivated: false
   });
 
   const trimmedSearch = searchTerm.trim();
@@ -119,7 +123,8 @@ const AdminUsers = () => {
       password: '',
       department_id: '',
       position_id: '',
-      hire_date: ''
+      hire_date: '',
+      deactivated: false
     });
     setOpen(true);
   };
@@ -136,7 +141,8 @@ const AdminUsers = () => {
       password: '',
       department_id: userData.department_id || '',
       position_id: userData.position_id || '',
-      hire_date: userData.hire_date ? userData.hire_date.split('T')[0] : ''
+      hire_date: userData.hire_date ? userData.hire_date.split('T')[0] : '',
+      deactivated: !!userData.deactivated
     });
     setOpen(true);
   };
@@ -203,6 +209,7 @@ const AdminUsers = () => {
                 <TableCell>部門</TableCell>
                 <TableCell>職位</TableCell>
                 <TableCell>入職日期</TableCell>
+                <TableCell>帳戶狀態</TableCell>
                 <TableCell>操作</TableCell>
               </TableRow>
             </TableHead>
@@ -214,7 +221,10 @@ const AdminUsers = () => {
                   <TableCell>{u.email}</TableCell>
                   <TableCell>{u.department_name_zh || '-'}</TableCell>
                   <TableCell>{u.position_name_zh || '-'}</TableCell>
-                  <TableCell>{u.hire_date ? new Date(u.hire_date).toLocaleDateString('zh-TW') : '-'}</TableCell>
+                  <TableCell>{formatDate(u.hire_date)}</TableCell>
+                  <TableCell>
+                    {u.deactivated ? '已停用' : '啟用中'}
+                  </TableCell>
                   <TableCell>
                     <IconButton size="small" onClick={() => handleEdit(u)}>
                       <EditIcon />
@@ -311,6 +321,18 @@ const AdminUsers = () => {
               InputLabelProps={{
                 shrink: true
               }}
+            />
+            <FormControlLabel
+              control={(
+                <Switch
+                  checked={formData.deactivated}
+                  onChange={(e) =>
+                    setFormData(prev => ({ ...prev, deactivated: e.target.checked }))
+                  }
+                  color="error"
+                />
+              )}
+              label={formData.deactivated ? '帳戶已停用（無法登入）' : '帳戶啟用中'}
             />
           </Box>
         </DialogContent>

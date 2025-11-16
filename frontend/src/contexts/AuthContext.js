@@ -94,6 +94,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     changePassword,
+    isDeactivated: !!user?.deactivated,
     isSystemAdmin: user?.is_system_admin,
     isDeptHead: user?.is_dept_head
   };

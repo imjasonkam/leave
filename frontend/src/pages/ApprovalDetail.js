@@ -28,6 +28,7 @@ import {
 import { Visibility as VisibilityIcon, GetApp as GetAppIcon, Description as DescriptionIcon, Image as ImageIcon, Close as CloseIcon } from '@mui/icons-material';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { formatDateTime, formatDate } from '../utils/dateFormat';
 
 const ApprovalDetail = () => {
   const { id } = useParams();
@@ -325,10 +326,10 @@ const ApprovalDetail = () => {
                 <ListItemText primary="假期類型" secondary={application.leave_type_name_zh} />
               </ListItem>
               <ListItem>
-                <ListItemText primary="開始日期" secondary={application.start_date} />
+                <ListItemText primary="開始日期" secondary={formatDate(application.start_date)} />
               </ListItem>
               <ListItem>
-                <ListItemText primary="結束日期" secondary={application.end_date} />
+                <ListItemText primary="結束日期" secondary={formatDate(application.end_date)} />
               </ListItem>
               <ListItem>
                 <ListItemText primary="天數" secondary={application.days} />
@@ -358,10 +359,10 @@ const ApprovalDetail = () => {
             <List>
               <ListItem>
                 <ListItemText
-                  primary="檢查"
+                  primary="待核實"
                   secondary={
                     application.checker_at 
-                      ? `已檢查於 ${application.checker_at}${application.checker_name ? ` - ${application.checker_name}` : ''}` 
+                      ? `已檢查於 ${formatDateTime(application.checker_at)}${application.checker_name ? ` - ${application.checker_name}` : ''}` 
                       : '待檢查'
                   }
                 />
@@ -373,10 +374,10 @@ const ApprovalDetail = () => {
               </ListItem>
               <ListItem>
                 <ListItemText
-                  primary="第一批核"
+                  primary="首階段批核"
                   secondary={
                     application.approver_1_at 
-                      ? `已批核於 ${application.approver_1_at}${application.approver_1_name ? ` - ${application.approver_1_name}` : ''}` 
+                      ? `已批核於 ${formatDateTime(application.approver_1_at)}${application.approver_1_name ? ` - ${application.approver_1_name}` : ''}` 
                       : application.checker_at ? '待批核' : '未開始'
                   }
                 />
@@ -388,10 +389,10 @@ const ApprovalDetail = () => {
               </ListItem>
               <ListItem>
                 <ListItemText
-                  primary="第二批核"
+                  primary="次階段批核"
                   secondary={
                     application.approver_2_at 
-                      ? `已批核於 ${application.approver_2_at}${application.approver_2_name ? ` - ${application.approver_2_name}` : ''}` 
+                      ? `已批核於 ${formatDateTime(application.approver_2_at)}${application.approver_2_name ? ` - ${application.approver_2_name}` : ''}` 
                       : application.approver_1_at ? '待批核' : '未開始'
                   }
                 />
@@ -403,10 +404,10 @@ const ApprovalDetail = () => {
               </ListItem>
               <ListItem>
                 <ListItemText
-                  primary="第三批核 (HR)"
+                  primary="最終批核"
                   secondary={
                     application.approver_3_at 
-                      ? `已批核於 ${application.approver_3_at}${application.approver_3_name ? ` - ${application.approver_3_name}` : ''}` 
+                      ? `已批核於 ${formatDateTime(application.approver_3_at)}${application.approver_3_name ? ` - ${application.approver_3_name}` : ''}` 
                       : application.approver_2_at ? '待批核' : '未開始'
                   }
                 />
@@ -420,7 +421,7 @@ const ApprovalDetail = () => {
                 <ListItem>
                   <ListItemText
                     primary="拒絕"
-                    secondary={`已拒絕於 ${application.rejected_at || ''} - ${application.rejected_by_name}`}
+                    secondary={`已拒絕於 ${formatDateTime(application.rejected_at)} - ${application.rejected_by_name}`}
                   />
                   {application.rejection_reason && (
                     <Typography variant="body2" color="text.secondary">

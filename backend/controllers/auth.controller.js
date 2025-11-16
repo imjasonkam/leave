@@ -36,6 +36,12 @@ class AuthController {
         return res.status(401).json({ message: '無效的員工編號或密碼' });
       }
 
+      // 檢查帳戶是否已停用
+      if (user.deactivated) {
+        console.log('❌ User account deactivated for employee_number:', employee_number);
+        return res.status(403).json({ message: '此帳戶已被停用，無法登入' });
+      }
+
       console.log('Comparing password...');
       const isValidPassword = await comparePassword(password, user.password_hash);
       console.log('Password match result:', isValidPassword);
@@ -73,7 +79,7 @@ class AuthController {
         (group.approver_3_id && delegationGroupIds.includes(Number(group.approver_3_id)))
       );
 
-      // 準備用戶數據
+      // 準備用戶數據（包含 deactivated 狀態）
       const userData = {
         id: user.id,
         employee_number: user.employee_number,
@@ -88,6 +94,7 @@ class AuthController {
         position_id: user.position_id || null,
         position_name: user.position_name || null,
         position_name_zh: user.position_name_zh || null,
+        deactivated: !!user.deactivated,
         is_system_admin: isHRMember,
         is_dept_head: isDeptHead,
         is_hr_member: isHRMember,
@@ -185,6 +192,7 @@ class AuthController {
           position_id: user.position_id,
           position_name: user.position_name,
           position_name_zh: user.position_name_zh,
+          deactivated: !!user.deactivated,
           is_system_admin: isHRMember,
           is_dept_head: isDeptHead,
           is_hr_member: isHRMember,

@@ -1,6 +1,7 @@
 const User = require('../database/models/User');
 const LeaveType = require('../database/models/LeaveType');
 const LeaveBalance = require('../database/models/LeaveBalance');
+const LeaveBalanceTransaction = require('../database/models/LeaveBalanceTransaction');
 const Department = require('../database/models/Department');
 const Position = require('../database/models/Position');
 const { hashPassword } = require('../utils/password');
@@ -19,7 +20,8 @@ class AdminController {
         password,
         department_id,
         position_id,
-        hire_date
+        hire_date,
+        deactivated
       } = req.body;
 
       if (!employee_number || !surname || !given_name || !name_zh || !email || !password) {
@@ -48,7 +50,9 @@ class AdminController {
         password_hash: passwordHash,
         department_id: department_id || null,
         position_id: position_id || null,
-        hire_date: hire_date || null
+        hire_date: hire_date || null,
+        // 帳戶是否停用（預設為未停用，可由 HR/System Admin 指定）
+        deactivated: deactivated !== undefined ? !!deactivated : false
       };
 
       const user = await User.create(userData);
@@ -169,17 +173,133 @@ class AdminController {
         return res.status(400).json({ message: '請填寫所有必填欄位' });
       }
 
-      const balanceRecord = await LeaveBalance.updateOrCreate(user_id, leave_type_id, currentYear, {
-        balance: parseFloat(balance)
-      });
+      // 獲取當前總餘額
+      const currentTotal = await LeaveBalanceTransaction.getTotalBalance(
+        user_id,
+        leave_type_id,
+        currentYear
+      );
+      
+      // 計算需要添加的數量
+      const amount = parseFloat(balance) - currentTotal;
+      
+      if (amount !== 0) {
+        // 創建交易記錄
+        await LeaveBalanceTransaction.create({
+          user_id,
+          leave_type_id,
+          year: currentYear,
+          amount,
+          remarks: `管理員設定餘額`,
+          created_by_id: req.user.id
+        });
+      }
+
+      // 獲取更新後的餘額信息
+      const balanceInfo = await LeaveBalance.findByUserAndType(
+        user_id,
+        leave_type_id,
+        currentYear
+      );
 
       res.json({
         message: '假期餘額已更新',
-        balance: balanceRecord
+        balance: balanceInfo
       });
     } catch (error) {
       console.error('Update balance error:', error);
       res.status(500).json({ message: '更新假期餘額時發生錯誤', error: error.message });
+    }
+  }
+
+  async addBalanceTransaction(req, res) {
+    try {
+      const { user_id, leave_type_id, amount, year, remarks, start_date, end_date } = req.body;
+      const currentYear = year || new Date().getFullYear();
+
+      console.log('addBalanceTransaction request:', { user_id, leave_type_id, amount, year: currentYear, start_date, end_date });
+
+      if (!user_id || !leave_type_id || amount === undefined || parseFloat(amount) === 0) {
+        return res.status(400).json({ message: '請填寫所有必填欄位，且數量不能為0' });
+      }
+
+      // 驗證日期範圍
+      if (start_date && end_date && new Date(start_date) > new Date(end_date)) {
+        return res.status(400).json({ message: '有效開始日期不能晚於結束日期' });
+      }
+
+      // 創建交易記錄
+      const transaction = await LeaveBalanceTransaction.create({
+        user_id,
+        leave_type_id,
+        year: currentYear,
+        amount: parseFloat(amount),
+        start_date: start_date || null,
+        end_date: end_date || null,
+        remarks: remarks || null,
+        created_by_id: req.user.id
+      });
+
+      console.log('Transaction created:', transaction);
+
+      // 獲取更新後的餘額信息
+      const balanceInfo = await LeaveBalance.findByUserAndType(
+        user_id,
+        leave_type_id,
+        currentYear
+      );
+
+      console.log('Balance info:', balanceInfo);
+
+      res.json({
+        message: '假期餘額交易已添加',
+        transaction,
+        balance: balanceInfo
+      });
+    } catch (error) {
+      console.error('Add balance transaction error:', error);
+      console.error('Error stack:', error.stack);
+      res.status(500).json({ 
+        message: '添加假期餘額交易時發生錯誤', 
+        error: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
+    }
+  }
+
+  async getBalanceTransactions(req, res) {
+    try {
+      const { user_id, leave_type_id, year } = req.query;
+      const currentYear = year || new Date().getFullYear();
+
+      console.log('getBalanceTransactions request:', { user_id, leave_type_id, year: currentYear });
+
+      if (!user_id) {
+        return res.status(400).json({ message: '請提供用戶ID' });
+      }
+
+      let transactions;
+      if (leave_type_id) {
+        transactions = await LeaveBalanceTransaction.findByUserAndType(
+          user_id,
+          leave_type_id,
+          currentYear
+        );
+      } else {
+        transactions = await LeaveBalanceTransaction.findByUser(user_id, currentYear);
+      }
+
+      console.log('Transactions found:', transactions?.length || 0);
+
+      res.json({ transactions: transactions || [], year: currentYear });
+    } catch (error) {
+      console.error('Get balance transactions error:', error);
+      console.error('Error stack:', error.stack);
+      res.status(500).json({ 
+        message: '獲取假期餘額交易記錄時發生錯誤', 
+        error: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
     }
   }
 

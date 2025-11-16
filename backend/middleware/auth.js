@@ -17,6 +17,11 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ message: '用戶不存在' });
     }
 
+    // 如果帳戶已停用，拒絕所有後續請求
+    if (user.deactivated) {
+      return res.status(403).json({ message: '此帳戶已被停用' });
+    }
+
     // 根據群組資料設定權限
     const [delegationGroups, departmentGroups] = await Promise.all([
       User.getDelegationGroups(user.id),

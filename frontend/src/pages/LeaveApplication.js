@@ -17,7 +17,9 @@ import {
   ListItem,
   ListItemText,
   IconButton,
-  LinearProgress
+  LinearProgress,
+  FormControlLabel,
+  Switch
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -42,6 +44,7 @@ const LeaveApplication = () => {
   const [success, setSuccess] = useState('');
   const [balance, setBalance] = useState(null);
   const [files, setFiles] = useState([]);
+  const [includeWeekends, setIncludeWeekends] = useState(true); // 預設包含週末
 
   useEffect(() => {
     fetchLeaveTypes();
@@ -53,12 +56,39 @@ const LeaveApplication = () => {
     }
   }, [formData.leave_type_id, user.id]);
 
+  // 計算工作日（排除週末）
+  const calculateWorkingDays = (startDate, endDate) => {
+    if (!startDate || !endDate) return 0;
+    
+    let count = 0;
+    let current = dayjs(startDate);
+    const end = dayjs(endDate);
+    
+    // 使用 isBefore 和 isSame 來替代 isSameOrBefore
+    while (current.isBefore(end, 'day') || current.isSame(end, 'day')) {
+      const dayOfWeek = current.day(); // 0 = Sunday, 6 = Saturday
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        count++;
+      }
+      current = current.add(1, 'day');
+    }
+    
+    return count;
+  };
+
   useEffect(() => {
     if (formData.start_date && formData.end_date) {
-      const days = formData.end_date.diff(formData.start_date, 'day') + 1;
-      setFormData(prev => ({ ...prev, days: days.toString() }));
+      let days;
+      if (includeWeekends) {
+        // 包含週末：計算總天數
+        days = formData.end_date.diff(formData.start_date, 'day') + 1;
+      } else {
+        // 不包含週末：只計算工作日
+        days = calculateWorkingDays(formData.start_date, formData.end_date);
+      }
+      setFormData(prev => ({ ...prev, days: days > 0 ? days.toString() : '' }));
     }
-  }, [formData.start_date, formData.end_date]);
+  }, [formData.start_date, formData.end_date, includeWeekends]);
 
   const fetchLeaveTypes = async () => {
     try {
@@ -188,6 +218,7 @@ const LeaveApplication = () => {
       });
       setFiles([]);
       setBalance(null);
+      setIncludeWeekends(true); // 重置為預設值
     } catch (error) {
       setError(error.response?.data?.message || '提交申請時發生錯誤');
     } finally {
@@ -250,6 +281,7 @@ const LeaveApplication = () => {
                   label="開始日期"
                   value={formData.start_date}
                   onChange={(date) => setFormData(prev => ({ ...prev, start_date: date }))}
+                  format="DD/MM/YYYY"
                   slotProps={{ textField: { fullWidth: true, required: true } }}
                 />
               </Grid>
@@ -258,12 +290,31 @@ const LeaveApplication = () => {
                   label="結束日期"
                   value={formData.end_date}
                   onChange={(date) => setFormData(prev => ({ ...prev, end_date: date }))}
+                  format="DD/MM/YYYY"
                   slotProps={{ textField: { fullWidth: true, required: true } }}
                   minDate={formData.start_date}
                 />
               </Grid>
             </Grid>
           </LocalizationProvider>
+
+          <Box sx={{ mb: 2 }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={includeWeekends}
+                  onChange={(e) => setIncludeWeekends(e.target.checked)}
+                  color="primary"
+                />
+              }
+              label="計算星期六及星期日"
+            />
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+              {includeWeekends 
+                ? '將計算開始日期至結束日期之間的所有天數（包括星期六及星期日）'
+                : '只計算工作日（星期一至星期五），星期六及星期日將不計入假期天數'}
+            </Typography>
+          </Box>
 
           <TextField
             fullWidth

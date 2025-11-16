@@ -18,6 +18,7 @@ import { Search as SearchIcon } from '@mui/icons-material';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { formatDate } from '../utils/dateFormat';
 
 const LeaveHistory = () => {
   const { user, isSystemAdmin, isDeptHead } = useAuth();
@@ -131,8 +132,8 @@ const LeaveHistory = () => {
                     <TableCell>{app.transaction_id}</TableCell>
                     <TableCell>{app.applicant_name_zh}</TableCell>
                     <TableCell>{app.leave_type_name_zh}</TableCell>
-                    <TableCell>{app.start_date}</TableCell>
-                    <TableCell>{app.end_date}</TableCell>
+                    <TableCell>{formatDate(app.start_date)}</TableCell>
+                    <TableCell>{formatDate(app.end_date)}</TableCell>
                     <TableCell>{app.days}</TableCell>
                     <TableCell>
                       <Chip

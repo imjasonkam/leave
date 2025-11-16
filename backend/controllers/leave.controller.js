@@ -63,7 +63,8 @@ class LeaveController {
         total_days: parseFloat(total_days),
         reason: reason || null,
         status: actualFlowType === 'paper-flow' ? 'approved' : 'pending',
-        flow_type: actualFlowType
+        flow_type: actualFlowType,
+        is_paper_flow: actualFlowType === 'paper-flow' // 標記是否為 paper-flow
       };
 
       // 如果是 e-flow，設定批核流程
@@ -309,11 +310,19 @@ class LeaveController {
         return res.status(404).json({ message: '申請不存在' });
       }
 
-      // 只有申請人或批核者可以上傳檔案
+      // 檢查權限：申請人、批核者、HR Group 獲授權人都可以上傳檔案
       const isApplicant = application.user_id === req.user.id;
       const canApprove = await User.canApprove(req.user.id, id);
+      const isHRMember = await User.isHRMember(req.user.id);
+      const isSystemAdmin = req.user.is_system_admin;
 
-      if (!isApplicant && !canApprove && application.status !== 'pending') {
+      // 允許條件：
+      // 1. 申請人、批核者、系統管理員（任何狀態）
+      // 2. HR Group 獲授權人（任何狀態，包括已批核）
+      // 3. 待批核狀態（任何人都可以上傳）
+      const canUpload = isApplicant || canApprove || isHRMember || isSystemAdmin || application.status === 'pending';
+
+      if (!canUpload) {
         return res.status(403).json({ message: '無權限上載檔案到此申請' });
       }
 
@@ -414,6 +423,70 @@ class LeaveController {
     } catch (error) {
       console.error('Download document error:', error);
       res.status(500).json({ message: '查看檔案時發生錯誤' });
+    }
+  }
+
+  async deleteDocument(req, res) {
+    try {
+      // 支援兩種參數名稱：documentId 或 id（與下載路由保持一致）
+      const documentId = req.params.documentId || req.params.id;
+      console.log(`[deleteDocument] 收到刪除請求，documentId: ${documentId}, userId: ${req.user.id}`);
+      
+      if (!documentId) {
+        return res.status(400).json({ message: '缺少檔案 ID' });
+      }
+
+      const document = await LeaveDocument.findById(documentId);
+      console.log(`[deleteDocument] 查詢檔案結果:`, document ? `找到檔案 ID: ${document.id}` : '檔案不存在');
+
+      if (!document) {
+        return res.status(404).json({ message: '檔案不存在' });
+      }
+
+      const application = await LeaveApplication.findById(document.leave_application_id);
+      console.log(`[deleteDocument] 查詢申請結果:`, application ? `找到申請 ID: ${application.id}, 狀態: ${application.status}` : '申請不存在');
+
+      if (!application) {
+        return res.status(404).json({ message: '申請不存在' });
+      }
+
+      // 檢查權限：只有 HR Group 獲授權人可以刪除已批核申請的檔案
+      const isHRMember = await User.isHRMember(req.user.id);
+      const isSystemAdmin = req.user.is_system_admin;
+      console.log(`[deleteDocument] 權限檢查: isHRMember=${isHRMember}, isSystemAdmin=${isSystemAdmin}`);
+
+      // 只有 HR Group 獲授權人或系統管理員可以刪除已批核申請的檔案
+      if (!isHRMember && !isSystemAdmin) {
+        console.log(`[deleteDocument] 權限不足，拒絕刪除`);
+        return res.status(403).json({ message: '只有 HR Group 獲授權人可以刪除已批核申請的檔案' });
+      }
+
+      // 只有已批核的申請才能被 HR Group 獲授權人刪除檔案
+      if (application.status !== 'approved') {
+        console.log(`[deleteDocument] 申請狀態不是已批核，當前狀態: ${application.status}`);
+        return res.status(403).json({ message: '只能刪除已批核申請的檔案' });
+      }
+
+      // 只刪除資料庫記錄，不刪除實體檔案
+      const deleteResult = await LeaveDocument.delete(documentId);
+      console.log(`[deleteDocument] 資料庫記錄刪除結果:`, deleteResult);
+
+      if (deleteResult === 0) {
+        return res.status(404).json({ message: '檔案記錄不存在或已被刪除' });
+      }
+
+      res.json({
+        message: '檔案已刪除',
+        documentId: documentId
+      });
+    } catch (error) {
+      console.error('[deleteDocument] 刪除檔案時發生錯誤:', error);
+      console.error('[deleteDocument] 錯誤堆疊:', error.stack);
+      res.status(500).json({ 
+        message: '刪除檔案時發生錯誤', 
+        error: error.message,
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
     }
   }
 

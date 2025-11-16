@@ -79,7 +79,14 @@ const AdminGroups = () => {
   const fetchUsers = async () => {
     try {
       const response = await axios.get('/api/admin/users');
-      setUsers(response.data.users || []);
+      const usersList = response.data.users || [];
+      // 按 employee_number 排序
+      usersList.sort((a, b) => {
+        const aNum = a.employee_number || '';
+        const bNum = b.employee_number || '';
+        return aNum.localeCompare(bNum, undefined, { numeric: true, sensitivity: 'base' });
+      });
+      setUsers(usersList);
     } catch (error) {
       console.error('Fetch users error:', error);
     }
@@ -167,7 +174,14 @@ const AdminGroups = () => {
     try {
       const endpoint = type === 'department' ? '/api/groups/department' : '/api/groups/delegation';
       const response = await axios.get(`${endpoint}/${group.id}/members`);
-      setGroupMembers(response.data.members || []);
+      const members = response.data.members || [];
+      // 按 employee_number 排序
+      members.sort((a, b) => {
+        const aNum = a.employee_number || '';
+        const bNum = b.employee_number || '';
+        return aNum.localeCompare(bNum, undefined, { numeric: true, sensitivity: 'base' });
+      });
+      setGroupMembers(members);
       setMembersDialogOpen(true);
     } catch (error) {
       console.error('Fetch members error:', error);
@@ -427,7 +441,7 @@ const AdminGroups = () => {
               >
                 {users.filter(u => !groupMembers.find(m => m.id === u.id)).map((user) => (
                   <MenuItem key={user.id} value={user.id}>
-                    {user.name_zh} ({user.employee_number})
+                    {user.employee_number} ({user.name_zh})
                   </MenuItem>
                 ))}
               </Select>
@@ -438,7 +452,7 @@ const AdminGroups = () => {
             {groupMembers.map((member) => (
               <ListItem key={member.id}>
                 <ListItemText
-                  primary={`${member.name_zh} (${member.employee_number})`}
+                  primary={`${member.employee_number} (${member.name_zh})`}
                   secondary={member.department_name_zh}
                 />
                 <ListItemSecondaryAction>

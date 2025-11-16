@@ -2,8 +2,8 @@ const bcrypt = require('bcryptjs');
 
 exports.seed = async function (knex) {
   // 清空所有表（注意順序，避免外鍵約束問題）
+  await knex('leave_balance_transactions').del();
   await knex('leave_applications').del();
-  await knex('leave_balances').del();
   await knex('users').del();
   await knex('department_groups').del();
   await knex('delegation_groups').del();
@@ -553,7 +553,8 @@ exports.seed = async function (knex) {
     { code: 'AL', name: 'Annual Leave', name_zh: '年假', requires_balance: true },
     { code: 'BL', name: 'Birthday Leave', name_zh: '生日假', requires_balance: true },
     { code: 'CL', name: 'Compensatory Leave', name_zh: '補假', requires_balance: true },
-    { code: 'PSL', name: 'Paid Sick Leave', name_zh: '全薪病假', requires_balance: true },
+    { code: 'FPSL', name: 'Paid Sick Leave', name_zh: '全薪病假', requires_balance: true },
+    { code: 'SASL', name: 'Sick Leave (Sickness Allowance)', name_zh: '病假 (疾病津貼)', requires_balance: true },
     { code: 'MGL', name: 'Marriage Leave', name_zh: '婚假', requires_balance: false },
     { code: 'MTL', name: 'Maternity Leave', name_zh: '產假', requires_balance: false },
     { code: 'PTL', name: 'Paternity Leave', name_zh: '侍產假', requires_balance: false },
@@ -585,6 +586,7 @@ exports.seed = async function (knex) {
       department_id: hrDept.id,
       position_id: managerPos.id,
       hire_date: '2020-01-01',
+      deactivated: false,
       created_at: '2025-11-09 10:00:50.179784+00',
       updated_at: '2025-11-09 10:00:50.179784+00'
     },
@@ -7304,35 +7306,44 @@ exports.seed = async function (knex) {
   const sickLeave = leaveTypes.find(lt => lt.code === 'PSL');
 
   // 為測試用戶建立假期餘額（使用 transaction 方式）
-  // 注意：實際的餘額應該通過 leave_balances 表和 transactions 來管理
-  // await knex('leave_balances').insert([
+  // 注意：現在使用 leave_balance_transactions 表來管理餘額
+  // 如果需要為測試用戶添加初始餘額，可以使用以下方式：
+  // await knex('leave_balance_transactions').insert([
   //   {
   //     user_id: john.id,
   //     leave_type_id: annualLeave.id,
   //     year: 2025,
-  //     balance: 14.0,
-  //     taken: 0.0
+  //     amount: 14.0,
+  //     start_date: '2025-01-01', // 假期有效開始日期
+  //     end_date: '2025-12-31', // 假期有效結束日期
+  //     remarks: '年度假期配額'
   //   },
   //   {
   //     user_id: john.id,
   //     leave_type_id: sickLeave.id,
   //     year: 2025,
-  //     balance: 12.0,
-  //     taken: 0.0
+  //     amount: 12.0,
+  //     start_date: '2025-01-01',
+  //     end_date: '2025-12-31',
+  //     remarks: '病假配額'
   //   },
   //   {
   //     user_id: jason.id,
   //     leave_type_id: annualLeave.id,
   //     year: 2025,
-  //     balance: 14.0,
-  //     taken: 0.0
+  //     amount: 14.0,
+  //     start_date: '2025-01-01',
+  //     end_date: '2025-12-31',
+  //     remarks: '年度假期配額'
   //   },
   //   {
   //     user_id: jason.id,
   //     leave_type_id: sickLeave.id,
   //     year: 2025,
-  //     balance: 12.0,
-  //     taken: 0.0
+  //     amount: 12.0,
+  //     start_date: '2025-01-01',
+  //     end_date: '2025-12-31',
+  //     remarks: '病假配額'
   //   }
   // ]);
 };

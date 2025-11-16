@@ -1,16 +1,11 @@
+// 此 migration 已被廢棄，leave_balances 表不再使用
+// 現在使用 leave_balance_transactions 表來管理假期餘額
 exports.up = function(knex) {
-  return knex.schema.createTable('leave_balances', function(table) {
-    table.increments('id').primary();
-    table.integer('user_id').unsigned().notNullable().references('id').inTable('users').onDelete('CASCADE');
-    table.integer('leave_type_id').unsigned().notNullable().references('id').inTable('leave_types').onDelete('CASCADE');
-    table.decimal('balance', 10, 2).defaultTo(0);
-    table.decimal('taken', 10, 2).defaultTo(0);
-    table.integer('year').notNullable();
-    table.unique(['user_id', 'leave_type_id', 'year']);
-    table.timestamps(true, true);
-  });
+  // 空操作，不再創建 leave_balances 表
+  return Promise.resolve();
 };
 
 exports.down = function(knex) {
-  return knex.schema.dropTable('leave_balances');
+  // 空操作
+  return Promise.resolve();
 };
