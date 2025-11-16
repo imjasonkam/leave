@@ -58,6 +58,17 @@ class UserController {
       res.status(500).json({ message: '獲取部門用戶列表時發生錯誤' });
     }
   }
+
+  async checkCanApprove(req, res) {
+    try {
+      const { id } = req.params;
+      const canApprove = await User.canApprove(req.user.id, id);
+      res.json({ canApprove });
+    } catch (error) {
+      console.error('Check can approve error:', error);
+      res.status(500).json({ message: '檢查批核權限時發生錯誤' });
+    }
+  }
 }
 
 module.exports = new UserController();

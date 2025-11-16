@@ -30,39 +30,107 @@ const ApprovalDetail = () => {
   const [action, setAction] = useState('approve');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [canApproveThis, setCanApproveThis] = useState(false);
+  const [userApprovalStage, setUserApprovalStage] = useState(null);
 
   useEffect(() => {
     fetchApplication();
   }, [id]);
 
+  useEffect(() => {
+    if (application && user) {
+      checkCanApprove();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [application, user, id]);
+
   const fetchApplication = async () => {
     try {
       setLoading(true);
+      setError('');
       const response = await axios.get(`/api/leaves/${id}`);
       setApplication(response.data.application);
     } catch (error) {
       console.error('Fetch application error:', error);
+      if (error.response?.status === 403) {
+        setError('無權限查看此申請');
+      } else if (error.response?.status === 404) {
+        setError('申請不存在');
+      } else {
+        setError('獲取申請詳情時發生錯誤');
+      }
+      setApplication(null);
     } finally {
       setLoading(false);
     }
   };
 
   const getCurrentStage = (app) => {
-    if (!app.checked_at) return { stage: 'checker', text: '檢查' };
-    if (!app.approved_1_at) return { stage: 'approver_1', text: '第一批核' };
-    if (!app.approved_2_at) return { stage: 'approver_2', text: '第二批核' };
-    if (!app.approved_3_at) return { stage: 'approver_3', text: '第三批核' };
+    if (!app.checker_at && app.checker_id) return { stage: 'checker', text: '檢查' };
+    if (!app.approver_1_at && app.approver_1_id) return { stage: 'approver_1', text: '第一批核' };
+    if (!app.approver_2_at && app.approver_2_id) return { stage: 'approver_2', text: '第二批核' };
+    if (!app.approver_3_at && app.approver_3_id) return { stage: 'approver_3', text: '第三批核' };
     return { stage: 'completed', text: '已完成' };
   };
 
-  const canApprove = (app) => {
-    if (!app) return false;
-    const { stage } = getCurrentStage(app);
-    if (stage === 'checker' && app.checker_id === user.id) return true;
-    if (stage === 'approver_1' && app.approver_1_id === user.id) return true;
-    if (stage === 'approver_2' && app.approver_2_id === user.id) return true;
-    if (stage === 'approver_3' && app.approver_3_id === user.id) return true;
-    return false;
+  const checkCanApprove = async () => {
+    if (!application || application.status !== 'pending') {
+      setCanApproveThis(false);
+      setUserApprovalStage(null);
+      return;
+    }
+    
+    // 檢查是否直接設置為批核者
+    const { stage } = getCurrentStage(application);
+    const isDirectApprover = 
+      (stage === 'checker' && application.checker_id === user?.id) ||
+      (stage === 'approver_1' && application.approver_1_id === user?.id) ||
+      (stage === 'approver_2' && application.approver_2_id === user?.id) ||
+      (stage === 'approver_3' && application.approver_3_id === user?.id);
+    
+    if (isDirectApprover) {
+      setCanApproveThis(true);
+      setUserApprovalStage(stage);
+      return;
+    }
+    
+    // 優先檢查：如果用戶是 HR Group 成員，且申請已設置 approver_3_id 但尚未批核
+    // HR Group 成員應該能夠批核所有申請的 approver_3 階段
+    if (application.approver_3_id && !application.approver_3_at) {
+      const isHRMember = user?.is_hr_member || user?.is_system_admin;
+      if (isHRMember) {
+        setCanApproveThis(true);
+        setUserApprovalStage('approver_3');
+        return;
+      }
+    }
+    
+    // 如果直接檢查不通過，通過後端 API 檢查（包括授權群組成員的情況）
+    // 這個 API 會檢查用戶是否屬於任何階段的授權群組，包括 approver_3
+    // 後端已經處理了所有情況，包括 HR 群組（approver_3）的特殊情況
+    try {
+      const response = await axios.get(`/api/users/can-approve/${id}`);
+      const canApprove = response.data.canApprove || false;
+      setCanApproveThis(canApprove);
+      
+      // 如果用戶可以批核，確定用戶應該批核的階段
+      if (canApprove) {
+        // 如果申請已設置 approver_3_id 且尚未批核，且用戶不是直接設置的批核者，
+        // 那麼用戶可能是 approver_3 群組成員
+        if (application.approver_3_id && !application.approver_3_at && application.approver_3_id !== user?.id) {
+          setUserApprovalStage('approver_3');
+        } else {
+          // 否則使用當前階段
+          setUserApprovalStage(stage);
+        }
+      } else {
+        setUserApprovalStage(null);
+      }
+    } catch (error) {
+      console.error('Check approval permission error:', error);
+      setCanApproveThis(false);
+      setUserApprovalStage(null);
+    }
   };
 
   const handleSubmit = async () => {
@@ -73,11 +141,9 @@ const ApprovalDetail = () => {
     setApproving(true);
 
     try {
-      const { stage } = getCurrentStage(application);
       await axios.post(`/api/approvals/${id}/approve`, {
         action,
-        stage,
-        comment
+        remarks: comment
       });
 
       setSuccess(action === 'approve' ? '批核成功' : '已拒絕');
@@ -100,7 +166,13 @@ const ApprovalDetail = () => {
   }
 
   const { stage, text } = getCurrentStage(application);
-  const canApproveThis = canApprove(application);
+  // 如果用戶有特定的批核階段，使用該階段；否則使用當前階段
+  const displayStage = userApprovalStage || stage;
+  const displayText = userApprovalStage === 'checker' ? '檢查' :
+                      userApprovalStage === 'approver_1' ? '第一批核' :
+                      userApprovalStage === 'approver_2' ? '第二批核' :
+                      userApprovalStage === 'approver_3' ? '第三批核' :
+                      text;
 
   return (
     <Box>
@@ -172,44 +244,44 @@ const ApprovalDetail = () => {
               <ListItem>
                 <ListItemText
                   primary="檢查"
-                  secondary={application.checked_at ? `已檢查於 ${application.checked_at}` : '待檢查'}
+                  secondary={application.checker_at ? `已檢查於 ${application.checker_at}` : '待檢查'}
                 />
-                {application.checker_comment && (
+                {application.checker_remarks && (
                   <Typography variant="body2" color="text.secondary">
-                    {application.checker_comment}
+                    {application.checker_remarks}
                   </Typography>
                 )}
               </ListItem>
               <ListItem>
                 <ListItemText
                   primary="第一批核"
-                  secondary={application.approved_1_at ? `已批核於 ${application.approved_1_at}` : '待批核'}
+                  secondary={application.approver_1_at ? `已批核於 ${application.approver_1_at}` : '待批核'}
                 />
-                {application.approver_1_comment && (
+                {application.approver_1_remarks && (
                   <Typography variant="body2" color="text.secondary">
-                    {application.approver_1_comment}
+                    {application.approver_1_remarks}
                   </Typography>
                 )}
               </ListItem>
               <ListItem>
                 <ListItemText
                   primary="第二批核"
-                  secondary={application.approved_2_at ? `已批核於 ${application.approved_2_at}` : application.approved_1_at ? '待批核' : '未開始'}
+                  secondary={application.approver_2_at ? `已批核於 ${application.approver_2_at}` : application.approver_1_at ? '待批核' : '未開始'}
                 />
-                {application.approver_2_comment && (
+                {application.approver_2_remarks && (
                   <Typography variant="body2" color="text.secondary">
-                    {application.approver_2_comment}
+                    {application.approver_2_remarks}
                   </Typography>
                 )}
               </ListItem>
               <ListItem>
                 <ListItemText
                   primary="第三批核 (HR)"
-                  secondary={application.approved_3_at ? `已批核於 ${application.approved_3_at}` : application.approved_2_at ? '待批核' : '未開始'}
+                  secondary={application.approver_3_at ? `已批核於 ${application.approver_3_at}` : application.approver_2_at ? '待批核' : '未開始'}
                 />
-                {application.approver_3_comment && (
+                {application.approver_3_remarks && (
                   <Typography variant="body2" color="text.secondary">
-                    {application.approver_3_comment}
+                    {application.approver_3_remarks}
                   </Typography>
                 )}
               </ListItem>
@@ -225,7 +297,7 @@ const ApprovalDetail = () => {
                   批核操作
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  當前階段：{text}
+                  批核階段：{displayText}
                 </Typography>
 
                 <TextField

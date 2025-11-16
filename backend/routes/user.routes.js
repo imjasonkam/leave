@@ -5,5 +5,6 @@ const { authenticate, isDeptHead } = require('../middleware/auth');
 
 router.get('/profile', authenticate, userController.getProfile);
 router.get('/department', authenticate, isDeptHead, userController.getDepartmentUsers);
+router.get('/can-approve/:id', authenticate, userController.checkCanApprove);
 
 module.exports = router;

@@ -176,27 +176,99 @@ class LeaveController {
   async getApplicationById(req, res) {
     try {
       const { id } = req.params;
+      console.log(`[getApplicationById] 請求 ID: ${id}, 用戶 ID: ${req.user.id}`);
+      
       const application = await LeaveApplication.findById(id);
+      console.log(`[getApplicationById] 查詢結果:`, application ? `找到申請 ID: ${application.id}` : '申請不存在');
 
       if (!application) {
+        console.log(`[getApplicationById] 返回 404: 申請不存在`);
         return res.status(404).json({ message: '申請不存在' });
       }
 
       // 檢查權限
       const isHRMember = await User.isHRMember(req.user.id);
+      const isSystemAdmin = req.user.is_system_admin;
+      const isDeptHead = req.user.is_dept_head;
       const isApplicant = application.user_id === req.user.id;
-      const isApprover = [
+      const isDirectApprover = [
         application.checker_id, 
         application.approver_1_id, 
         application.approver_2_id, 
         application.approver_3_id
       ].includes(req.user.id);
 
-      if (!isHRMember && !isApplicant && !isApprover) {
-        return res.status(403).json({ message: '無權限查看此申請' });
+      console.log(`[getApplicationById] 權限檢查:`, {
+        isHRMember,
+        isSystemAdmin,
+        isDeptHead,
+        isApplicant,
+        isDirectApprover,
+        applicationUserId: application.user_id,
+        currentUserId: req.user.id,
+        checker_id: application.checker_id,
+        approver_1_id: application.approver_1_id,
+        approver_2_id: application.approver_2_id,
+        approver_3_id: application.approver_3_id
+      });
+
+      // 如果是系統管理員、部門主管、申請人或直接批核者，允許查看
+      if (isSystemAdmin || isDeptHead || isHRMember || isApplicant || isDirectApprover) {
+        console.log(`[getApplicationById] 通過直接權限檢查，返回申請`);
+        return res.json({ application });
       }
 
-      res.json({ application });
+      // 檢查用戶是否通過授權群組有權限批核此申請（包括當前可以批核的，以及將來需要批核的）
+      // 獲取用戶所屬的授權群組
+      const userDelegationGroups = await User.getDelegationGroups(req.user.id);
+      const userDelegationGroupIds = userDelegationGroups.map(g => Number(g.id));
+      console.log(`[getApplicationById] 用戶授權群組 IDs:`, userDelegationGroupIds);
+
+      // 獲取申請人所屬的部門群組
+      const departmentGroups = await DepartmentGroup.findByUserId(application.user_id);
+      console.log(`[getApplicationById] 申請人部門群組:`, departmentGroups?.length || 0);
+
+      if (departmentGroups && departmentGroups.length > 0 && userDelegationGroupIds.length > 0) {
+        const deptGroup = departmentGroups[0];
+        const approvalFlow = await DepartmentGroup.getApprovalFlow(deptGroup.id);
+        console.log(`[getApplicationById] 批核流程步驟數:`, approvalFlow?.length || 0);
+
+        // 檢查用戶是否屬於申請流程中任何階段的授權群組
+        for (const step of approvalFlow) {
+          if (step.delegation_group_id && userDelegationGroupIds.includes(Number(step.delegation_group_id))) {
+            console.log(`[getApplicationById] 用戶屬於階段 ${step.level} 的授權群組`);
+            // 檢查該階段是否已設置且尚未批核
+            let stepIsPending = false;
+            
+            if (step.level === 'checker' && application.checker_id && !application.checker_at) {
+              stepIsPending = true;
+            } else if (step.level === 'approver_1' && application.approver_1_id && !application.approver_1_at) {
+              stepIsPending = true;
+            } else if (step.level === 'approver_2' && application.approver_2_id && !application.approver_2_at) {
+              stepIsPending = true;
+            } else if (step.level === 'approver_3' && application.approver_3_id && !application.approver_3_at) {
+              stepIsPending = true;
+            }
+
+            console.log(`[getApplicationById] 階段 ${step.level} 是否待批核:`, stepIsPending);
+
+            // 如果用戶屬於該階段的授權群組，且該階段尚未批核，允許查看
+            if (stepIsPending) {
+              console.log(`[getApplicationById] 通過授權群組檢查，返回申請`);
+              return res.json({ application });
+            }
+          }
+        }
+      } else {
+        console.log(`[getApplicationById] 跳過授權群組檢查:`, {
+          hasDepartmentGroups: !!(departmentGroups && departmentGroups.length > 0),
+          hasUserDelegationGroups: userDelegationGroupIds.length > 0
+        });
+      }
+
+      // 如果都不符合，拒絕訪問
+      console.log(`[getApplicationById] 返回 403: 無權限查看此申請`);
+      return res.status(403).json({ message: '無權限查看此申請' });
     } catch (error) {
       console.error('Get application error:', error);
       res.status(500).json({ message: '獲取申請詳情時發生錯誤' });

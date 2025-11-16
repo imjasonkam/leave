@@ -6,7 +6,7 @@ exports.up = function(knex) {
     table.string('given_name', 50);
     table.string('alias', 50);
     table.string('name_zh', 100);
-    table.string('email', 100).unique();
+    table.string('email', 100);
     table.string('password_hash', 255).notNullable();
     table.integer('department_id').unsigned().notNullable()
       .references('id').inTable('departments').onDelete('RESTRICT');

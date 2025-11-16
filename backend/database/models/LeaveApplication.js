@@ -143,7 +143,11 @@ class LeaveApplication {
 
   // 取得待批核的申請（針對特定使用者）
   static async getPendingApprovals(userId) {
-    const applications = await knex('leave_applications')
+    const DepartmentGroup = require('./DepartmentGroup');
+    const DelegationGroup = require('./DelegationGroup');
+
+    // 獲取所有待批核的申請
+    const allApplications = await knex('leave_applications')
       .leftJoin('users', 'leave_applications.user_id', 'users.id')
       .leftJoin('leave_types', 'leave_applications.leave_type_id', 'leave_types.id')
       .select(
@@ -161,15 +165,95 @@ class LeaveApplication {
         'leave_types.name_zh as leave_type_name_zh'
       )
       .where('leave_applications.status', 'pending')
-      .where(function() {
-        this.where('leave_applications.checker_id', userId)
-          .orWhere('leave_applications.approver_1_id', userId)
-          .orWhere('leave_applications.approver_2_id', userId)
-          .orWhere('leave_applications.approver_3_id', userId);
-      })
       .orderBy('leave_applications.created_at', 'asc');
 
-    return applications.map(formatApplication);
+    // 獲取當前用戶所屬的所有授權群組 ID
+    const userDelegationGroups = await knex('delegation_groups')
+      .whereRaw('? = ANY(delegation_groups.user_ids)', [Number(userId)])
+      .select('id');
+
+    const userDelegationGroupIds = userDelegationGroups.map(g => Number(g.id));
+
+    // 過濾出當前用戶有權限批核的申請
+    const filteredApplications = [];
+
+    for (const app of allApplications) {
+      let canApprove = false;
+
+      // 方法1：檢查是否直接設置為批核者
+      if (app.checker_id === userId ||
+          app.approver_1_id === userId ||
+          app.approver_2_id === userId ||
+          app.approver_3_id === userId) {
+        canApprove = true;
+      } 
+      // 方法2：檢查是否屬於 HR Group（全局權限，優先檢查）
+      // HR Group 成員應該能夠批核所有申請的 approver_3 階段
+      if (!canApprove && app.approver_3_id && !app.approver_3_at) {
+        const hrGroup = await knex('delegation_groups')
+          .where('name', 'HR Group')
+          .first();
+        
+        if (hrGroup && Array.isArray(hrGroup.user_ids)) {
+          const userIds = hrGroup.user_ids.map(id => Number(id));
+          if (userIds.includes(Number(userId))) {
+            canApprove = true;
+          }
+        }
+      }
+      // 方法3：檢查是否屬於對應的授權群組（特定部門群組）
+      // 這個檢查對所有成員都應該執行，不僅僅是第一個成員
+      if (!canApprove) {
+        // 獲取申請人所屬的部門群組
+        const departmentGroups = await DepartmentGroup.findByUserId(app.user_id);
+        
+        if (departmentGroups && departmentGroups.length > 0 && userDelegationGroupIds.length > 0) {
+          // 使用第一個部門群組（與創建申請時的邏輯一致）
+          const deptGroup = departmentGroups[0];
+          
+          // 獲取該部門群組的批核流程
+          const approvalFlow = await DepartmentGroup.getApprovalFlow(deptGroup.id);
+          
+          // 檢查用戶是否屬於申請流程中任何階段的授權群組，且該階段尚未批核
+          // 這樣可以讓所有授權群組成員都能看到他們將來需要批核的申請
+          for (const step of approvalFlow) {
+            if (step.delegation_group_id && userDelegationGroupIds.includes(Number(step.delegation_group_id))) {
+              // 檢查該階段是否已設置且尚未批核
+              // 使用多種可能的字段名稱來檢查（因為可能有不同的 migration 版本）
+              let stepIsPending = false;
+              
+              if (step.level === 'checker') {
+                // 檢查 checker 階段：checker_id 存在且尚未批核
+                stepIsPending = !!(app.checker_id && app.checker_at == null && app.checked_at == null);
+              } else if (step.level === 'approver_1') {
+                // 檢查 approver_1 階段：approver_1_id 存在且尚未批核
+                // 注意：approver_1_id 存儲的是授權群組中第一個成員的 ID
+                // 但所有授權群組成員都應該能看到這個申請
+                stepIsPending = !!(app.approver_1_id && app.approver_1_at == null && app.approved_1_at == null);
+              } else if (step.level === 'approver_2') {
+                // 檢查 approver_2 階段：approver_2_id 存在且尚未批核
+                stepIsPending = !!(app.approver_2_id && app.approver_2_at == null && app.approved_2_at == null);
+              } else if (step.level === 'approver_3') {
+                // 檢查 approver_3 階段：approver_3_id 存在且尚未批核
+                stepIsPending = !!(app.approver_3_id && app.approver_3_at == null && app.approved_3_at == null);
+              }
+
+              // 如果用戶屬於該階段的授權群組，且該階段尚未批核，允許查看
+              if (stepIsPending) {
+                canApprove = true;
+                break; // 找到一個匹配的階段就可以退出循環
+              }
+            }
+          }
+        }
+      }
+
+      if (canApprove) {
+        filteredApplications.push(app);
+      }
+    }
+
+    return filteredApplications.map(formatApplication);
   }
 
   // 取得下一個批核者

@@ -3,7 +3,7 @@ exports.up = function(knex) {
     // 建立授權群組表 (Delegation Groups)
     .createTable('delegation_groups', function(table) {
       table.increments('id').primary();
-      table.string('name', 100).notNullable().unique();
+      table.string('name', 100).unique();
       table.string('name_zh', 100);
       table.text('description');
       table.specificType('user_ids', 'integer[]').defaultTo('{}');
@@ -12,7 +12,7 @@ exports.up = function(knex) {
     // 建立部門群組表 (Department Groups)
     .createTable('department_groups', function(table) {
       table.increments('id').primary();
-      table.string('name', 100).notNullable().unique();
+      table.string('name', 100).unique();
       table.string('name_zh', 100);
       table.text('description');
       table.specificType('user_ids', 'integer[]').defaultTo('{}');

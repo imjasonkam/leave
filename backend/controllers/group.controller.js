@@ -48,7 +48,35 @@ class GroupController {
     try {
       const { id } = req.params;
       const groupData = req.body;
-      const group = await DepartmentGroup.update(id, groupData);
+      
+      console.log('[updateDepartmentGroup] 更新 ID:', id);
+      console.log('[updateDepartmentGroup] 更新數據:', JSON.stringify(groupData, null, 2));
+      
+      // 過濾掉不需要更新的字段（如果有的話）
+      const allowedFields = ['name', 'name_zh', 'description', 'checker_id', 'approver_1_id', 'approver_2_id', 'approver_3_id', 'user_ids'];
+      const filteredData = {};
+      
+      for (const key of allowedFields) {
+        if (key in groupData) {
+          // 對於 ID 字段，將空字符串轉換為 null
+          if ((key === 'checker_id' || key === 'approver_1_id' || key === 'approver_2_id' || key === 'approver_3_id')) {
+            filteredData[key] = groupData[key] === '' || groupData[key] === null || groupData[key] === undefined 
+              ? null 
+              : Number(groupData[key]);
+          } else {
+            filteredData[key] = groupData[key];
+          }
+        }
+      }
+      
+      // 如果 user_ids 是數組，確保格式正確
+      if (filteredData.user_ids && Array.isArray(filteredData.user_ids)) {
+        filteredData.user_ids = filteredData.user_ids.map(id => Number(id)).filter(id => !isNaN(id));
+      }
+      
+      console.log('[updateDepartmentGroup] 過濾後的數據:', JSON.stringify(filteredData, null, 2));
+      
+      const group = await DepartmentGroup.update(id, filteredData);
       
       if (!group) {
         return res.status(404).json({ message: '部門群組不存在' });
@@ -60,7 +88,12 @@ class GroupController {
       });
     } catch (error) {
       console.error('Update department group error:', error);
-      res.status(500).json({ message: '更新部門群組時發生錯誤' });
+      console.error('Error stack:', error.stack);
+      res.status(500).json({ 
+        message: '更新部門群組時發生錯誤',
+        error: error.message,
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
     }
   }
 
