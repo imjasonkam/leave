@@ -48,6 +48,14 @@ exports.up = function(knex) {
       .references('id').inTable('users').onDelete('SET NULL');
     table.timestamp('cancelled_at');
     table.text('cancellation_reason');
+
+    // 銷假 / Reverse 相關欄位
+    table.boolean('is_reversal_transaction').defaultTo(false);
+    table.integer('reversal_of_application_id').unsigned()
+      .references('id').inTable('leave_applications').onDelete('SET NULL');
+    table.boolean('is_reversed').defaultTo(false);
+    table.timestamp('reversal_completed_at');
+    table.text('transaction_remark');
     
     table.timestamps(true, true);
     

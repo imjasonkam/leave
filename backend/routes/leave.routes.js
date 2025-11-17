@@ -20,6 +20,7 @@ router.get('/:id/documents', authenticate, leaveController.getDocuments);
 
 // 取消假期（必須在 /:id 之前）
 router.post('/cancel', authenticate, leaveController.requestCancellation);
+router.post('/reverse', authenticate, leaveController.requestReversal);
 
 // 獲取單個申請（必須在最後，因為會匹配所有 /:id 路徑）
 router.get('/:id', authenticate, leaveController.getApplicationById);

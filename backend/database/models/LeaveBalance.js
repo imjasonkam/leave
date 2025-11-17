@@ -113,7 +113,7 @@ class LeaveBalance {
   }
 
   // 扣除餘額：創建負數交易記錄
-  static async decrementBalance(userId, leaveTypeId, year, days) {
+  static async decrementBalance(userId, leaveTypeId, year, days, remarks = '假期申請已批准，扣除餘額') {
     // 檢查當前餘額是否足夠
     const currentBalance = await LeaveBalanceTransaction.getTotalBalance(userId, leaveTypeId, year);
     const daysToDeduct = parseFloat(days);
@@ -128,7 +128,7 @@ class LeaveBalance {
       leave_type_id: leaveTypeId,
       year,
       amount: -daysToDeduct, // 負數表示扣除
-      remarks: '假期申請已批准，扣除餘額',
+      remarks,
       created_by_id: null // 系統自動扣除
     });
 
@@ -137,7 +137,7 @@ class LeaveBalance {
   }
 
   // 增加餘額：創建正數交易記錄
-  static async incrementBalance(userId, leaveTypeId, year, days) {
+  static async incrementBalance(userId, leaveTypeId, year, days, remarks = '假期申請被拒絕或取消，退回餘額') {
     const daysToAdd = parseFloat(days);
     
     // 創建正數交易記錄來增加餘額
@@ -146,7 +146,7 @@ class LeaveBalance {
       leave_type_id: leaveTypeId,
       year,
       amount: daysToAdd, // 正數表示增加
-      remarks: '假期申請被拒絕或取消，退回餘額',
+      remarks,
       created_by_id: null // 系統自動退回
     });
 

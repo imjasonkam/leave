@@ -541,6 +541,87 @@ class LeaveController {
     }
   }
 
+  // 銷假申請
+  async requestReversal(req, res) {
+    try {
+      const { application_id } = req.body;
+
+      if (!application_id) {
+        return res.status(400).json({ message: '請提供原始申請 ID' });
+      }
+
+      const originalApplication = await LeaveApplication.findById(application_id);
+      if (!originalApplication) {
+        return res.status(404).json({ message: '申請不存在' });
+      }
+
+      const isHRMember = await User.isHRMember(req.user.id);
+      const isSystemAdmin = req.user.is_system_admin;
+      const isApplicant = originalApplication.user_id === req.user.id;
+      
+      // 檢查是否為 paper-flow 申請
+      const isPaperFlow = originalApplication.is_paper_flow === true || originalApplication.flow_type === 'paper-flow';
+
+      // 如果是 paper-flow，只有 HR 成員可以進行銷假
+      if (isPaperFlow) {
+        if (!isHRMember && !isSystemAdmin) {
+          return res.status(403).json({ message: '只有 HR 成員可以對紙本申請進行銷假' });
+        }
+      } else {
+        // e-flow 申請，申請者本人可以進行銷假
+        if (!isApplicant && !isHRMember && !isSystemAdmin) {
+          return res.status(403).json({ message: '只有申請人或 HR 才能進行銷假' });
+        }
+      }
+
+      // 對於 paper-flow，使用原始申請的 user_id；對於 e-flow，使用申請者本人的 user_id
+      const userIdForReversal = isPaperFlow ? originalApplication.user_id : (isApplicant ? req.user.id : originalApplication.user_id);
+
+      // 如果是 HR 成員或系統管理員操作，直接批准銷假申請（無需批核流程）
+      // 無論原始申請是 paper-flow 還是 e-flow，HR 成員的銷假都直接批准
+      const isHRDirectApproval = isHRMember || isSystemAdmin;
+
+      console.log('[requestReversal] HR 直接批准檢查:', {
+        isHRMember,
+        isSystemAdmin,
+        isHRDirectApproval,
+        isPaperFlow,
+        application_id
+      });
+
+      const reversalRequest = await LeaveApplication.createReversalRequest(
+        application_id,
+        userIdForReversal,
+        req.user.id,
+        isHRDirectApproval
+      );
+
+      console.log('[requestReversal] 銷假申請創建結果:', {
+        id: reversalRequest.id,
+        status: reversalRequest.status,
+        is_reversal_transaction: reversalRequest.is_reversal_transaction
+      });
+
+      // HR 成員或系統管理員的銷假申請會直接批准並完成
+      const message = isHRDirectApproval && reversalRequest.status === 'approved' 
+        ? '銷假申請已完成' 
+        : reversalRequest.status === 'approved'
+        ? '銷假申請已完成'
+        : '銷假申請已提交，等待批核';
+
+      res.status(201).json({
+        message,
+        application: reversalRequest
+      });
+    } catch (error) {
+      console.error('Request reversal error:', error);
+      res.status(500).json({
+        message: error.message || '建立銷假申請時發生錯誤',
+        error: error.message
+      });
+    }
+  }
+
   // 取得待批核的申請
   async getPendingApprovals(req, res) {
     try {

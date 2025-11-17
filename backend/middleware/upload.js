@@ -43,8 +43,8 @@ const fileFilter = (req, file, cb) => {
   const fileExt = path.extname(file.originalname).toLowerCase();
   const allowedExtensions = ['.pdf', '.jpeg', '.jpg', '.png', '.gif', '.bmp', '.webp', '.tiff', '.tif'];
   
-  // 檢查檔案大小（10MB）
-  const maxSize = 10 * 1024 * 1024; // 10MB
+  // 檢查檔案大小（5MB）
+  const maxSize = 5 * 1024 * 1024; // 5MB
   
   // 檢查檔案類型
   const isValidType = allowedTypes.includes(file.mimetype) || allowedExtensions.includes(fileExt);
@@ -60,7 +60,7 @@ const fileFilter = (req, file, cb) => {
 const uploadSingle = multer({
   storage: storage,
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB
+    fileSize: 5 * 1024 * 1024 // 5MB
   },
   fileFilter: fileFilter
 });
@@ -69,7 +69,7 @@ const uploadSingle = multer({
 const uploadMultiple = multer({
   storage: storage,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB per file
+    fileSize: 5 * 1024 * 1024, // 5MB per file
     files: 100 // 最多 100 個檔案（不限制數量，但設置一個合理的上限）
   },
   fileFilter: fileFilter

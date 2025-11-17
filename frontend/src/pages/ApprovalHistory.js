@@ -20,13 +20,15 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogContentText,
   DialogActions,
   List,
   ListItem,
   ListItemText,
   IconButton,
   Alert,
-  Link
+  Link,
+  Snackbar
 } from '@mui/material';
 import { 
   Visibility as VisibilityIcon, 
@@ -36,7 +38,8 @@ import {
   Upload as UploadIcon,
   Description as DescriptionIcon,
   Image as ImageIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  Undo as UndoIcon
 } from '@mui/icons-material';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -57,6 +60,10 @@ const ApprovalHistory = () => {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [reversalDialogOpen, setReversalDialogOpen] = useState(false);
+  const [selectedReversalApplication, setSelectedReversalApplication] = useState(null);
+  const [reversing, setReversing] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   useEffect(() => {
     fetchApprovalHistory();
@@ -262,6 +269,80 @@ const ApprovalHistory = () => {
     return isHRMember && application.status === 'approved';
   };
 
+  const canShowReversalButton = (application) => {
+    // 只有 HR 成員可以看到銷假按鈕
+    if (!isHRMember) {
+      return false;
+    }
+    
+    // 只有已批核的申請才能銷假
+    if (application.status !== 'approved') {
+      return false;
+    }
+    
+    // 如果已經被銷假，不顯示按鈕
+    if (application.is_reversed) {
+      return false;
+    }
+    
+    // 如果是銷假交易本身，不顯示按鈕
+    if (application.is_reversal_transaction) {
+      return false;
+    }
+    
+    return true;
+  };
+
+  const handleReversalClick = (application) => {
+    setSelectedReversalApplication(application);
+    setReversalDialogOpen(true);
+  };
+
+  const handleReversalConfirm = async () => {
+    if (!selectedReversalApplication) return;
+
+    try {
+      setReversing(true);
+      const response = await axios.post('/api/leaves/reverse', {
+        application_id: selectedReversalApplication.id
+      });
+      
+      // 使用後端返回的消息
+      const message = response.data.message || '銷假申請已完成';
+      
+      setSnackbar({
+        open: true,
+        message,
+        severity: 'success'
+      });
+      
+      setReversalDialogOpen(false);
+      setSelectedReversalApplication(null);
+      
+      // 重新載入申請列表
+      await fetchApprovalHistory();
+    } catch (error) {
+      console.error('Reversal error:', error);
+      const errorMessage = error.response?.data?.message || '提交銷假申請時發生錯誤';
+      setSnackbar({
+        open: true,
+        message: errorMessage,
+        severity: 'error'
+      });
+    } finally {
+      setReversing(false);
+    }
+  };
+
+  const handleReversalCancel = () => {
+    setReversalDialogOpen(false);
+    setSelectedReversalApplication(null);
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
+
   return (
     <Box>
       <Typography variant="h5" gutterBottom>
@@ -348,7 +429,7 @@ const ApprovalHistory = () => {
                       />
                     </TableCell>
                     <TableCell>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                         <Button
                           variant="contained"
                           size="small"
@@ -365,6 +446,17 @@ const ApprovalHistory = () => {
                             startIcon={<AttachFileIcon />}
                           >
                             管理檔案
+                          </Button>
+                        )}
+                        {canShowReversalButton(app) && (
+                          <Button
+                            variant="contained"
+                            size="small"
+                            color="warning"
+                            startIcon={<UndoIcon />}
+                            onClick={() => handleReversalClick(app)}
+                          >
+                            銷假
                           </Button>
                         )}
                       </Box>
@@ -428,7 +520,7 @@ const ApprovalHistory = () => {
               </Button>
             </label>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              支援格式：PDF、JPG、JPEG、PNG、GIF、BMP、WEBP、TIFF（每個檔案最大 10MB）
+              支援格式：PDF、JPG、JPEG、PNG、GIF、BMP、WEBP、TIFF（每個檔案最大 5MB）
             </Typography>
           </Box>
 
@@ -479,6 +571,66 @@ const ApprovalHistory = () => {
           <Button onClick={handleCloseFileDialog}>關閉</Button>
         </DialogActions>
       </Dialog>
+
+      {/* 銷假確認對話框 */}
+      <Dialog
+        open={reversalDialogOpen}
+        onClose={handleReversalCancel}
+        aria-labelledby="reversal-dialog-title"
+      >
+        <DialogTitle id="reversal-dialog-title">確認銷假</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            您確定要對此申請進行銷假嗎？此操作將直接批准並完成銷假，無需批核流程。
+            {selectedReversalApplication && (
+              <>
+                <br />
+                <br />
+                <strong>申請詳情：</strong>
+                <br />
+                交易編號：{selectedReversalApplication.transaction_id}
+                <br />
+                申請人：{selectedReversalApplication.applicant_name_zh}
+                <br />
+                假期類型：{selectedReversalApplication.leave_type_name_zh}
+                <br />
+                日期：{formatDate(selectedReversalApplication.start_date)} ~ {formatDate(selectedReversalApplication.end_date)}
+                <br />
+                天數：{selectedReversalApplication.days} 天
+              </>
+            )}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleReversalCancel} disabled={reversing}>
+            取消
+          </Button>
+          <Button
+            onClick={handleReversalConfirm}
+            color="warning"
+            variant="contained"
+            disabled={reversing}
+          >
+            {reversing ? '處理中...' : '確認銷假'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 成功/錯誤提示 */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

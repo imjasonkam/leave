@@ -120,7 +120,7 @@ const LeaveApplication = () => {
     // 驗證文件類型和大小
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp', 'image/webp', 'image/tiff', 'image/tif', 'application/pdf'];
     const allowedExtensions = ['.pdf', '.jpeg', '.jpg', '.png', '.gif', '.bmp', '.webp', '.tiff', '.tif'];
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const maxSize = 5 * 1024 * 1024; // 5MB
     
     const validFiles = [];
     const errors = [];
@@ -133,7 +133,7 @@ const LeaveApplication = () => {
       if (!isValidType) {
         errors.push(`${file.name}: 不支援的檔案類型。只允許：${allowedExtensions.join(', ')}`);
       } else if (!isValidSize) {
-        errors.push(`${file.name}: 檔案大小超過 10MB`);
+        errors.push(`${file.name}: 檔案大小超過 5MB`);
       } else {
         validFiles.push(file);
       }
@@ -339,7 +339,7 @@ const LeaveApplication = () => {
 
           <Box sx={{ mb: 2 }}>
             <Typography variant="subtitle2" gutterBottom>
-              附件（可選，支持 PDF、JPEG、JPG、TIFF 及其他圖片格式，每個文件不超過 10MB）
+              附件（可選，支持 PDF、JPEG、JPG、TIFF 及其他圖片格式，每個文件不超過 5MB）
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
               <Button

@@ -106,38 +106,37 @@ class ApprovalController {
         // 執行批核（使用自動確定的階段）
         const updatedApplication = await LeaveApplication.approve(id, req.user.id, currentLevel, remarks);
 
-        // 如果是取消假期的申請且已完全批准，更新原始申請的狀態
-        if (updatedApplication.status === 'approved' && updatedApplication.is_cancellation_request) {
-          await LeaveApplication.cancel(
-            updatedApplication.original_application_id,
-            req.user.id,
-            updatedApplication.reason
-          );
-
-          // 退回假期餘額
-          const leaveType = await require('../database/models/LeaveType').findById(updatedApplication.leave_type_id);
-          if (leaveType && leaveType.requires_balance) {
-            const currentYear = new Date().getFullYear();
-            await LeaveBalance.incrementBalance(
-              updatedApplication.user_id,
-              updatedApplication.leave_type_id,
-              currentYear,
-              parseFloat(updatedApplication.total_days)
+        if (updatedApplication.status === 'approved') {
+          if (updatedApplication.is_cancellation_request) {
+            await LeaveApplication.cancel(
+              updatedApplication.original_application_id,
+              req.user.id,
+              updatedApplication.reason
             );
-          }
-        }
 
-        // 如果是一般假期申請且已完全批准，扣除假期餘額
-        if (updatedApplication.status === 'approved' && !updatedApplication.is_cancellation_request) {
-          const leaveType = await require('../database/models/LeaveType').findById(updatedApplication.leave_type_id);
-          if (leaveType && leaveType.requires_balance) {
-            const currentYear = new Date().getFullYear();
-            await LeaveBalance.decrementBalance(
-              updatedApplication.user_id,
-              updatedApplication.leave_type_id,
-              currentYear,
-              parseFloat(updatedApplication.total_days)
-            );
+            const leaveType = await require('../database/models/LeaveType').findById(updatedApplication.leave_type_id);
+            if (leaveType && leaveType.requires_balance) {
+              const currentYear = new Date().getFullYear();
+              await LeaveBalance.incrementBalance(
+                updatedApplication.user_id,
+                updatedApplication.leave_type_id,
+                currentYear,
+                parseFloat(updatedApplication.total_days)
+              );
+            }
+          } else if (updatedApplication.is_reversal_transaction) {
+            updatedApplication = await LeaveApplication.finalizeReversal(updatedApplication);
+          } else {
+            const leaveType = await require('../database/models/LeaveType').findById(updatedApplication.leave_type_id);
+            if (leaveType && leaveType.requires_balance) {
+              const currentYear = new Date().getFullYear();
+              await LeaveBalance.decrementBalance(
+                updatedApplication.user_id,
+                updatedApplication.leave_type_id,
+                currentYear,
+                parseFloat(updatedApplication.total_days)
+              );
+            }
           }
         }
 

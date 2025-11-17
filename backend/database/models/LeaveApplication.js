@@ -387,6 +387,156 @@ class LeaveApplication {
 
     return await this.create(cancellationData);
   }
+
+  static async createReversalRequest(originalApplicationId, userId, requestedByUserId = null, isHRDirectApproval = false) {
+    const originalApp = await this.findById(originalApplicationId);
+    if (!originalApp) {
+      throw new Error('原始假期申請不存在');
+    }
+
+    if (originalApp.status !== 'approved') {
+      throw new Error('只能銷假已批核的申請');
+    }
+
+    if (originalApp.is_reversed) {
+      throw new Error('此申請已完成銷假');
+    }
+
+    // 檢查是否為 paper-flow 申請
+    const isPaperFlow = originalApp.is_paper_flow === true || originalApp.flow_type === 'paper-flow';
+    
+    console.log('[createReversalRequest] 銷假申請參數:', {
+      originalApplicationId,
+      userId,
+      isPaperFlow,
+      isHRDirectApproval,
+      originalStatus: originalApp.status
+    });
+    
+    // 如果是 paper-flow 或 HR 直接批准，銷假申請直接批准
+    if (isPaperFlow || isHRDirectApproval) {
+      const reversalData = {
+        user_id: originalApp.user_id, // 使用原始申請的 user_id
+        leave_type_id: originalApp.leave_type_id,
+        start_date: originalApp.start_date,
+        end_date: originalApp.end_date,
+        total_days: -Math.abs(Number(originalApp.total_days || 0)),
+        reason: 'Reversal',
+        status: 'approved', // 直接批准
+        flow_type: isPaperFlow ? 'paper-flow' : 'e-flow',
+        is_paper_flow: isPaperFlow,
+        is_reversal_transaction: true,
+        reversal_of_application_id: originalApplicationId,
+        transaction_remark: 'Reversal - 銷假'
+      };
+
+      console.log('[createReversalRequest] 創建直接批准的銷假申請:', {
+        status: reversalData.status,
+        flow_type: reversalData.flow_type,
+        is_paper_flow: reversalData.is_paper_flow
+      });
+
+      const reversalApplication = await this.create(reversalData);
+      console.log('[createReversalRequest] 銷假申請創建成功，開始完成流程:', {
+        id: reversalApplication.id,
+        status: reversalApplication.status
+      });
+      
+      // 直接完成銷假流程
+      return await this.finalizeReversal(reversalApplication);
+    }
+
+    // e-flow 的處理邏輯
+    const DepartmentGroup = require('./DepartmentGroup');
+    const DelegationGroup = require('./DelegationGroup');
+
+    const departmentGroups = await DepartmentGroup.findByUserId(userId);
+    const reversalData = {
+      user_id: userId,
+      leave_type_id: originalApp.leave_type_id,
+      start_date: originalApp.start_date,
+      end_date: originalApp.end_date,
+      total_days: -Math.abs(Number(originalApp.total_days || 0)),
+      reason: 'Reversal',
+      status: 'pending',
+      flow_type: 'e-flow',
+      is_reversal_transaction: true,
+      reversal_of_application_id: originalApplicationId,
+      transaction_remark: 'Reversal - 銷假'
+    };
+
+    if (departmentGroups && departmentGroups.length > 0) {
+      const deptGroup = departmentGroups[0];
+      const approvalFlow = await DepartmentGroup.getApprovalFlow(deptGroup.id);
+
+      if (approvalFlow && approvalFlow.length > 0) {
+        for (const step of approvalFlow) {
+          if (!step.delegation_group_id) {
+            continue;
+          }
+          const members = await DelegationGroup.getMembers(step.delegation_group_id);
+          if (members && members.length > 0) {
+            const approverId = members[0].id;
+            if (step.level === 'checker') {
+              reversalData.checker_id = approverId;
+            } else {
+              reversalData[`${step.level}_id`] = approverId;
+            }
+          }
+        }
+      } else {
+        reversalData.status = 'approved';
+      }
+    } else {
+      // 沒有部門群組時直接批准
+      reversalData.status = 'approved';
+    }
+
+    const reversalApplication = await this.create(reversalData);
+    if (reversalApplication.status === 'approved') {
+      return await this.finalizeReversal(reversalApplication);
+    }
+    return reversalApplication;
+  }
+
+  static async finalizeReversal(application) {
+    if (!application || !application.is_reversal_transaction) {
+      return application;
+    }
+
+    const effectiveDays = Math.abs(Number(application.total_days || 0));
+
+    if (application.reversal_of_application_id) {
+      await knex('leave_applications')
+        .where('id', application.reversal_of_application_id)
+        .update({
+          is_reversed: true,
+          reversal_completed_at: knex.fn.now()
+        });
+    }
+
+    if (effectiveDays > 0) {
+      const LeaveBalance = require('./LeaveBalance');
+      const LeaveType = require('./LeaveType');
+      const leaveType = await LeaveType.findById(application.leave_type_id);
+
+      if (leaveType && leaveType.requires_balance) {
+        const year = application.start_date
+          ? new Date(application.start_date).getFullYear()
+          : new Date().getFullYear();
+
+        await LeaveBalance.incrementBalance(
+          application.user_id,
+          application.leave_type_id,
+          year,
+          effectiveDays,
+          '銷假 - Reversal'
+        );
+      }
+    }
+
+    return await this.findById(application.id);
+  }
 }
 
 module.exports = LeaveApplication;
