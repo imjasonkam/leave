@@ -6,7 +6,9 @@ exports.up = function(knex) {
     table.integer('leave_type_id').unsigned().notNullable()
       .references('id').inTable('leave_types').onDelete('RESTRICT');
     table.date('start_date').notNullable();
+    table.string('start_session'); // 'AM' or 'PM' for half-day, null for full day
     table.date('end_date').notNullable();
+    table.string('end_session'); // 'AM' or 'PM' for half-day, null for full day
     table.decimal('total_days', 5, 2).notNullable();
     table.text('reason');
     // table.jsonb('document_urls').defaultTo('[]'); // 存儲上傳文件的路由陣列，格式：["/api/leaves/documents/1/download", "/api/leaves/documents/2/download"]

@@ -150,6 +150,66 @@ class User {
   }
 
   // 檢查使用者是否可以批核某個假期申請
+  // 檢查用戶是否可以查看申請（包括批核歷史）
+  static async canViewApplication(userId, leaveApplicationId) {
+    const application = await knex('leave_applications')
+      .where('id', leaveApplicationId)
+      .first();
+    
+    if (!application) {
+      return false;
+    }
+
+    // 檢查是否為 HR 成員
+    const isHRMember = await this.isHRMember(userId);
+    if (isHRMember) {
+      return true;
+    }
+
+    // 檢查是否為申請人
+    if (application.user_id === userId) {
+      return true;
+    }
+
+    // 檢查是否為直接批核者
+    const isDirectApprover = [
+      application.checker_id,
+      application.approver_1_id,
+      application.approver_2_id,
+      application.approver_3_id
+    ].includes(userId);
+
+    if (isDirectApprover) {
+      return true;
+    }
+
+    // 檢查是否屬於批核流程中任何階段的授權群組
+    const DepartmentGroup = require('./DepartmentGroup');
+    const userDelegationGroups = await this.getDelegationGroups(userId);
+    const userDelegationGroupIds = userDelegationGroups.map(g => Number(g.id));
+
+    if (userDelegationGroupIds.length === 0) {
+      return false;
+    }
+
+    // 獲取申請人所屬的部門群組
+    const departmentGroups = await DepartmentGroup.findByUserId(application.user_id);
+    
+    if (departmentGroups && departmentGroups.length > 0) {
+      const deptGroup = departmentGroups[0];
+      const approvalFlow = await DepartmentGroup.getApprovalFlow(deptGroup.id);
+      
+      // 檢查用戶是否屬於批核流程中任何階段的授權群組
+      for (const step of approvalFlow) {
+        if (step.delegation_group_id && userDelegationGroupIds.includes(Number(step.delegation_group_id))) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   static async canApprove(userId, leaveApplicationId) {
     const application = await knex('leave_applications')
       .where('id', leaveApplicationId)

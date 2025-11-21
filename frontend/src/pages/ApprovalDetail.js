@@ -586,6 +586,67 @@ const ApprovalDetail = () => {
                 </List>
               </>
             )}
+
+            {application.reversal_transactions && application.reversal_transactions.length > 0 && (
+              <>
+                <Divider sx={{ my: 2 }} />
+                <Typography variant="h6" gutterBottom>
+                  相關銷假交易
+                </Typography>
+                <List>
+                  {application.reversal_transactions.map((reversal) => (
+                    <ListItem key={reversal.id}>
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Chip
+                              label="銷假"
+                              color="info"
+                              size="small"
+                            />
+                            <Typography variant="body1" component="span">
+                              交易編號：{reversal.transaction_id}
+                            </Typography>
+                          </Box>
+                        }
+                        secondary={
+                          <Box sx={{ mt: 1 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              申請人：{reversal.applicant_name_zh}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              假期類型：{reversal.leave_type_name_zh}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              日期：{formatDate(reversal.start_date)} ~ {formatDate(reversal.end_date)}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              天數：{Math.abs(reversal.days)} 天
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              狀態：
+                              <Chip
+                                label={reversal.status === 'approved' ? '已批准' : reversal.status === 'pending' ? '待批核' : reversal.status === 'rejected' ? '已拒絕' : reversal.status}
+                                color={reversal.status === 'approved' ? 'success' : reversal.status === 'pending' ? 'warning' : reversal.status === 'rejected' ? 'error' : 'default'}
+                                size="small"
+                                sx={{ ml: 1 }}
+                              />
+                            </Typography>
+                            {reversal.created_at && (
+                              <Typography variant="body2" color="text.secondary">
+                                創建時間：{formatDateTime(reversal.created_at)}
+                              </Typography>
+                            )}
+                          </Box>
+                        }
+                        primaryTypographyProps={{ variant: 'caption' }}
+                        secondaryTypographyProps={{ variant: 'body1', component: 'div' }}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              </>
+            )}
           </Paper>
         </Grid>
 

@@ -119,6 +119,33 @@ class LeaveApplication {
     if (application) {
       application.documents = await knex('leave_documents')
         .where('leave_application_id', id);
+      
+      // 查詢相關的 reverse transaction（銷假交易）
+      // 查找所有 reversal_of_application_id 指向當前申請的銷假交易
+      const reversalTransactions = await knex('leave_applications')
+        .leftJoin('users', 'leave_applications.user_id', 'users.id')
+        .leftJoin('leave_types', 'leave_applications.leave_type_id', 'leave_types.id')
+        .select(
+          'leave_applications.*',
+          knex.raw('leave_applications.total_days as days'),
+          knex.raw('leave_applications.id as transaction_id'),
+          'users.employee_number as user_employee_number',
+          'users.employee_number as applicant_employee_number',
+          'users.surname as user_surname',
+          'users.given_name as user_given_name',
+          'users.name_zh as user_name_zh',
+          'users.name_zh as applicant_name_zh',
+          'leave_types.code as leave_type_code',
+          'leave_types.name as leave_type_name',
+          'leave_types.name_zh as leave_type_name_zh'
+        )
+        .where('leave_applications.reversal_of_application_id', id)
+        .where('leave_applications.is_reversal_transaction', true)
+        .orderBy('leave_applications.created_at', 'desc');
+      
+      application.reversal_transactions = reversalTransactions.map(app => 
+        formatApplication(withResolvedApprovalStage(app))
+      );
     }
     
     return formatApplication(withResolvedApprovalStage(application));

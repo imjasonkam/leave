@@ -327,20 +327,51 @@ class ApprovalController {
         }
       }
 
-      // 格式化申請數據（使用 LeaveApplication 的 formatApplication 函數）
+      // 格式化申請數據並添加相關的 reverse transaction
       const LeaveApplicationModel = require('../database/models/LeaveApplication');
-      const formattedApplications = processedApplications.map(app => {
-        // formatApplication 是模塊級函數，需要通過其他方式訪問
-        // 暫時直接返回，因為數據已經包含所需字段
+      const formattedApplications = [];
+      
+      for (const app of processedApplications) {
         const isPaperFlow = app.is_paper_flow === true || app.flow_type === 'paper-flow';
-        return {
+        
+        // 查詢與此申請相關的 reverse transaction
+        const reversalTransactions = await knex('leave_applications')
+          .leftJoin('users', 'leave_applications.user_id', 'users.id')
+          .leftJoin('leave_types', 'leave_applications.leave_type_id', 'leave_types.id')
+          .select(
+            'leave_applications.*',
+            knex.raw('leave_applications.total_days as days'), 
+            knex.raw('leave_applications.id as transaction_id'),
+            'users.employee_number as user_employee_number',
+            'users.employee_number as applicant_employee_number',
+            'users.surname as user_surname',
+            'users.given_name as user_given_name',
+            'users.name_zh as user_name_zh',
+            'users.name_zh as applicant_name_zh',
+            'leave_types.code as leave_type_code',
+            'leave_types.name as leave_type_name',
+            'leave_types.name_zh as leave_type_name_zh'
+          )
+          .where('leave_applications.reversal_of_application_id', app.id)
+          .where('leave_applications.is_reversal_transaction', true)
+          .orderBy('leave_applications.created_at', 'desc');
+        
+        const formattedApp = {
           ...app,
           transaction_id: app.transaction_id || `LA-${String(app.id).padStart(6, '0')}`,
           applicant_name_zh: app.applicant_name_zh || app.user_name_zh,
           days: app.days !== undefined && app.days !== null ? app.days : app.total_days,
-          is_paper_flow: isPaperFlow // 確保前端能正確識別
+          is_paper_flow: isPaperFlow, // 確保前端能正確識別
+          reversal_transactions: reversalTransactions.map(rev => ({
+            ...rev,
+            transaction_id: rev.transaction_id || `LA-${String(rev.id).padStart(6, '0')}`,
+            applicant_name_zh: rev.applicant_name_zh || rev.user_name_zh,
+            days: rev.days !== undefined && rev.days !== null ? rev.days : rev.total_days
+          }))
         };
-      });
+        
+        formattedApplications.push(formattedApp);
+      }
 
       console.log(`[getApprovalHistory] 最終返回 ${formattedApplications.length} 個申請，其中 paper-flow: ${formattedApplications.filter(a => a.is_paper_flow).length} 個`);
 

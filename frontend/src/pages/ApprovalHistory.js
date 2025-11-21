@@ -406,62 +406,123 @@ const ApprovalHistory = () => {
                 </TableRow>
               ) : (
                 filteredApplications.map((app) => (
-                  <TableRow key={app.id} hover>
-                    <TableCell>{app.transaction_id}</TableCell>
-                    <TableCell>{app.applicant_name_zh}</TableCell>
-                    <TableCell>{app.leave_type_name_zh}</TableCell>
-                    <TableCell>{formatDate(app.start_date)}</TableCell>
-                    <TableCell>{formatDate(app.end_date)}</TableCell>
-                    <TableCell>{app.days}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={getApprovalStage(app)}
-                        size="small"
-                        color="primary"
-                      />
-                    </TableCell>
-                    <TableCell>{formatDateTime(getApprovalDate(app))}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={getStatusText(app.status)}
-                        color={getStatusColor(app.status)}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                        <Button
-                          variant="contained"
+                  <React.Fragment key={app.id}>
+                    <TableRow hover>
+                      <TableCell>{app.transaction_id}</TableCell>
+                      <TableCell>{app.applicant_name_zh}</TableCell>
+                      <TableCell>{app.leave_type_name_zh}</TableCell>
+                      <TableCell>{formatDate(app.start_date)}</TableCell>
+                      <TableCell>{formatDate(app.end_date)}</TableCell>
+                      <TableCell>{app.days}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={getApprovalStage(app)}
                           size="small"
-                          onClick={() => navigate(`/approval/${app.id}`)}
-                          startIcon={<VisibilityIcon />}
-                        >
-                          查看詳情
-                        </Button>
-                        {canManageFiles(app) && (
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            onClick={() => handleOpenFileDialog(app)}
-                            startIcon={<AttachFileIcon />}
-                          >
-                            管理檔案
-                          </Button>
-                        )}
-                        {canShowReversalButton(app) && (
+                          color="primary"
+                        />
+                      </TableCell>
+                      <TableCell>{formatDateTime(getApprovalDate(app))}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={getStatusText(app.status)}
+                          color={getStatusColor(app.status)}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                           <Button
                             variant="contained"
                             size="small"
-                            color="warning"
-                            startIcon={<UndoIcon />}
-                            onClick={() => handleReversalClick(app)}
+                            onClick={() => navigate(`/approval/${app.id}`)}
+                            startIcon={<VisibilityIcon />}
                           >
-                            銷假
+                            查看詳情
                           </Button>
-                        )}
-                      </Box>
-                    </TableCell>
-                  </TableRow>
+                          {canManageFiles(app) && (
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={() => handleOpenFileDialog(app)}
+                              startIcon={<AttachFileIcon />}
+                            >
+                              管理檔案
+                            </Button>
+                          )}
+                          {canShowReversalButton(app) && (
+                            <Button
+                              variant="contained"
+                              size="small"
+                              color="warning"
+                              startIcon={<UndoIcon />}
+                              onClick={() => handleReversalClick(app)}
+                            >
+                              銷假
+                            </Button>
+                          )}
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                    {/* 顯示相關的 Reverse Transaction */}
+                    {app.reversal_transactions && app.reversal_transactions.length > 0 && (
+                      app.reversal_transactions.map((reversal) => (
+                        <TableRow key={`reversal-${reversal.id}`} hover sx={{ backgroundColor: '#f8f9fa' }}>
+                          <TableCell sx={{ pl: 4, position: 'relative' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
+                                ↳ 銷假:
+                              </Typography>
+                              {reversal.transaction_id}
+                            </Box>
+                          </TableCell>
+                          <TableCell>{reversal.applicant_name_zh}</TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Chip
+                                label="銷假"
+                                color="info"
+                                size="small"
+                                sx={{ fontSize: '0.65rem', height: '20px' }}
+                              />
+                              <Typography variant="body2">{reversal.leave_type_name_zh}</Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>{formatDate(reversal.start_date)}</TableCell>
+                          <TableCell>{formatDate(reversal.end_date)}</TableCell>
+                          <TableCell>
+                            <Typography variant="body2" sx={{ color: 'error.main' }}>
+                              -{Math.abs(reversal.days)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label="HR 銷假"
+                              size="small"
+                              color="info"
+                            />
+                          </TableCell>
+                          <TableCell>{formatDateTime(reversal.created_at)}</TableCell>
+                          <TableCell>
+                            <Chip
+                              label={getStatusText(reversal.status)}
+                              color={getStatusColor(reversal.status)}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={() => navigate(`/approval/${reversal.id}`)}
+                              startIcon={<VisibilityIcon />}
+                            >
+                              查看詳情
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </React.Fragment>
                 ))
               )}
             </TableBody>

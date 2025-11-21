@@ -69,6 +69,17 @@ class UserController {
       res.status(500).json({ message: '檢查批核權限時發生錯誤' });
     }
   }
+
+  async checkCanView(req, res) {
+    try {
+      const { id } = req.params;
+      const canView = await User.canViewApplication(req.user.id, id);
+      res.json({ canView });
+    } catch (error) {
+      console.error('Check can view error:', error);
+      res.status(500).json({ message: '檢查查看權限時發生錯誤' });
+    }
+  }
 }
 
 module.exports = new UserController();

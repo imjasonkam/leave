@@ -34,7 +34,9 @@ const LeaveApplication = () => {
   const [formData, setFormData] = useState({
     leave_type_id: '',
     start_date: null,
+    start_session: 'AM', // 預設為上午
     end_date: null,
+    end_session: 'PM', // 預設為下午
     days: '',
     reason: ''
   });
@@ -76,19 +78,76 @@ const LeaveApplication = () => {
     return count;
   };
 
+  // 計算天數，考慮半日假期
+  // 規則：
+  // - 開始上午 + 結束下午 = 整數（如4日或5日）
+  // - 開始上午 + 結束上午 = 半日數（如4.5日或5.5日）
+  // - 開始下午 + 結束下午 = 半日數（如3.5日或6.5日）
+  // - 開始下午 + 結束上午 = 整數 - 1（因為第一天下午+最後一天上午=1日）
+  const calculateDays = (startDate, endDate, startSession, endSession, includeWeekends) => {
+    if (!startDate || !endDate || !startSession || !endSession) return 0;
+
+    // 計算基礎天數
+    let baseDays;
+    if (includeWeekends) {
+      // 包含週末：計算總天數
+      baseDays = endDate.diff(startDate, 'day') + 1;
+    } else {
+      // 不包含週末：只計算工作日
+      baseDays = calculateWorkingDays(startDate, endDate);
+    }
+
+    // 如果是同一天
+    if (startDate.isSame(endDate, 'day')) {
+      // 上午 + 下午 = 1日
+      if (startSession === 'AM' && endSession === 'PM') {
+        return 1;
+      }
+      // 相同時段 = 0.5日
+      if (startSession === endSession) {
+        return 0.5;
+      }
+      // 下午 + 上午（同一天不應該出現，但處理為0.5日）
+      return 0.5;
+    }
+
+    // 多天的情況
+    // 開始上午 + 結束下午 = 整數
+    if (startSession === 'AM' && endSession === 'PM') {
+      return baseDays;
+    }
+    
+    // 開始上午 + 結束上午 = 整數 - 0.5
+    if (startSession === 'AM' && endSession === 'AM') {
+      return baseDays - 0.5;
+    }
+    
+    // 開始下午 + 結束下午 = 整數 - 0.5
+    if (startSession === 'PM' && endSession === 'PM') {
+      return baseDays - 0.5;
+    }
+    
+    // 開始下午 + 結束上午 = 整數 - 1
+    // 因為第一天下午(0.5) + 中間完整天數 + 最後一天上午(0.5) = baseDays - 1
+    if (startSession === 'PM' && endSession === 'AM') {
+      return baseDays - 1;
+    }
+
+    return baseDays;
+  };
+
   useEffect(() => {
     if (formData.start_date && formData.end_date) {
-      let days;
-      if (includeWeekends) {
-        // 包含週末：計算總天數
-        days = formData.end_date.diff(formData.start_date, 'day') + 1;
-      } else {
-        // 不包含週末：只計算工作日
-        days = calculateWorkingDays(formData.start_date, formData.end_date);
-      }
+      const days = calculateDays(
+        formData.start_date,
+        formData.end_date,
+        formData.start_session,
+        formData.end_session,
+        includeWeekends
+      );
       setFormData(prev => ({ ...prev, days: days > 0 ? days.toString() : '' }));
     }
-  }, [formData.start_date, formData.end_date, includeWeekends]);
+  }, [formData.start_date, formData.end_date, formData.start_session, formData.end_session, includeWeekends]);
 
   const fetchLeaveTypes = async () => {
     try {
@@ -180,7 +239,8 @@ const LeaveApplication = () => {
     setSuccess('');
     setLoading(true);
 
-    if (!formData.leave_type_id || !formData.start_date || !formData.end_date || !formData.days) {
+    if (!formData.leave_type_id || !formData.start_date || !formData.start_session || 
+        !formData.end_date || !formData.end_session || !formData.days) {
       setError('請填寫所有必填欄位');
       setLoading(false);
       return;
@@ -191,7 +251,9 @@ const LeaveApplication = () => {
       formDataToSend.append('user_id', user.id);
       formDataToSend.append('leave_type_id', formData.leave_type_id);
       formDataToSend.append('start_date', formData.start_date.format('YYYY-MM-DD'));
+      formDataToSend.append('start_session', formData.start_session);
       formDataToSend.append('end_date', formData.end_date.format('YYYY-MM-DD'));
+      formDataToSend.append('end_session', formData.end_session);
       formDataToSend.append('total_days', parseFloat(formData.days));
       if (formData.reason) {
         formDataToSend.append('reason', formData.reason);
@@ -212,7 +274,9 @@ const LeaveApplication = () => {
       setFormData({
         leave_type_id: '',
         start_date: null,
+        start_session: 'AM', // 預設為上午
         end_date: null,
+        end_session: 'PM', // 預設為下午
         days: '',
         reason: ''
       });
@@ -286,6 +350,20 @@ const LeaveApplication = () => {
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
+                <FormControl fullWidth required>
+                  <InputLabel>開始時段</InputLabel>
+                  <Select
+                    value={formData.start_session}
+                    label="開始時段"
+                    onChange={(e) => setFormData(prev => ({ ...prev, start_session: e.target.value }))}
+                    required
+                  >
+                    <MenuItem value="AM">上午</MenuItem>
+                    <MenuItem value="PM">下午</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} sm={6}>
                 <DatePicker
                   label="結束日期"
                   value={formData.end_date}
@@ -294,6 +372,20 @@ const LeaveApplication = () => {
                   slotProps={{ textField: { fullWidth: true, required: true } }}
                   minDate={formData.start_date}
                 />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth required>
+                  <InputLabel>結束時段</InputLabel>
+                  <Select
+                    value={formData.end_session}
+                    label="結束時段"
+                    onChange={(e) => setFormData(prev => ({ ...prev, end_session: e.target.value }))}
+                    required
+                  >
+                    <MenuItem value="AM">上午</MenuItem>
+                    <MenuItem value="PM">下午</MenuItem>
+                  </Select>
+                </FormControl>
               </Grid>
             </Grid>
           </LocalizationProvider>
