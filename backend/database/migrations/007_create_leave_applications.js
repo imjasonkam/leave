@@ -11,6 +11,9 @@ exports.up = function(knex) {
     table.text('reason');
     // table.jsonb('document_urls').defaultTo('[]'); // 存儲上傳文件的路由陣列，格式：["/api/leaves/documents/1/download", "/api/leaves/documents/2/download"]
     table.enum('status', ['pending', 'approved', 'rejected', 'cancelled']).defaultTo('pending');
+    table.enum('current_approval_stage', ['checker', 'approver_1', 'approver_2', 'approver_3', 'completed'])
+      .notNullable()
+      .defaultTo('checker');
     table.enum('flow_type', ['e-flow', 'paper-flow']).defaultTo('e-flow');
     table.boolean('is_paper_flow').defaultTo(false); // 標記是否為 paper-flow 流程
     
@@ -64,6 +67,7 @@ exports.up = function(knex) {
     table.index('status');
     table.index('start_date');
     table.index('end_date');
+    table.index('current_approval_stage');
   });
 };
 

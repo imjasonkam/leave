@@ -20,15 +20,53 @@ class ApprovalController {
 
       // 拒絕申請
       if (action === 'reject') {
-        // HR Group 成員可以隨時拒絕申請（即使不是當前階段）
-        const isHRMember = await User.isHRMember(req.user.id);
-        if (!isHRMember) {
-          // 非 HR Group 成員需要檢查是否有權限批核（只有當前階段的批核者才能拒絕）
-          const canApprove = await User.canApprove(req.user.id, id);
-          if (!canApprove) {
-            return res.status(403).json({ message: '無權限進行此操作' });
+        // 確定當前申請處於哪個階段
+        let currentLevel = application.current_approval_stage;
+        if (!currentLevel || currentLevel === 'completed') {
+          if (!application.checker_at && application.checker_id) {
+            currentLevel = 'checker';
+          } else if (!application.approver_1_at && application.approver_1_id) {
+            currentLevel = 'approver_1';
+          } else if (!application.approver_2_at && application.approver_2_id) {
+            currentLevel = 'approver_2';
+          } else if (!application.approver_3_at && application.approver_3_id) {
+            currentLevel = 'approver_3';
+          } else {
+            currentLevel = 'completed';
           }
         }
+
+        // 檢查是否有權限拒絕
+        let canReject = false;
+        
+        // 方法1：直接檢查是否是 HR Group 獲授權人（ID: 1, 29, 31），且在 checker、approver_1、approver_2 階段
+        const userId = Number(req.user.id);
+        const hrGroupUserIds = [1, 29, 31]; // HR Group 成員 ID
+        const isHRMember = hrGroupUserIds.includes(userId);
+        const allowedStages = ['checker', 'approver_1', 'approver_2'];
+        
+        console.log('[Reject] User ID:', userId, 'isHRMember:', isHRMember, 'currentLevel:', currentLevel);
+        
+        if (isHRMember && allowedStages.includes(currentLevel)) {
+          canReject = true;
+          console.log('[Reject] HR Member can reject at stage:', currentLevel);
+        } else {
+          console.log('[Reject] HR Member check failed - isHRMember:', isHRMember, 'currentLevel:', currentLevel, 'allowed levels:', allowedStages);
+        }
+        
+        // 方法2：如果方法1不滿足，檢查是否有權限批核（只有當前階段的批核者才能拒絕）
+        if (!canReject) {
+          const canApproveResult = await User.canApprove(userId, id);
+          console.log('[Reject] canApprove result:', canApproveResult);
+          canReject = canApproveResult;
+        }
+        
+        console.log('[Reject] Final canReject:', canReject);
+        
+        if (!canReject) {
+          return res.status(403).json({ message: '無權限進行此操作' });
+        }
+        
         await LeaveApplication.reject(id, req.user.id, remarks || '已拒絕');
         return res.json({ message: '申請已拒絕' });
       }
@@ -41,54 +79,22 @@ class ApprovalController {
 
       // 批准申請
       if (action === 'approve') {
-        // 優先檢查用戶是否為 HR Group 成員（全局權限）
-        // HR Group 成員應該能夠批核所有申請的 approver_3 階段
-        let currentLevel = null;
-        if (application.approver_3_id && !application.approver_3_at) {
-          const isHRMember = await User.isHRMember(req.user.id);
-          if (isHRMember) {
-            // 用戶是 HR Group 成員，設置為 approver_3
-            currentLevel = 'approver_3';
-          }
-        }
+        // 按照正常流程確定當前階段
+        // 優先使用 current_approval_stage，如果沒有則根據批核狀態確定
+        let currentLevel = application.current_approval_stage;
         
-        // 如果用戶不是 HR Group 成員，按照正常流程確定當前階段
-        if (!currentLevel) {
-          // 檢查用戶是否屬於特定部門群組的 approver_3 授權群組
-          if (application.approver_3_id && !application.approver_3_at) {
-            const DepartmentGroup = require('../database/models/DepartmentGroup');
-            const departmentGroups = await DepartmentGroup.findByUserId(application.user_id);
-            
-            if (departmentGroups && departmentGroups.length > 0) {
-              const deptGroup = departmentGroups[0];
-              const approvalFlow = await DepartmentGroup.getApprovalFlow(deptGroup.id);
-              const approver3Step = approvalFlow.find(step => step.level === 'approver_3');
-              
-              if (approver3Step && approver3Step.delegation_group_id) {
-                const isInHRGroup = await knex('delegation_groups')
-                  .where('id', approver3Step.delegation_group_id)
-                  .whereRaw('? = ANY(delegation_groups.user_ids)', [Number(req.user.id)])
-                  .first();
-                
-                if (isInHRGroup) {
-                  // 用戶屬於 approver_3 的授權群組，設置為 approver_3
-                  currentLevel = 'approver_3';
-                }
-              }
-            }
-          }
-          
-          // 如果還沒有確定階段，按照正常流程確定當前階段
-          if (!currentLevel) {
-            if (!application.checker_at && application.checker_id) {
-              currentLevel = 'checker';
-            } else if (!application.approver_1_at && application.approver_1_id) {
-              currentLevel = 'approver_1';
-            } else if (!application.approver_2_at && application.approver_2_id) {
-              currentLevel = 'approver_2';
-            } else if (!application.approver_3_at && application.approver_3_id) {
-              currentLevel = 'approver_3';
-            }
+        if (!currentLevel || currentLevel === 'completed') {
+          // 如果沒有 current_approval_stage，按照正常流程確定當前階段
+          if (!application.checker_at && application.checker_id) {
+            currentLevel = 'checker';
+          } else if (!application.approver_1_at && application.approver_1_id) {
+            currentLevel = 'approver_1';
+          } else if (!application.approver_2_at && application.approver_2_id) {
+            currentLevel = 'approver_2';
+          } else if (!application.approver_3_at && application.approver_3_id) {
+            currentLevel = 'approver_3';
+          } else {
+            currentLevel = 'completed';
           }
         }
 
@@ -160,6 +166,26 @@ class ApprovalController {
     } catch (error) {
       console.error('Get pending approvals error:', error);
       res.status(500).json({ message: '獲取待批核申請時發生錯誤' });
+    }
+  }
+
+  // 臨時測試 API - 診斷 HR 權限
+  async testHRPermission(req, res) {
+    try {
+      const userId = Number(req.user.id);
+      const hrGroupUserIds = [1, 29, 31];
+      const isHRMember = hrGroupUserIds.includes(userId);
+      
+      res.json({
+        userId: userId,
+        userType: typeof userId,
+        isHRMember: isHRMember,
+        hrGroupUserIds: hrGroupUserIds,
+        message: isHRMember ? 'User is HR Group member' : 'User is NOT HR Group member'
+      });
+    } catch (error) {
+      console.error('Test HR permission error:', error);
+      res.status(500).json({ message: '測試時發生錯誤', error: error.message });
     }
   }
 

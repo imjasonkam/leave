@@ -54,6 +54,8 @@ const ApprovalDetail = () => {
   const [viewingFile, setViewingFile] = useState(null);
   const [fileBlobUrl, setFileBlobUrl] = useState(null);
   const [loadingFile, setLoadingFile] = useState(false);
+  const [hrRejectionReason, setHrRejectionReason] = useState('');
+  const [hrRejecting, setHrRejecting] = useState(false);
 
   useEffect(() => {
     fetchApplication();
@@ -122,11 +124,23 @@ const ApprovalDetail = () => {
   };
 
   const getCurrentStage = (app) => {
-    if (!app.checker_at && app.checker_id) return { stage: 'checker', text: '檢查' };
-    if (!app.approver_1_at && app.approver_1_id) return { stage: 'approver_1', text: '第一批核' };
-    if (!app.approver_2_at && app.approver_2_id) return { stage: 'approver_2', text: '第二批核' };
-    if (!app.approver_3_at && app.approver_3_id) return { stage: 'approver_3', text: '第三批核' };
-    return { stage: 'completed', text: '已完成' };
+    // 優先使用後端返回的 current_approval_stage
+    if (app.current_approval_stage) {
+      const stageMap = {
+        'checker': { stage: 'checker', text: '檢查' },
+        'approver_1': { stage: 'approver_1', text: '第一批核' },
+        'approver_2': { stage: 'approver_2', text: '第二批核' },
+        'approver_3': { stage: 'approver_3', text: '第三批核' },
+        'completed': { stage: 'completed', text: '已完成' }
+      };
+      return stageMap[app.current_approval_stage] || { stage: 'checker', text: '檢查' };
+    }
+    // Fallback: 如果沒有 current_approval_stage，使用舊的邏輯
+    // if (!app.checker_at && app.checker_id) return { stage: 'checker', text: '檢查' };
+    // if (!app.approver_1_at && app.approver_1_id) return { stage: 'approver_1', text: '第一批核' };
+    // if (!app.approver_2_at && app.approver_2_id) return { stage: 'approver_2', text: '第二批核' };
+    // if (!app.approver_3_at && app.approver_3_id) return { stage: 'approver_3', text: '第三批核' };
+    // return { stage: 'completed', text: '已完成' };
   };
 
   const checkCanApprove = async () => {
@@ -138,22 +152,29 @@ const ApprovalDetail = () => {
     }
     
     // 確定當前申請處於哪個階段（必須按順序：checker -> approver_1 -> approver_2 -> approver_3）
-    const { stage } = getCurrentStage(application);
+    // 優先使用後端返回的 current_approval_stage
+    const currentStage = application.current_approval_stage || getCurrentStage(application).stage;
+
     
-    // 檢查是否為 HR Group 成員
-    const isHRMember = user?.is_hr_member || user?.is_system_admin;
+    // 如果已經完成所有批核階段，不顯示批核操作
+    if (currentStage === 'completed') {
+      setCanApproveThis(false);
+      setCanRejectThis(false);
+      setUserApprovalStage(null);
+      return;
+    }
     
     // 檢查用戶是否屬於當前階段的批核者（直接設置或通過授權群組）
     let isCurrentStageApprover = false;
     
-    // 方法1：檢查是否直接設置為當前階段的批核者
-    if (stage === 'checker' && application.checker_id === user?.id) {
+    // 方法1：檢查是否直接設置為當前階段的批核者，且該階段尚未批核
+    if (currentStage === 'checker' && application.checker_id === user?.id && !application.checker_at) {
       isCurrentStageApprover = true;
-    } else if (stage === 'approver_1' && application.approver_1_id === user?.id) {
+    } else if (currentStage === 'approver_1' && application.approver_1_id === user?.id && !application.approver_1_at) {
       isCurrentStageApprover = true;
-    } else if (stage === 'approver_2' && application.approver_2_id === user?.id) {
+    } else if (currentStage === 'approver_2' && application.approver_2_id === user?.id && !application.approver_2_at) {
       isCurrentStageApprover = true;
-    } else if (stage === 'approver_3' && application.approver_3_id === user?.id) {
+    } else if (currentStage === 'approver_3' && application.approver_3_id === user?.id && !application.approver_3_at) {
       isCurrentStageApprover = true;
     }
     
@@ -180,21 +201,11 @@ const ApprovalDetail = () => {
     if (isCurrentStageApprover) {
       setCanApproveThis(true);
       setCanRejectThis(true);
-      setUserApprovalStage(stage);
+      setUserApprovalStage(currentStage);
       return;
     }
     
-    // 如果用戶不是當前階段的批核者，但用戶是 HR Group 成員
-    // 且申請處於 approver_3 階段，可以拒絕（但不允許批准）
-    // 這個邏輯只用於特殊情況，例如 HR Group 成員需要緊急拒絕不符合政策的申請
-    if (isHRMember && stage === 'approver_3') {
-      setCanRejectThis(true);
-      setCanApproveThis(false);
-      setUserApprovalStage(null);
-      return;
-    }
-    
-    // 未輪到的批核者只能查看申請資料，不能批核
+    // 未輪到的批核者只能查看申請資料，不能批核（不顯示批核操作 div）
     setCanApproveThis(false);
     setCanRejectThis(false);
     setUserApprovalStage(null);
@@ -221,6 +232,30 @@ const ApprovalDetail = () => {
       setError(error.response?.data?.message || '操作失敗');
     } finally {
       setApproving(false);
+    }
+  };
+
+  const handleHRReject = async () => {
+    if (!application) return;
+
+    setError('');
+    setSuccess('');
+    setHrRejecting(true);
+
+    try {
+      await axios.post(`/api/approvals/${id}/approve`, {
+        action: 'reject',
+        remarks: hrRejectionReason || 'HR Group 拒絕申請'
+      });
+
+      setSuccess('申請已拒絕');
+      setTimeout(() => {
+        navigate('/approval/list');
+      }, 2000);
+    } catch (error) {
+      setError(error.response?.data?.message || '拒絕操作失敗');
+    } finally {
+      setHrRejecting(false);
     }
   };
 
@@ -281,9 +316,11 @@ const ApprovalDetail = () => {
     return <Box>申請不存在</Box>;
   }
 
-  const { stage, text } = getCurrentStage(application);
+  // 優先使用後端返回的 current_approval_stage
+  const currentStage = application.current_approval_stage || getCurrentStage(application).stage;
+  const { text } = getCurrentStage(application);
   // 如果用戶有特定的批核階段，使用該階段；否則使用當前階段
-  const displayStage = userApprovalStage || stage;
+  const displayStage = userApprovalStage || currentStage;
   const displayText = userApprovalStage === 'checker' ? '檢查' :
                       userApprovalStage === 'approver_1' ? '第一批核' :
                       userApprovalStage === 'approver_2' ? '第二批核' :
@@ -317,35 +354,75 @@ const ApprovalDetail = () => {
 
             <List>
               <ListItem>
-                <ListItemText primary="交易編號" secondary={application.transaction_id} />
+                <ListItemText 
+                  primary="交易編號"
+                  secondary={application.transaction_id}
+                  primaryTypographyProps={{ variant: 'caption' }}
+                  secondaryTypographyProps={{ variant: 'body1' }}
+                />
               </ListItem>
               <ListItem>
-                <ListItemText primary="申請人" secondary={application.applicant_name_zh} />
+                <ListItemText 
+                  primary="申請人"
+                  secondary={application.applicant_name_zh}
+                  primaryTypographyProps={{ variant: 'caption' }}
+                  secondaryTypographyProps={{ variant: 'body1' }}
+                />
               </ListItem>
               <ListItem>
-                <ListItemText primary="假期類型" secondary={application.leave_type_name_zh} />
+                <ListItemText 
+                  primary="假期類型"
+                  secondary={application.leave_type_name_zh}
+                  primaryTypographyProps={{ variant: 'caption' }}
+                  secondaryTypographyProps={{ variant: 'body1' }}
+                />
               </ListItem>
               <ListItem>
-                <ListItemText primary="開始日期" secondary={formatDate(application.start_date)} />
+                <ListItemText 
+                  primary="開始日期"
+                  secondary={formatDate(application.start_date)}
+                  primaryTypographyProps={{ variant: 'caption' }}
+                  secondaryTypographyProps={{ variant: 'body1' }}
+                />
               </ListItem>
               <ListItem>
-                <ListItemText primary="結束日期" secondary={formatDate(application.end_date)} />
+                <ListItemText 
+                  primary="結束日期"
+                  secondary={formatDate(application.end_date)}
+                  primaryTypographyProps={{ variant: 'caption' }}
+                  secondaryTypographyProps={{ variant: 'body1' }}
+                />
               </ListItem>
               <ListItem>
-                <ListItemText primary="天數" secondary={application.days} />
+                <ListItemText 
+                  primary="天數"
+                  secondary={application.days}
+                  primaryTypographyProps={{ variant: 'caption' }}
+                  secondaryTypographyProps={{ variant: 'body1' }}
+                />
               </ListItem>
               <ListItem>
-                <ListItemText primary="狀態" secondary={
-                  <Chip
-                    label={application.status === 'pending' ? '待批核' : application.status === 'approved' ? '已批准' : '已拒絕'}
-                    color={application.status === 'pending' ? 'warning' : application.status === 'approved' ? 'success' : 'error'}
-                    size="small"
-                  />
-                } />
+                <ListItemText 
+                  primary="狀態"
+                  secondary={
+                    <Chip
+                      label={application.status === 'pending' ? '待批核' : application.status === 'approved' ? '已批准' : '已拒絕'}
+                      color={application.status === 'pending' ? 'warning' : application.status === 'approved' ? 'success' : 'error'}
+                      size="small"
+                    />
+                  }
+                  primaryTypographyProps={{ variant: 'caption' }}
+                  secondaryTypographyProps={{ variant: 'body1', component: 'div' }}
+                />
               </ListItem>
               {application.reason && (
                 <ListItem>
-                  <ListItemText primary="原因" secondary={application.reason} />
+                  <ListItemText 
+                    primary="原因"
+                    secondary={application.reason}
+                    primaryTypographyProps={{ variant: 'caption' }}
+                    secondaryTypographyProps={{ variant: 'body1' }}
+                  />
                 </ListItem>
               )}
             </List>
@@ -361,73 +438,105 @@ const ApprovalDetail = () => {
                 <ListItemText
                   primary="待核實"
                   secondary={
-                    application.checker_at 
-                      ? `已檢查於 ${formatDateTime(application.checker_at)}${application.checker_name ? ` - ${application.checker_name}` : ''}` 
-                      : '待檢查'
+                    <Box>
+                      <Box>
+                        {application.checker_at 
+                          ? `已檢查於 ${formatDateTime(application.checker_at)}${application.checker_name ? ` - ${application.checker_name}` : ''}` 
+                          : '待檢查'}
+                      </Box>
+                      {application.checker_remarks && (
+                        <Typography variant="body2" sx={{ color: '#1565C0', mt: 1 }}>
+                          {application.checker_remarks}
+                        </Typography>
+                      )}
+                    </Box>
                   }
+                  primaryTypographyProps={{ variant: 'caption' }}
+                  secondaryTypographyProps={{ variant: 'body1', component: 'div' }}
                 />
-                {application.checker_remarks && (
-                  <Typography variant="body2" color="text.secondary">
-                    {application.checker_remarks}
-                  </Typography>
-                )}
               </ListItem>
               <ListItem>
                 <ListItemText
                   primary="首階段批核"
                   secondary={
-                    application.approver_1_at 
-                      ? `已批核於 ${formatDateTime(application.approver_1_at)}${application.approver_1_name ? ` - ${application.approver_1_name}` : ''}` 
-                      : application.checker_at ? '待批核' : '未開始'
+                    <Box>
+                      <Box>
+                        {application.approver_1_at 
+                          ? `已批核於 ${formatDateTime(application.approver_1_at)}${application.approver_1_name ? ` - ${application.approver_1_name}` : ''}` 
+                          : application.checker_at ? '待批核' : '未開始'}
+                      </Box>
+                      {application.approver_1_remarks && (
+                        <Typography variant="body2" sx={{ color: '#1565C0', mt: 1 }}>
+                          {application.approver_1_remarks}
+                        </Typography>
+                      )}
+                    </Box>
                   }
+                  primaryTypographyProps={{ variant: 'caption' }}
+                  secondaryTypographyProps={{ variant: 'body1', component: 'div' }}
                 />
-                {application.approver_1_remarks && (
-                  <Typography variant="body2" color="text.secondary">
-                    {application.approver_1_remarks}
-                  </Typography>
-                )}
               </ListItem>
               <ListItem>
                 <ListItemText
                   primary="次階段批核"
                   secondary={
-                    application.approver_2_at 
-                      ? `已批核於 ${formatDateTime(application.approver_2_at)}${application.approver_2_name ? ` - ${application.approver_2_name}` : ''}` 
-                      : application.approver_1_at ? '待批核' : '未開始'
+                    <Box>
+                      <Box>
+                        {application.approver_2_at 
+                          ? `已批核於 ${formatDateTime(application.approver_2_at)}${application.approver_2_name ? ` - ${application.approver_2_name}` : ''}` 
+                          : application.approver_1_at ? '待批核' : '未開始'}
+                      </Box>
+                      {application.approver_2_remarks && (
+                        <Typography variant="body2" sx={{ color: '#1565C0', mt: 1 }}>
+                          {application.approver_2_remarks}
+                        </Typography>
+                      )}
+                    </Box>
                   }
+                  primaryTypographyProps={{ variant: 'caption' }}
+                  secondaryTypographyProps={{ variant: 'body1', component: 'div' }}
                 />
-                {application.approver_2_remarks && (
-                  <Typography variant="body2" color="text.secondary">
-                    {application.approver_2_remarks}
-                  </Typography>
-                )}
               </ListItem>
               <ListItem>
                 <ListItemText
                   primary="最終批核"
                   secondary={
-                    application.approver_3_at 
-                      ? `已批核於 ${formatDateTime(application.approver_3_at)}${application.approver_3_name ? ` - ${application.approver_3_name}` : ''}` 
-                      : application.approver_2_at ? '待批核' : '未開始'
+                    <Box>
+                      <Box>
+                        {application.approver_3_at 
+                          ? `已批核於 ${formatDateTime(application.approver_3_at)}${application.approver_3_name ? ` - ${application.approver_3_name}` : ''}` 
+                          : application.approver_2_at ? '待批核' : '未開始'}
+                      </Box>
+                      {application.approver_3_remarks && (
+                        <Typography variant="body2" sx={{ color: '#1565C0', mt: 1 }}>
+                          {application.approver_3_remarks}
+                        </Typography>
+                      )}
+                    </Box>
                   }
+                  primaryTypographyProps={{ variant: 'caption' }}
+                  secondaryTypographyProps={{ variant: 'body1', component: 'div' }}
                 />
-                {application.approver_3_remarks && (
-                  <Typography variant="body2" color="text.secondary">
-                    {application.approver_3_remarks}
-                  </Typography>
-                )}
               </ListItem>
               {application.status === 'rejected' && application.rejected_by_name && (
                 <ListItem>
                   <ListItemText
                     primary="拒絕"
-                    secondary={`已拒絕於 ${formatDateTime(application.rejected_at)} - ${application.rejected_by_name}`}
+                    secondary={
+                      <Box>
+                        <Box>
+                          已拒絕於 {formatDateTime(application.rejected_at)} - {application.rejected_by_name}
+                        </Box>
+                        {application.rejection_reason && (
+                          <Typography variant="body2" sx={{ color: '#1565C0', mt: 1 }}>
+                            {application.rejection_reason}
+                          </Typography>
+                        )}
+                      </Box>
+                    }
+                    primaryTypographyProps={{ variant: 'caption' }}
+                    secondaryTypographyProps={{ variant: 'body1', component: 'div' }}
                   />
-                  {application.rejection_reason && (
-                    <Typography variant="body2" color="text.secondary">
-                      {application.rejection_reason}
-                    </Typography>
-                  )}
                 </ListItem>
               )}
             </List>
@@ -480,7 +589,7 @@ const ApprovalDetail = () => {
           </Paper>
         </Grid>
 
-        {(canApproveThis || canRejectThis) && application.status === 'pending' && (
+        {canApproveThis && application.status === 'pending' && (
           <Grid item xs={12} md={4}>
             <Card>
               <CardContent>
@@ -539,6 +648,51 @@ const ApprovalDetail = () => {
                   }}
                 >
                   {approving ? '處理中...' : !action ? '請選擇批准或拒絕' : '提交'}
+                </Button>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
+
+        {/* HR Group 獲授權人專用拒絕操作 Grid */}
+        {user?.is_hr_member && 
+         application?.status === 'pending' && 
+         (currentStage === 'checker' || currentStage === 'approver_1' || currentStage === 'approver_2') && (
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  HR Group 拒絕操作
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  當前階段：{displayText}
+                </Typography>
+
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
+                  label="拒絕原因"
+                  value={hrRejectionReason}
+                  onChange={(e) => setHrRejectionReason(e.target.value)}
+                  placeholder="請輸入拒絕原因..."
+                  sx={{ mb: 2 }}
+                />
+
+                <Button
+                  variant="contained"
+                  color="error"
+                  fullWidth
+                  onClick={handleHRReject}
+                  disabled={hrRejecting}
+                  sx={{
+                    '&:disabled': {
+                      backgroundColor: 'rgba(0, 0, 0, 0.12)',
+                      color: 'rgba(0, 0, 0, 0.26)'
+                    }
+                  }}
+                >
+                  {hrRejecting ? '處理中...' : '拒絕申請'}
                 </Button>
               </CardContent>
             </Card>

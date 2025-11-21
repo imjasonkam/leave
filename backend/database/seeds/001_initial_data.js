@@ -1,5 +1,51 @@
 const bcrypt = require('bcryptjs');
 
+const APPROVAL_STAGE_CONFIG = [
+  { level: 'checker', idField: 'checker_id', timestampField: 'checker_at' },
+  { level: 'approver_1', idField: 'approver_1_id', timestampField: 'approver_1_at' },
+  { level: 'approver_2', idField: 'approver_2_id', timestampField: 'approver_2_at' },
+  { level: 'approver_3', idField: 'approver_3_id', timestampField: 'approver_3_at' }
+];
+
+const determineSeedApprovalStage = (application = {}) => {
+  for (const stage of APPROVAL_STAGE_CONFIG) {
+    const hasAssignee = application[stage.idField];
+    const isCompleted = Boolean(application[stage.timestampField]);
+    if (hasAssignee && !isCompleted) {
+      return stage.level;
+    }
+  }
+  return 'completed';
+};
+
+const syncLeaveApplicationStages = async (knex) => {
+  const applications = await knex('leave_applications').select(
+    'id',
+    'checker_id',
+    'checker_at',
+    'approver_1_id',
+    'approver_1_at',
+    'approver_2_id',
+    'approver_2_at',
+    'approver_3_id',
+    'approver_3_at',
+    'current_approval_stage'
+  );
+
+  if (!applications.length) {
+    return;
+  }
+
+  for (const application of applications) {
+    const resolvedStage = determineSeedApprovalStage(application);
+    if (application.current_approval_stage !== resolvedStage) {
+      await knex('leave_applications')
+        .where('id', application.id)
+        .update({ current_approval_stage: resolvedStage });
+    }
+  }
+};
+
 exports.seed = async function (knex) {
   // 清空所有表（注意順序，避免外鍵約束問題）
   await knex('leave_balance_transactions').del();
@@ -7346,4 +7392,6 @@ exports.seed = async function (knex) {
   //     remarks: '病假配額'
   //   }
   // ]);
+
+  await syncLeaveApplicationStages(knex);
 };

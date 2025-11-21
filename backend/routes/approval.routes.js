@@ -12,4 +12,7 @@ router.get('/history', authenticate, approvalController.getApprovalHistory);
 // 批核申請
 router.post('/:id/approve', authenticate, approvalController.approve);
 
+// 臨時測試 API - 診斷 HR 權限
+router.get('/test-hr-permission', authenticate, approvalController.testHRPermission);
+
 module.exports = router;

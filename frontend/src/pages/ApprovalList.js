@@ -42,6 +42,11 @@ const ApprovalList = () => {
   };
 
   const getCurrentStage = (application) => {
+    // 優先使用後端返回的 current_approval_stage
+    if (application.current_approval_stage) {
+      return application.current_approval_stage;
+    }
+    // Fallback: 如果沒有 current_approval_stage，使用舊的邏輯
     if (!application.checker_at && application.checker_id) return 'checker';
     if (!application.approver_1_at && application.approver_1_id) return 'approver_1';
     if (!application.approver_2_at && application.approver_2_id) return 'approver_2';

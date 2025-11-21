@@ -1,5 +1,37 @@
 const knex = require('../../config/database');
 
+const APPROVAL_STAGE_CONFIG = [
+  { level: 'checker', idField: 'checker_id', timestampField: 'checker_at' },
+  { level: 'approver_1', idField: 'approver_1_id', timestampField: 'approver_1_at' },
+  { level: 'approver_2', idField: 'approver_2_id', timestampField: 'approver_2_at' },
+  { level: 'approver_3', idField: 'approver_3_id', timestampField: 'approver_3_at' }
+];
+
+const determineCurrentApprovalStage = (application = {}) => {
+  for (const stage of APPROVAL_STAGE_CONFIG) {
+    const hasAssignee = application[stage.idField];
+    const isCompleted = Boolean(application[stage.timestampField]);
+    if (hasAssignee && !isCompleted) {
+      return stage.level;
+    }
+  }
+  return 'completed';
+};
+
+const withResolvedApprovalStage = (application) => {
+  if (!application) {
+    return application;
+  }
+
+  const resolvedStage =
+    application.current_approval_stage || determineCurrentApprovalStage(application);
+
+  return {
+    ...application,
+    current_approval_stage: resolvedStage
+  };
+};
+
 const formatApplication = (application) => {
   if (!application) {
     return application;
@@ -26,18 +58,27 @@ const formatApplication = (application) => {
         ? Number(application.total_days)
         : null;
 
+  const approvalStage =
+    application.current_approval_stage || determineCurrentApprovalStage(application);
+
   return {
     ...application,
     transaction_id: transactionId,
     applicant_name_zh: applicantNameZh,
     applicant_employee_number: applicantEmployeeNumber,
-    days
+    days,
+    current_approval_stage: approvalStage
   };
 };
 
 class LeaveApplication {
   static async create(applicationData) {
-    const [application] = await knex('leave_applications').insert(applicationData).returning('*');
+    const payload = {
+      ...applicationData,
+      current_approval_stage: determineCurrentApprovalStage(applicationData)
+    };
+
+    const [application] = await knex('leave_applications').insert(payload).returning('*');
     return await this.findById(application.id);
   }
 
@@ -80,7 +121,7 @@ class LeaveApplication {
         .where('leave_application_id', id);
     }
     
-    return formatApplication(application);
+    return formatApplication(withResolvedApprovalStage(application));
   }
 
   static async findAll(options = {}) {
@@ -133,12 +174,45 @@ class LeaveApplication {
     }
 
     const applications = await query.orderBy('leave_applications.created_at', 'desc');
-    return applications.map(formatApplication);
+    return applications.map(app => formatApplication(withResolvedApprovalStage(app)));
   }
 
   static async update(id, updateData) {
     await knex('leave_applications').where('id', id).update(updateData);
+    await this.syncCurrentApprovalStage(id);
     return await this.findById(id);
+  }
+
+  static async syncCurrentApprovalStage(id) {
+    const application = await knex('leave_applications')
+      .select(
+        'id',
+        'checker_id',
+        'checker_at',
+        'approver_1_id',
+        'approver_1_at',
+        'approver_2_id',
+        'approver_2_at',
+        'approver_3_id',
+        'approver_3_at',
+        'current_approval_stage'
+      )
+      .where('id', id)
+      .first();
+
+    if (!application) {
+      return null;
+    }
+
+    const resolvedStage = determineCurrentApprovalStage(application);
+
+    if (application.current_approval_stage !== resolvedStage) {
+      await knex('leave_applications')
+        .where('id', id)
+        .update({ current_approval_stage: resolvedStage });
+    }
+
+    return resolvedStage;
   }
 
   // 取得待批核的申請（針對特定使用者）
@@ -187,21 +261,7 @@ class LeaveApplication {
           app.approver_3_id === userId) {
         canApprove = true;
       } 
-      // 方法2：檢查是否屬於 HR Group（全局權限，優先檢查）
-      // HR Group 成員應該能夠批核所有申請的 approver_3 階段
-      if (!canApprove && app.approver_3_id && !app.approver_3_at) {
-        const hrGroup = await knex('delegation_groups')
-          .where('name', 'HR Group')
-          .first();
-        
-        if (hrGroup && Array.isArray(hrGroup.user_ids)) {
-          const userIds = hrGroup.user_ids.map(id => Number(id));
-          if (userIds.includes(Number(userId))) {
-            canApprove = true;
-          }
-        }
-      }
-      // 方法3：檢查是否屬於對應的授權群組（特定部門群組）
+      // 方法2：檢查是否屬於對應的授權群組（特定部門群組）
       // 這個檢查對所有成員都應該執行，不僅僅是第一個成員
       if (!canApprove) {
         // 獲取申請人所屬的部門群組
@@ -290,6 +350,8 @@ class LeaveApplication {
   static async approve(applicationId, approverId, level, remarks = null) {
     const updateData = {};
     updateData[`${level}_at`] = knex.fn.now();
+    // 更新批核者ID為實際批核的用戶，確保記錄正確的批核者
+    updateData[`${level}_id`] = approverId;
     if (remarks) {
       updateData[`${level}_remarks`] = remarks;
     }
@@ -300,11 +362,20 @@ class LeaveApplication {
 
     // 檢查是否所有批核都已完成
     const nextApprover = await this.getNextApprover(applicationId);
+    const stageUpdate = nextApprover ? nextApprover.level : 'completed';
+
     if (!nextApprover) {
-      // 所有批核完成，更新狀態為 approved
+      // 所有批核完成
       await knex('leave_applications')
         .where('id', applicationId)
-        .update({ status: 'approved' });
+        .update({
+          status: 'approved',
+          current_approval_stage: stageUpdate
+        });
+    } else {
+      await knex('leave_applications')
+        .where('id', applicationId)
+        .update({ current_approval_stage: stageUpdate });
     }
 
     return await this.findById(applicationId);
@@ -318,7 +389,8 @@ class LeaveApplication {
         status: 'rejected',
         rejected_by_id: rejectorId,
         rejected_at: knex.fn.now(),
-        rejection_reason: reason
+        rejection_reason: reason,
+        current_approval_stage: 'completed'
       });
 
     return await this.findById(applicationId);
@@ -332,7 +404,8 @@ class LeaveApplication {
         status: 'cancelled',
         cancelled_by_id: cancelledById,
         cancelled_at: knex.fn.now(),
-        cancellation_reason: reason
+        cancellation_reason: reason,
+        current_approval_stage: 'completed'
       });
 
     return await this.findById(applicationId);

@@ -104,16 +104,49 @@ class User {
 
   // 檢查使用者是否為 HR 群組成員
   static async isHRMember(userId) {
-    const hrGroup = await knex('delegation_groups')
-      .where('name', 'HR Group')
-      .first();
-    
-    if (!hrGroup || !Array.isArray(hrGroup.user_ids)) {
+    try {
+      const hrGroup = await knex('delegation_groups')
+        .where('name', 'HR Group')
+        .first();
+      
+      if (!hrGroup) {
+        console.log('[isHRMember] HR Group not found in delegation_groups');
+        return false;
+      }
+      
+      if (!hrGroup.user_ids) {
+        console.log('[isHRMember] HR Group has no user_ids');
+        return false;
+      }
+      
+      // PostgreSQL 數組可能返回為字符串或數組，需要處理
+      let userIds = hrGroup.user_ids;
+      if (typeof userIds === 'string') {
+        // 如果是字符串格式的數組，嘗試解析
+        try {
+          userIds = JSON.parse(userIds);
+        } catch (e) {
+          // 如果不是 JSON，可能是 PostgreSQL 數組格式，需要手動解析
+          userIds = userIds.replace(/[{}]/g, '').split(',').filter(Boolean).map(Number);
+        }
+      }
+      
+      if (!Array.isArray(userIds)) {
+        console.log('[isHRMember] user_ids is not an array:', typeof userIds, userIds);
+        return false;
+      }
+      
+      const userIdsNum = userIds.map(id => Number(id));
+      const userIdNum = Number(userId);
+      const isMember = userIdsNum.includes(userIdNum);
+      
+      console.log('[isHRMember] User ID:', userIdNum, 'HR Group user_ids:', userIdsNum, 'isMember:', isMember);
+      
+      return isMember;
+    } catch (error) {
+      console.error('[isHRMember] Error:', error);
       return false;
     }
-    
-    const userIds = hrGroup.user_ids.map(id => Number(id));
-    return userIds.includes(Number(userId));
   }
 
   // 檢查使用者是否可以批核某個假期申請
@@ -131,30 +164,41 @@ class User {
       return false;
     }
 
-    // 方法1：檢查使用者是否直接設置為該申請的批核者
-    if (application.checker_id === userId ||
-        application.approver_1_id === userId ||
-        application.approver_2_id === userId ||
-        application.approver_3_id === userId) {
-      // 檢查是否為當前階段（尚未批核的階段）
-      if ((application.checker_id === userId && !application.checker_at) ||
-          (application.approver_1_id === userId && !application.approver_1_at) ||
-          (application.approver_2_id === userId && !application.approver_2_at) ||
-          (application.approver_3_id === userId && !application.approver_3_at)) {
-        return true;
+    // 確定當前申請處於哪個階段（優先使用 current_approval_stage）
+    let currentStage = application.current_approval_stage;
+    if (!currentStage) {
+      // Fallback: 如果沒有 current_approval_stage，使用舊的邏輯
+      if (!application.checker_at && application.checker_id) {
+        currentStage = 'checker';
+      } else if (!application.approver_1_at && application.approver_1_id) {
+        currentStage = 'approver_1';
+      } else if (!application.approver_2_at && application.approver_2_id) {
+        currentStage = 'approver_2';
+      } else if (!application.approver_3_at && application.approver_3_id) {
+        currentStage = 'approver_3';
+      } else {
+        currentStage = 'completed';
       }
     }
 
-    // 方法2：檢查是否屬於 HR Group（全局權限，優先檢查）
-    // HR Group 成員應該能夠批核所有申請的 approver_3 階段
-    if (application.approver_3_id && !application.approver_3_at) {
-      const isHRMember = await this.isHRMember(userId);
-      if (isHRMember) {
-        return true;
-      }
+    // 如果已經完成所有批核階段，不能批核
+    if (currentStage === 'completed') {
+      return false;
     }
-    
-    // 方法3：檢查是否屬於對應的授權群組（特定部門群組）
+
+    // 方法1：檢查使用者是否直接設置為當前階段的批核者
+    // 只檢查當前階段，未輪到的批核者不能批核
+    if (currentStage === 'checker' && application.checker_id === userId && !application.checker_at) {
+      return true;
+    } else if (currentStage === 'approver_1' && application.approver_1_id === userId && !application.approver_1_at) {
+      return true;
+    } else if (currentStage === 'approver_2' && application.approver_2_id === userId && !application.approver_2_at) {
+      return true;
+    } else if (currentStage === 'approver_3' && application.approver_3_id === userId && !application.approver_3_at) {
+      return true;
+    }
+
+    // 方法2：檢查是否屬於對應的授權群組（特定部門群組）
     const DepartmentGroup = require('./DepartmentGroup');
     
     // 獲取申請人所屬的部門群組
@@ -167,22 +211,10 @@ class User {
       // 獲取該部門群組的批核流程
       const approvalFlow = await DepartmentGroup.getApprovalFlow(deptGroup.id);
       
-      // 確定當前申請處於哪個階段
-      let currentLevel = null;
-      if (!application.checker_at && application.checker_id) {
-        currentLevel = 'checker';
-      } else if (!application.approver_1_at && application.approver_1_id) {
-        currentLevel = 'approver_1';
-      } else if (!application.approver_2_at && application.approver_2_id) {
-        currentLevel = 'approver_2';
-      } else if (!application.approver_3_at && application.approver_3_id) {
-        currentLevel = 'approver_3';
-      }
-      
       // 檢查用戶是否屬於當前階段的授權群組，且該階段尚未批核
       // 只有當前階段的批核者才能批核，未輪到的批核者不能批核
-      if (currentLevel) {
-        const currentStep = approvalFlow.find(step => step.level === currentLevel);
+      if (currentStage && currentStage !== 'completed') {
+        const currentStep = approvalFlow.find(step => step.level === currentStage);
         if (currentStep && currentStep.delegation_group_id) {
           // 檢查用戶是否屬於當前階段的授權群組
           const isInDelegationGroup = await knex('delegation_groups')
@@ -211,9 +243,6 @@ class User {
           }
         }
       }
-      
-      // 特別處理 HR Group（approver_3）：即使當前階段不是 approver_3，HR Group 成員也可以批核
-      // 但這已經在方法2中處理了，所以這裡不需要重複檢查
     }
 
     return false;
