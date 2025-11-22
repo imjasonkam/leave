@@ -171,7 +171,7 @@ const AdminBalances = () => {
             >
               {users.map((u) => (
                 <MenuItem key={u.id} value={u.id}>
-                  {u.employee_number} ({u.name_zh})
+                  {u.employee_number} ({u.display_name})
                 </MenuItem>
               ))}
             </Select>

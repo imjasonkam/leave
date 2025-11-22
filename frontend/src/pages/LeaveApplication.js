@@ -33,6 +33,7 @@ const LeaveApplication = () => {
   const { user } = useAuth();
   const [formData, setFormData] = useState({
     leave_type_id: '',
+    year: new Date().getFullYear(), // 預設為當前年份
     start_date: null,
     start_session: 'AM', // 預設為上午
     end_date: null,
@@ -47,6 +48,7 @@ const LeaveApplication = () => {
   const [balance, setBalance] = useState(null);
   const [files, setFiles] = useState([]);
   const [includeWeekends, setIncludeWeekends] = useState(true); // 預設包含週末
+  const [yearManuallySet, setYearManuallySet] = useState(false); // 標記年份是否被手動設置
 
   useEffect(() => {
     fetchLeaveTypes();
@@ -54,9 +56,20 @@ const LeaveApplication = () => {
 
   useEffect(() => {
     if (formData.leave_type_id) {
-      fetchBalance(user.id, formData.leave_type_id);
+      fetchBalance(user.id, formData.leave_type_id, formData.year);
     }
-  }, [formData.leave_type_id, user.id]);
+  }, [formData.leave_type_id, formData.year, user.id]);
+
+  // 當開始日期改變時，如果年份未被手動設置，則自動更新年份
+  useEffect(() => {
+    if (formData.start_date && !yearManuallySet) {
+      const dateYear = formData.start_date.year();
+      // 如果當前選擇的年份與日期年份不同，自動更新
+      if (formData.year !== dateYear) {
+        setFormData(prev => ({ ...prev, year: dateYear }));
+      }
+    }
+  }, [formData.start_date, yearManuallySet]);
 
   // 計算工作日（排除週末）
   const calculateWorkingDays = (startDate, endDate) => {
@@ -158,11 +171,11 @@ const LeaveApplication = () => {
     }
   };
 
-  const fetchBalance = async (userId, leaveTypeId) => {
+  const fetchBalance = async (userId, leaveTypeId, year) => {
     try {
-      const currentYear = new Date().getFullYear();
+      const selectedYear = year || new Date().getFullYear();
       const response = await axios.get('/api/leaves/balances', {
-        params: { user_id: userId, year: currentYear }
+        params: { user_id: userId, year: selectedYear }
       });
       const balances = response.data.balances || [];
       const selectedBalance = balances.find(b => b.leave_type_id === parseInt(leaveTypeId));
@@ -255,6 +268,7 @@ const LeaveApplication = () => {
       formDataToSend.append('end_date', formData.end_date.format('YYYY-MM-DD'));
       formDataToSend.append('end_session', formData.end_session);
       formDataToSend.append('total_days', parseFloat(formData.days));
+      formDataToSend.append('year', formData.year); // 發送年份
       if (formData.reason) {
         formDataToSend.append('reason', formData.reason);
       }
@@ -273,6 +287,7 @@ const LeaveApplication = () => {
       setSuccess(`申請已提交，交易編號：${response.data.application.transaction_id}`);
       setFormData({
         leave_type_id: '',
+        year: new Date().getFullYear(), // 重置為當前年份
         start_date: null,
         start_session: 'AM', // 預設為上午
         end_date: null,
@@ -283,6 +298,7 @@ const LeaveApplication = () => {
       setFiles([]);
       setBalance(null);
       setIncludeWeekends(true); // 重置為預設值
+      setYearManuallySet(false); // 重置年份手動設置標記
     } catch (error) {
       setError(error.response?.data?.message || '提交申請時發生錯誤');
     } finally {
@@ -325,6 +341,28 @@ const LeaveApplication = () => {
                   {lt.name_zh} ({lt.name})
                 </MenuItem>
               ))}
+            </Select>
+          </FormControl>
+
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel>假期所屬年份</InputLabel>
+            <Select
+              value={formData.year}
+              label="假期所屬年份"
+              onChange={(e) => {
+                setFormData(prev => ({ ...prev, year: e.target.value }));
+                setYearManuallySet(true); // 標記為手動設置
+              }}
+              required
+            >
+              {Array.from({ length: 5 }, (_, i) => {
+                const year = new Date().getFullYear() - 1 + i; // 從去年到後年（共5年）
+                return (
+                  <MenuItem key={year} value={year}>
+                    {year}年
+                  </MenuItem>
+                );
+              })}
             </Select>
           </FormControl>
 

@@ -364,7 +364,7 @@ const ApprovalDetail = () => {
               <ListItem>
                 <ListItemText 
                   primary="申請人"
-                  secondary={application.applicant_name_zh}
+                  secondary={application.applicant_display_name}
                   primaryTypographyProps={{ variant: 'caption' }}
                   secondaryTypographyProps={{ variant: 'body1' }}
                 />
@@ -373,6 +373,14 @@ const ApprovalDetail = () => {
                 <ListItemText 
                   primary="假期類型"
                   secondary={application.leave_type_name_zh}
+                  primaryTypographyProps={{ variant: 'caption' }}
+                  secondaryTypographyProps={{ variant: 'body1' }}
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemText 
+                  primary="年份"
+                  secondary={application.year || (application.start_date ? new Date(application.start_date).getFullYear() : '-') + '年'}
                   primaryTypographyProps={{ variant: 'caption' }}
                   secondaryTypographyProps={{ variant: 'body1' }}
                 />
@@ -612,10 +620,13 @@ const ApprovalDetail = () => {
                         secondary={
                           <Box sx={{ mt: 1 }}>
                             <Typography variant="body2" color="text.secondary">
-                              申請人：{reversal.applicant_name_zh}
+                              申請人：{reversal.applicant_display_name}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
                               假期類型：{reversal.leave_type_name_zh}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              年份：{reversal.year || (reversal.start_date ? new Date(reversal.start_date).getFullYear() : '-')}年
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
                               日期：{formatDate(reversal.start_date)} ~ {formatDate(reversal.end_date)}

@@ -21,6 +21,7 @@ const determineSeedApprovalStage = (application = {}) => {
 const syncLeaveApplicationStages = async (knex) => {
   const applications = await knex('leave_applications').select(
     'id',
+    'start_date',
     'checker_id',
     'checker_at',
     'approver_1_id',
@@ -29,7 +30,8 @@ const syncLeaveApplicationStages = async (knex) => {
     'approver_2_at',
     'approver_3_id',
     'approver_3_at',
-    'current_approval_stage'
+    'current_approval_stage',
+    'year'
   );
 
   if (!applications.length) {
@@ -37,11 +39,28 @@ const syncLeaveApplicationStages = async (knex) => {
   }
 
   for (const application of applications) {
+    const updates = {};
+    
+    // 同步批核階段
     const resolvedStage = determineSeedApprovalStage(application);
     if (application.current_approval_stage !== resolvedStage) {
+      updates.current_approval_stage = resolvedStage;
+    }
+    
+    // 如果year字段為null或未設置，從start_date計算年份
+    if (!application.year && application.start_date) {
+      const year = new Date(application.start_date).getFullYear();
+      updates.year = year;
+    } else if (!application.year) {
+      // 如果沒有start_date，使用當前年份
+      updates.year = new Date().getFullYear();
+    }
+    
+    // 如果有需要更新的字段，執行更新
+    if (Object.keys(updates).length > 0) {
       await knex('leave_applications')
         .where('id', application.id)
-        .update({ current_approval_stage: resolvedStage });
+        .update(updates);
     }
   }
 };

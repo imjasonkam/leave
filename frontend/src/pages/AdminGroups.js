@@ -441,7 +441,7 @@ const AdminGroups = () => {
               >
                 {users.filter(u => !groupMembers.find(m => m.id === u.id)).map((user) => (
                   <MenuItem key={user.id} value={user.id}>
-                    {user.employee_number} ({user.name_zh})
+                    {user.employee_number} ({user.display_name})
                   </MenuItem>
                 ))}
               </Select>
@@ -452,7 +452,7 @@ const AdminGroups = () => {
             {groupMembers.map((member) => (
               <ListItem key={member.id}>
                 <ListItemText
-                  primary={`${member.employee_number} (${member.name_zh})`}
+                  primary={`${member.employee_number} (${member.display_name})`}
                   secondary={member.department_name_zh}
                 />
                 <ListItemSecondaryAction>

@@ -39,7 +39,7 @@ const AdminUsers = () => {
     surname: '',
     given_name: '',
     alias: '',
-    name_zh: '',
+    display_name: '',
     email: '',
     password: '',
     department_id: '',
@@ -65,7 +65,7 @@ const AdminUsers = () => {
       reversedEnglishFullName,
       u.surname || '',
       u.given_name || '',
-      u.name_zh || '',
+      u.display_name || '',
       u.alias || ''
     ];
 
@@ -118,7 +118,7 @@ const AdminUsers = () => {
       surname: '',
       given_name: '',
       alias: '',
-      name_zh: '',
+      display_name: '',
       email: '',
       password: '',
       department_id: '',
@@ -136,7 +136,7 @@ const AdminUsers = () => {
       surname: userData.surname,
       given_name: userData.given_name,
       alias: userData.alias || '',
-      name_zh: userData.name_zh,
+      display_name: userData.display_name,
       email: userData.email,
       password: '',
       department_id: userData.department_id || '',
@@ -217,7 +217,7 @@ const AdminUsers = () => {
               {filteredUsers.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell>{u.employee_number}</TableCell>
-                  <TableCell>{u.name_zh}</TableCell>
+                  <TableCell>{u.display_name}</TableCell>
                   <TableCell>{u.email}</TableCell>
                   <TableCell>{u.department_name_zh || '-'}</TableCell>
                   <TableCell>{u.position_name_zh || '-'}</TableCell>
@@ -267,8 +267,8 @@ const AdminUsers = () => {
             />
             <TextField
               label="中文姓名"
-              value={formData.name_zh}
-              onChange={(e) => setFormData(prev => ({ ...prev, name_zh: e.target.value }))}
+              value={formData.display_name}
+              onChange={(e) => setFormData(prev => ({ ...prev, display_name: e.target.value }))}
               required
             />
             <TextField

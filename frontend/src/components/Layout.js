@@ -130,10 +130,10 @@ const Layout = ({ children }) => {
             {menuItems.find(item => item.path === location.pathname)?.text || '假期管理系統'}
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2">{user?.name_zh || `${user?.surname} ${user?.given_name}`}</Typography>
+            <Typography variant="body2">{user?.display_name || `${user?.surname} ${user?.given_name}`}</Typography>
             <IconButton onClick={handleMenuOpen} sx={{ p: 0 }}>
               <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
-                {user?.name_zh?.charAt(0) || user?.surname?.charAt(0)}
+                {user?.display_name?.charAt(0) || user?.surname?.charAt(0)}
               </Avatar>
             </IconButton>
           </Box>

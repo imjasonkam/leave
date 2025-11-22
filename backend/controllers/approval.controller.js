@@ -122,11 +122,12 @@ class ApprovalController {
 
             const leaveType = await require('../database/models/LeaveType').findById(updatedApplication.leave_type_id);
             if (leaveType && leaveType.requires_balance) {
-              const currentYear = new Date().getFullYear();
+              // 使用申請的year字段來退回對應年份的quota
+              const applicationYear = updatedApplication.year || new Date(updatedApplication.start_date).getFullYear();
               await LeaveBalance.incrementBalance(
                 updatedApplication.user_id,
                 updatedApplication.leave_type_id,
-                currentYear,
+                applicationYear,
                 parseFloat(updatedApplication.total_days),
                 '假期申請被拒絕，退回餘額',
                 updatedApplication.start_date,
@@ -138,11 +139,12 @@ class ApprovalController {
           } else {
             const leaveType = await require('../database/models/LeaveType').findById(updatedApplication.leave_type_id);
             if (leaveType && leaveType.requires_balance) {
-              const currentYear = new Date().getFullYear();
+              // 使用申請的year字段來扣除對應年份的quota
+              const applicationYear = updatedApplication.year || new Date(updatedApplication.start_date).getFullYear();
               await LeaveBalance.decrementBalance(
                 updatedApplication.user_id,
                 updatedApplication.leave_type_id,
-                currentYear,
+                applicationYear,
                 parseFloat(updatedApplication.total_days),
                 '假期申請已批准，扣除餘額',
                 updatedApplication.start_date,
@@ -212,8 +214,8 @@ class ApprovalController {
           'users.employee_number as applicant_employee_number',
           'users.surname as user_surname',
           'users.given_name as user_given_name',
-          'users.name_zh as user_name_zh',
-          'users.name_zh as applicant_name_zh',
+          'users.display_name as user_display_name',
+          'users.display_name as applicant_display_name',
           'leave_types.code as leave_type_code',
           'leave_types.name as leave_type_name',
           'leave_types.name_zh as leave_type_name_zh',
@@ -382,14 +384,14 @@ class ApprovalController {
         const formattedApp = {
           ...app,
           transaction_id: app.transaction_id || `LA-${String(app.id).padStart(6, '0')}`,
-          applicant_name_zh: app.applicant_name_zh || app.user_name_zh,
+          applicant_display_name: app.applicant_display_name || app.user_display_name,
           days: app.days !== undefined && app.days !== null ? app.days : app.total_days,
           is_paper_flow: isPaperFlow, // 確保前端能正確識別
           user_approval_stage: app.user_approval_stage || null, // 記錄用戶在哪個階段批核的
           reversal_transactions: reversalTransactions.map(rev => ({
             ...rev,
             transaction_id: rev.transaction_id || `LA-${String(rev.id).padStart(6, '0')}`,
-            applicant_name_zh: rev.applicant_name_zh || rev.user_name_zh,
+            applicant_display_name: rev.applicant_display_name || rev.user_display_name,
             days: rev.days !== undefined && rev.days !== null ? rev.days : rev.total_days
           }))
         };

@@ -10,7 +10,7 @@ const path = require('path');
 class LeaveController {
   async createApplication(req, res) {
     try {
-      const { start_date, start_session, end_date, end_session, total_days, leave_type_id, reason, user_id, flow_type } = req.body;
+      const { start_date, start_session, end_date, end_session, total_days, leave_type_id, reason, user_id, flow_type, year } = req.body;
       const applied_by_id = req.user.id;
 
       if (!start_date || !start_session || !end_date || !end_session || !total_days || !leave_type_id) {
@@ -50,7 +50,8 @@ class LeaveController {
       // 決定流程類型：明確指定 paper-flow 才使用，否則一律走 e-flow
       const actualFlowType = flow_type === 'paper-flow' ? 'paper-flow' : 'e-flow';
 
-      const currentYear = new Date().getFullYear();
+      // 優先使用前端發送的year參數，如果沒有則從start_date計算
+      const applicationYear = year ? parseInt(year) : new Date(start_date).getFullYear();
 
       let balanceRecord = null;
 
@@ -58,7 +59,8 @@ class LeaveController {
       if (leaveType.requires_balance) {
         const LeaveBalanceTransaction = require('../database/models/LeaveBalanceTransaction');
         
-        balanceRecord = await LeaveBalance.findByUserAndType(applicantId, leave_type_id, currentYear);
+        // 使用申請的年份來檢查對應年份的餘額
+        balanceRecord = await LeaveBalance.findByUserAndType(applicantId, leave_type_id, applicationYear);
         
         if (!balanceRecord || parseFloat(balanceRecord.balance) < parseFloat(total_days)) {
           return res.status(400).json({ message: '假期餘額不足' });
@@ -86,6 +88,7 @@ class LeaveController {
         start_session,
         end_date,
         end_session,
+        year: applicationYear, // 設置假期所屬年份
         total_days: parseFloat(total_days),
         reason: reason || null,
         status: actualFlowType === 'paper-flow' ? 'approved' : 'pending',
@@ -158,10 +161,11 @@ class LeaveController {
           throw new Error('找不到假期餘額紀錄');
         }
 
+        // 使用申請的year字段來扣除對應年份的quota
         await LeaveBalance.decrementBalance(
           applicantId,
           leave_type_id,
-          currentYear,
+          applicationYear,
           parseFloat(total_days),
           '假期申請已批准，扣除餘額',
           start_date,

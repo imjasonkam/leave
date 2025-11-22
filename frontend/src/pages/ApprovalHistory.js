@@ -177,7 +177,7 @@ const ApprovalHistory = () => {
     const keyword = search.toLowerCase();
     const transactionId = app.transaction_id?.toString().toLowerCase() || '';
     const leaveTypeNameZh = app.leave_type_name_zh?.toLowerCase() || '';
-    const applicantNameZh = app.applicant_name_zh?.toLowerCase() || '';
+    const applicantNameZh = app.applicant_display_name?.toLowerCase() || '';
     
     return transactionId.includes(keyword) ||
            leaveTypeNameZh.includes(keyword) ||
@@ -414,6 +414,7 @@ const ApprovalHistory = () => {
                 <TableCell>交易編號</TableCell>
                 <TableCell>申請人</TableCell>
                 <TableCell>假期類型</TableCell>
+                <TableCell>年份</TableCell>
                 <TableCell>開始日期</TableCell>
                 <TableCell>結束日期</TableCell>
                 <TableCell>天數</TableCell>
@@ -426,19 +427,22 @@ const ApprovalHistory = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={10} align="center">載入中...</TableCell>
+                  <TableCell colSpan={11} align="center">載入中...</TableCell>
                 </TableRow>
               ) : filteredApplications.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} align="center">沒有批核記錄</TableCell>
+                  <TableCell colSpan={11} align="center">沒有批核記錄</TableCell>
                 </TableRow>
               ) : (
                 filteredApplications.map((app) => (
                   <React.Fragment key={app.id}>
                     <TableRow hover>
                       <TableCell>{app.transaction_id}</TableCell>
-                      <TableCell>{app.applicant_name_zh}</TableCell>
+                      <TableCell>{app.applicant_display_name}</TableCell>
                       <TableCell>{app.leave_type_name_zh}</TableCell>
+                      <TableCell>
+                        {app.year || (app.start_date ? new Date(app.start_date).getFullYear() : '-')}年
+                      </TableCell>
                       <TableCell>{formatDate(app.start_date)}</TableCell>
                       <TableCell>{formatDate(app.end_date)}</TableCell>
                       <TableCell>{app.days}</TableCell>
@@ -503,7 +507,7 @@ const ApprovalHistory = () => {
                               {reversal.transaction_id}
                             </Box>
                           </TableCell>
-                          <TableCell>{reversal.applicant_name_zh}</TableCell>
+                          <TableCell>{reversal.applicant_display_name}</TableCell>
                           <TableCell>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Chip
@@ -514,6 +518,9 @@ const ApprovalHistory = () => {
                               />
                               <Typography variant="body2">{reversal.leave_type_name_zh}</Typography>
                             </Box>
+                          </TableCell>
+                          <TableCell>
+                            {reversal.year || (reversal.start_date ? new Date(reversal.start_date).getFullYear() : '-')}年
                           </TableCell>
                           <TableCell>{formatDate(reversal.start_date)}</TableCell>
                           <TableCell>{formatDate(reversal.end_date)}</TableCell>
@@ -679,7 +686,7 @@ const ApprovalHistory = () => {
                 <br />
                 交易編號：{selectedReversalApplication.transaction_id}
                 <br />
-                申請人：{selectedReversalApplication.applicant_name_zh}
+                申請人：{selectedReversalApplication.applicant_display_name}
                 <br />
                 假期類型：{selectedReversalApplication.leave_type_name_zh}
                 <br />

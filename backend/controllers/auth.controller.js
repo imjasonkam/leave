@@ -24,7 +24,7 @@ class AuthController {
       if (user) {
         console.log('Found user details:');
         console.log('- Employee number:', user.employee_number);
-        console.log('- Name:', user.name_zh);
+        console.log('- Name:', user.display_name);
         console.log('- Has password_hash:', !!user.password_hash);
       }
 
@@ -86,7 +86,7 @@ class AuthController {
         surname: user.surname,
         given_name: user.given_name,
         alias: user.alias || null,
-        name_zh: user.name_zh,
+        display_name: user.display_name,
         email: user.email,
         department_id: user.department_id || null,
         department_name: user.department_name || null,
@@ -184,7 +184,7 @@ class AuthController {
           surname: user.surname,
           given_name: user.given_name,
           alias: user.alias,
-          name_zh: user.name_zh,
+          display_name: user.display_name,
           email: user.email,
           department_id: user.department_id,
           department_name: user.department_name,

@@ -9,6 +9,7 @@ exports.up = function(knex) {
     table.string('start_session'); // 'AM' or 'PM' for half-day, null for full day
     table.date('end_date').notNullable();
     table.string('end_session'); // 'AM' or 'PM' for half-day, null for full day
+    table.integer('year').notNullable(); // 假期所屬年份，用於控制扣除所屬年份的quota
     table.decimal('total_days', 5, 2).notNullable();
     table.text('reason');
     // table.jsonb('document_urls').defaultTo('[]'); // 存儲上傳文件的路由陣列，格式：["/api/leaves/documents/1/download", "/api/leaves/documents/2/download"]

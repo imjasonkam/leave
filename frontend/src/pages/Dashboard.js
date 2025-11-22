@@ -86,7 +86,7 @@ const Dashboard = () => {
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
-        歡迎，{user?.name_zh || `${user?.surname} ${user?.given_name}`}
+        歡迎，{user?.display_name || `${user?.surname} ${user?.given_name}`}
       </Typography>
       <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
         {user?.department_name_zh} - {user?.position_name_zh}

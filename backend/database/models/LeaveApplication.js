@@ -42,8 +42,8 @@ const formatApplication = (application) => {
     `LA-${String(application.id).padStart(6, '0')}`;
 
   const applicantNameZh =
-    application.applicant_name_zh ||
-    application.user_name_zh ||
+    application.applicant_display_name ||
+    application.user_display_name ||
     null;
 
   const applicantEmployeeNumber =
@@ -64,7 +64,7 @@ const formatApplication = (application) => {
   return {
     ...application,
     transaction_id: transactionId,
-    applicant_name_zh: applicantNameZh,
+    applicant_display_name: applicantNameZh,
     applicant_employee_number: applicantEmployeeNumber,
     days,
     current_approval_stage: approvalStage
@@ -100,18 +100,18 @@ class LeaveApplication {
         'users.employee_number as applicant_employee_number',
         'users.surname as user_surname',
         'users.given_name as user_given_name',
-        'users.name_zh as user_name_zh',
-        'users.name_zh as applicant_name_zh',
+        'users.display_name as user_display_name',
+        'users.display_name as applicant_display_name',
         'leave_types.code as leave_type_code',
         'leave_types.name as leave_type_name',
         'leave_types.name_zh as leave_type_name_zh',
         'leave_types.requires_balance as leave_type_requires_balance',
-        'checker.name_zh as checker_name',
-        'approver_1.name_zh as approver_1_name',
-        'approver_2.name_zh as approver_2_name',
-        'approver_3.name_zh as approver_3_name',
-        'rejected_by.name_zh as rejected_by_name',
-        'cancelled_by.name_zh as cancelled_by_name'
+        'checker.display_name as checker_name',
+        'approver_1.display_name as approver_1_name',
+        'approver_2.display_name as approver_2_name',
+        'approver_3.display_name as approver_3_name',
+        'rejected_by.display_name as rejected_by_name',
+        'cancelled_by.display_name as cancelled_by_name'
       )
       .where('leave_applications.id', id)
       .first();
@@ -163,8 +163,8 @@ class LeaveApplication {
         'users.employee_number as applicant_employee_number',
         'users.surname as user_surname',
         'users.given_name as user_given_name',
-        'users.name_zh as user_name_zh',
-        'users.name_zh as applicant_name_zh',
+        'users.display_name as user_display_name',
+        'users.display_name as applicant_display_name',
         'leave_types.code as leave_type_code',
         'leave_types.name as leave_type_name',
         'leave_types.name_zh as leave_type_name_zh',
@@ -259,8 +259,8 @@ class LeaveApplication {
         'users.employee_number as applicant_employee_number',
         'users.surname as user_surname',
         'users.given_name as user_given_name',
-        'users.name_zh as user_name_zh',
-        'users.name_zh as applicant_name_zh',
+        'users.display_name as user_display_name',
+        'users.display_name as applicant_display_name',
         'leave_types.code as leave_type_code',
         'leave_types.name as leave_type_name',
         'leave_types.name_zh as leave_type_name_zh'
@@ -281,7 +281,7 @@ class LeaveApplication {
     for (const app of allApplications) {
       let canApprove = false;
 
-      // 方法1：檢查是否直接設置為批核者
+      // 方法1：檢查是否直接設置為批核者（無論是否輪到他們批核，都應該能看到）
       if (app.checker_id === userId ||
           app.approver_1_id === userId ||
           app.approver_2_id === userId ||
@@ -289,7 +289,7 @@ class LeaveApplication {
         canApprove = true;
       } 
       // 方法2：檢查是否屬於對應的授權群組（特定部門群組）
-      // 這個檢查對所有成員都應該執行，不僅僅是第一個成員
+      // 修改邏輯：只要用戶屬於批核流程中任何階段的授權群組，且該階段已設置（無論是否已批核或尚未輪到），都應該能看到申請
       if (!canApprove) {
         // 獲取申請人所屬的部門群組
         const departmentGroups = await DepartmentGroup.findByUserId(app.user_id);
@@ -301,32 +301,32 @@ class LeaveApplication {
           // 獲取該部門群組的批核流程
           const approvalFlow = await DepartmentGroup.getApprovalFlow(deptGroup.id);
           
-          // 檢查用戶是否屬於申請流程中任何階段的授權群組，且該階段尚未批核
-          // 這樣可以讓所有授權群組成員都能看到他們將來需要批核的申請
+          // 檢查用戶是否屬於申請流程中任何階段的授權群組
+          // 只要該階段已設置（有對應的 approver_id），無論是否已批核或尚未輪到，都應該能看到
           for (const step of approvalFlow) {
             if (step.delegation_group_id && userDelegationGroupIds.includes(Number(step.delegation_group_id))) {
-              // 檢查該階段是否已設置且尚未批核
-              // 使用多種可能的字段名稱來檢查（因為可能有不同的 migration 版本）
-              let stepIsPending = false;
+              // 檢查該階段是否已設置（有對應的 approver_id）
+              // 不再檢查是否已批核，只要階段已設置就允許查看
+              let stepIsSet = false;
               
               if (step.level === 'checker') {
-                // 檢查 checker 階段：checker_id 存在且尚未批核
-                stepIsPending = !!(app.checker_id && app.checker_at == null && app.checked_at == null);
+                // 檢查 checker 階段：只要 checker_id 存在就允許查看
+                stepIsSet = !!(app.checker_id);
               } else if (step.level === 'approver_1') {
-                // 檢查 approver_1 階段：approver_1_id 存在且尚未批核
+                // 檢查 approver_1 階段：只要 approver_1_id 存在就允許查看
                 // 注意：approver_1_id 存儲的是授權群組中第一個成員的 ID
                 // 但所有授權群組成員都應該能看到這個申請
-                stepIsPending = !!(app.approver_1_id && app.approver_1_at == null && app.approved_1_at == null);
+                stepIsSet = !!(app.approver_1_id);
               } else if (step.level === 'approver_2') {
-                // 檢查 approver_2 階段：approver_2_id 存在且尚未批核
-                stepIsPending = !!(app.approver_2_id && app.approver_2_at == null && app.approved_2_at == null);
+                // 檢查 approver_2 階段：只要 approver_2_id 存在就允許查看
+                stepIsSet = !!(app.approver_2_id);
               } else if (step.level === 'approver_3') {
-                // 檢查 approver_3 階段：approver_3_id 存在且尚未批核
-                stepIsPending = !!(app.approver_3_id && app.approver_3_at == null && app.approved_3_at == null);
+                // 檢查 approver_3 階段：只要 approver_3_id 存在就允許查看
+                stepIsSet = !!(app.approver_3_id);
               }
 
-              // 如果用戶屬於該階段的授權群組，且該階段尚未批核，允許查看
-              if (stepIsPending) {
+              // 如果用戶屬於該階段的授權群組，且該階段已設置，允許查看
+              if (stepIsSet) {
                 canApprove = true;
                 break; // 找到一個匹配的階段就可以退出循環
               }
@@ -458,11 +458,15 @@ class LeaveApplication {
       approvalFlow = await DepartmentGroup.getApprovalFlow(userGroups[0].id);
     }
 
+    // 使用原始申請的year字段
+    const cancellationYear = originalApp.year || (originalApp.start_date ? new Date(originalApp.start_date).getFullYear() : new Date().getFullYear());
+    
     const cancellationData = {
       user_id: userId,
       leave_type_id: originalApp.leave_type_id,
       start_date: originalApp.start_date,
       end_date: originalApp.end_date,
+      year: cancellationYear, // 使用原始申請的年份
       total_days: originalApp.total_days,
       reason: reason,
       status: 'pending',
@@ -515,11 +519,15 @@ class LeaveApplication {
     
     // 如果是 paper-flow 或 HR 直接批准，銷假申請直接批准
     if (isPaperFlow || isHRDirectApproval) {
+      // 使用原始申請的year字段
+      const reversalYear = originalApp.year || (originalApp.start_date ? new Date(originalApp.start_date).getFullYear() : new Date().getFullYear());
+      
       const reversalData = {
         user_id: originalApp.user_id, // 使用原始申請的 user_id
         leave_type_id: originalApp.leave_type_id,
         start_date: originalApp.start_date,
         end_date: originalApp.end_date,
+        year: reversalYear, // 使用原始申請的年份
         total_days: -Math.abs(Number(originalApp.total_days || 0)),
         reason: 'Reversal',
         status: 'approved', // 直接批准
@@ -551,11 +559,15 @@ class LeaveApplication {
     const DelegationGroup = require('./DelegationGroup');
 
     const departmentGroups = await DepartmentGroup.findByUserId(userId);
+    // 使用原始申請的year字段
+    const reversalYear = originalApp.year || (originalApp.start_date ? new Date(originalApp.start_date).getFullYear() : new Date().getFullYear());
+    
     const reversalData = {
       user_id: userId,
       leave_type_id: originalApp.leave_type_id,
       start_date: originalApp.start_date,
       end_date: originalApp.end_date,
+      year: reversalYear, // 使用原始申請的年份
       total_days: -Math.abs(Number(originalApp.total_days || 0)),
       reason: 'Reversal',
       status: 'pending',
@@ -621,9 +633,10 @@ class LeaveApplication {
       const leaveType = await LeaveType.findById(application.leave_type_id);
 
       if (leaveType && leaveType.requires_balance) {
-        const year = application.start_date
+        // 使用申請的year字段，如果沒有則從start_date計算
+        const year = application.year || (application.start_date
           ? new Date(application.start_date).getFullYear()
-          : new Date().getFullYear();
+          : new Date().getFullYear());
 
         await LeaveBalance.incrementBalance(
           application.user_id,

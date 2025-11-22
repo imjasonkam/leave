@@ -77,6 +77,7 @@ const ApprovalList = () => {
                 <TableCell>交易編號</TableCell>
                 <TableCell>申請人</TableCell>
                 <TableCell>假期類型</TableCell>
+                <TableCell>年份</TableCell>
                 <TableCell>日期</TableCell>
                 <TableCell>天數</TableCell>
                 <TableCell>當前階段</TableCell>
@@ -86,11 +87,11 @@ const ApprovalList = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center">載入中...</TableCell>
+                  <TableCell colSpan={8} align="center">載入中...</TableCell>
                 </TableRow>
               ) : applications.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center">沒有待批核申請</TableCell>
+                  <TableCell colSpan={8} align="center">沒有待批核申請</TableCell>
                 </TableRow>
               ) : (
                 applications.map((app) => {
@@ -100,8 +101,11 @@ const ApprovalList = () => {
                   return (
                     <TableRow key={app.id} hover>
                       <TableCell>{app.transaction_id}</TableCell>
-                      <TableCell>{app.applicant_name_zh}</TableCell>
+                      <TableCell>{app.applicant_display_name}</TableCell>
                       <TableCell>{app.leave_type_name_zh}</TableCell>
+                      <TableCell>
+                        {app.year || (app.start_date ? new Date(app.start_date).getFullYear() : '-')}年
+                      </TableCell>
                       <TableCell>
                         {formatDate(app.start_date)} ~ {formatDate(app.end_date)}
                       </TableCell>

@@ -66,7 +66,7 @@ class User {
         this.where('users.employee_number', 'like', `%${options.search}%`)
           .orWhere('users.surname', 'like', `%${options.search}%`)
           .orWhere('users.given_name', 'like', `%${options.search}%`)
-          .orWhere('users.name_zh', 'like', `%${options.search}%`)
+          .orWhere('users.display_name', 'like', `%${options.search}%`)
           .orWhere('users.email', 'like', `%${options.search}%`);
       });
     }
@@ -184,6 +184,7 @@ class User {
     }
 
     // 檢查是否屬於批核流程中任何階段的授權群組
+    // 修改邏輯：只要用戶屬於批核流程中任何階段的授權群組，且該階段已設置（有對應的 approver_id），都應該能看到申請
     const DepartmentGroup = require('./DepartmentGroup');
     const userDelegationGroups = await this.getDelegationGroups(userId);
     const userDelegationGroupIds = userDelegationGroups.map(g => Number(g.id));
@@ -199,10 +200,26 @@ class User {
       const deptGroup = departmentGroups[0];
       const approvalFlow = await DepartmentGroup.getApprovalFlow(deptGroup.id);
       
-      // 檢查用戶是否屬於批核流程中任何階段的授權群組
+      // 檢查用戶是否屬於批核流程中任何階段的授權群組，且該階段已設置
       for (const step of approvalFlow) {
         if (step.delegation_group_id && userDelegationGroupIds.includes(Number(step.delegation_group_id))) {
-          return true;
+          // 檢查該階段是否已設置（有對應的 approver_id）
+          let stepIsSet = false;
+          
+          if (step.level === 'checker') {
+            stepIsSet = !!(application.checker_id);
+          } else if (step.level === 'approver_1') {
+            stepIsSet = !!(application.approver_1_id);
+          } else if (step.level === 'approver_2') {
+            stepIsSet = !!(application.approver_2_id);
+          } else if (step.level === 'approver_3') {
+            stepIsSet = !!(application.approver_3_id);
+          }
+          
+          // 如果用戶屬於該階段的授權群組，且該階段已設置，允許查看
+          if (stepIsSet) {
+            return true;
+          }
         }
       }
     }

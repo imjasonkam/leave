@@ -21,7 +21,7 @@ class UserController {
           surname: user.surname,
           given_name: user.given_name,
           alias: user.alias,
-          name_zh: user.name_zh,
+          display_name: user.display_name,
           email: user.email,
           department_id: user.department_id,
           department_name: user.department_name,
