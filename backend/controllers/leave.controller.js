@@ -54,12 +54,28 @@ class LeaveController {
 
       let balanceRecord = null;
 
-      // 檢查假期餘額
+      // 檢查假期餘額和有效期
       if (leaveType.requires_balance) {
+        const LeaveBalanceTransaction = require('../database/models/LeaveBalanceTransaction');
+        
         balanceRecord = await LeaveBalance.findByUserAndType(applicantId, leave_type_id, currentYear);
         
         if (!balanceRecord || parseFloat(balanceRecord.balance) < parseFloat(total_days)) {
           return res.status(400).json({ message: '假期餘額不足' });
+        }
+        
+        // 檢查申請日期是否在有效餘額期間內
+        const validBalance = await LeaveBalanceTransaction.getValidBalanceForPeriod(
+          applicantId,
+          leave_type_id,
+          start_date,
+          end_date
+        );
+        
+        if (validBalance < parseFloat(total_days)) {
+          return res.status(400).json({ 
+            message: '申請日期超出假期餘額有效期範圍，該期間可用餘額不足。請檢查您的假期餘額有效期限。' 
+          });
         }
       }
 
@@ -146,7 +162,10 @@ class LeaveController {
           applicantId,
           leave_type_id,
           currentYear,
-          parseFloat(total_days)
+          parseFloat(total_days),
+          '假期申請已批准，扣除餘額',
+          start_date,
+          end_date
         );
       }
       

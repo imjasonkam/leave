@@ -630,7 +630,9 @@ class LeaveApplication {
           application.leave_type_id,
           year,
           effectiveDays,
-          '銷假 - Reversal'
+          '銷假 - Reversal',
+          application.start_date,
+          application.end_date
         );
       }
     }

@@ -106,11 +106,25 @@ const ApprovalHistory = () => {
   };
 
   const getApprovalStage = (application) => {
-    // 如果是 paper-flow，顯示為「HR 提交」
+    // 優先使用後端返回的 user_approval_stage
+    if (application.user_approval_stage) {
+      const stageMap = {
+        checker: '待核實',
+        approver_1: '首階段批核',
+        approver_2: '次階段批核',
+        approver_3: '最後階段批核',
+        rejected: '拒絕',
+        paper_flow: '紙本申請'
+      };
+      return stageMap[application.user_approval_stage] || '未知';
+    }
+    
+    // 如果是 paper-flow，顯示為「紙本申請」
     if (application.is_paper_flow) {
       return '紙本申請';
     }
     
+    // Fallback: 如果沒有 user_approval_stage，使用舊的邏輯檢查直接批核者
     if (application.checker_id === user.id && application.checker_at) {
       return '待核實';
     } else if (application.approver_1_id === user.id && application.approver_1_at) {
@@ -127,10 +141,24 @@ const ApprovalHistory = () => {
 
   const getApprovalDate = (application) => {
     // 如果是 paper-flow，使用創建時間（因為提交即批准）
-    if (application.is_paper_flow) {
+    if (application.is_paper_flow || application.user_approval_stage === 'paper_flow') {
       return application.created_at;
     }
     
+    // 優先使用 user_approval_stage 來確定日期
+    if (application.user_approval_stage === 'checker' && application.checker_at) {
+      return application.checker_at;
+    } else if (application.user_approval_stage === 'approver_1' && application.approver_1_at) {
+      return application.approver_1_at;
+    } else if (application.user_approval_stage === 'approver_2' && application.approver_2_at) {
+      return application.approver_2_at;
+    } else if (application.user_approval_stage === 'approver_3' && application.approver_3_at) {
+      return application.approver_3_at;
+    } else if (application.user_approval_stage === 'rejected' && application.rejected_at) {
+      return application.rejected_at;
+    }
+    
+    // Fallback: 如果沒有 user_approval_stage，使用舊的邏輯
     if (application.checker_id === user.id && application.checker_at) {
       return application.checker_at;
     } else if (application.approver_1_id === user.id && application.approver_1_at) {

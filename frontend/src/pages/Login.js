@@ -10,6 +10,7 @@ import {
   Alert
 } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
+import logo from '../components/logo.webp';
 
 const Login = () => {
   const [employeeNumber, setEmployeeNumber] = useState('');
@@ -52,11 +53,31 @@ const Login = () => {
         }}
       >
         <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              mb: 3,
+            }}
+          >
+            <img
+              src={logo}
+              alt="Logo"
+              style={{
+                maxWidth: '100px',
+                maxHeight: '100px',
+                width: 'auto',
+                height: 'auto',
+                borderRadius: '12px',
+              }}
+            />
+          </Box>
           <Typography component="h1" variant="h4" align="center" gutterBottom>
-            假期管理系統
+          Staff Portal
           </Typography>
           <Typography component="h2" variant="h6" align="center" color="text.secondary" sx={{ mb: 3 }}>
-            登入
+          Big C HK
           </Typography>
           
           {error && (

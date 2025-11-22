@@ -27,7 +27,9 @@ const AdminPaperFlow = () => {
     user_id: '',
     leave_type_id: '',
     start_date: null,
+    start_session: 'AM', // 預設為上午
     end_date: null,
+    end_session: 'PM', // 預設為下午
     days: '',
     reason: ''
   });
@@ -50,12 +52,67 @@ const AdminPaperFlow = () => {
     }
   }, [formData.leave_type_id, formData.user_id]);
 
+  // 計算天數，考慮半日假期
+  // 規則：
+  // - 開始上午 + 結束下午 = 整數（如4日或5日）
+  // - 開始上午 + 結束上午 = 半日數（如4.5日或5.5日）
+  // - 開始下午 + 結束下午 = 半日數（如3.5日或6.5日）
+  // - 開始下午 + 結束上午 = 整數 - 1（因為第一天下午+最後一天上午=1日）
+  const calculateDays = (startDate, endDate, startSession, endSession) => {
+    if (!startDate || !endDate || !startSession || !endSession) return 0;
+
+    // 計算基礎天數（包含週末）
+    const baseDays = endDate.diff(startDate, 'day') + 1;
+
+    // 如果是同一天
+    if (startDate.isSame(endDate, 'day')) {
+      // 上午 + 下午 = 1日
+      if (startSession === 'AM' && endSession === 'PM') {
+        return 1;
+      }
+      // 相同時段 = 0.5日
+      if (startSession === endSession) {
+        return 0.5;
+      }
+      // 下午 + 上午（同一天不應該出現，但處理為0.5日）
+      return 0.5;
+    }
+
+    // 多天的情況
+    // 開始上午 + 結束下午 = 整數
+    if (startSession === 'AM' && endSession === 'PM') {
+      return baseDays;
+    }
+    
+    // 開始上午 + 結束上午 = 整數 - 0.5
+    if (startSession === 'AM' && endSession === 'AM') {
+      return baseDays - 0.5;
+    }
+    
+    // 開始下午 + 結束下午 = 整數 - 0.5
+    if (startSession === 'PM' && endSession === 'PM') {
+      return baseDays - 0.5;
+    }
+    
+    // 開始下午 + 結束上午 = 整數 - 1
+    if (startSession === 'PM' && endSession === 'AM') {
+      return baseDays - 1;
+    }
+
+    return baseDays;
+  };
+
   useEffect(() => {
     if (formData.start_date && formData.end_date) {
-      const days = formData.end_date.diff(formData.start_date, 'day') + 1;
-      setFormData(prev => ({ ...prev, days: days.toString() }));
+      const days = calculateDays(
+        formData.start_date,
+        formData.end_date,
+        formData.start_session,
+        formData.end_session
+      );
+      setFormData(prev => ({ ...prev, days: days > 0 ? days.toString() : '' }));
     }
-  }, [formData.start_date, formData.end_date]);
+  }, [formData.start_date, formData.end_date, formData.start_session, formData.end_session]);
 
   const fetchLeaveTypes = async () => {
     try {
@@ -103,7 +160,8 @@ const AdminPaperFlow = () => {
     setSuccess('');
     setLoading(true);
 
-    if (!formData.user_id || !formData.leave_type_id || !formData.start_date || !formData.end_date || !formData.days) {
+    if (!formData.user_id || !formData.leave_type_id || !formData.start_date || !formData.start_session || 
+        !formData.end_date || !formData.end_session || !formData.days) {
       setError('請填寫所有必填欄位');
       setLoading(false);
       return;
@@ -114,7 +172,9 @@ const AdminPaperFlow = () => {
       submitData.append('user_id', formData.user_id);
       submitData.append('leave_type_id', formData.leave_type_id);
       submitData.append('start_date', formData.start_date.format('YYYY-MM-DD'));
+      submitData.append('start_session', formData.start_session);
       submitData.append('end_date', formData.end_date.format('YYYY-MM-DD'));
+      submitData.append('end_session', formData.end_session);
       submitData.append('total_days', parseFloat(formData.days));
       if (formData.reason) {
         submitData.append('reason', formData.reason);
@@ -138,7 +198,9 @@ const AdminPaperFlow = () => {
         user_id: '',
         leave_type_id: '',
         start_date: null,
+        start_session: 'AM', // 預設為上午
         end_date: null,
+        end_session: 'PM', // 預設為下午
         days: '',
         reason: ''
       });
@@ -240,6 +302,35 @@ const AdminPaperFlow = () => {
               </Grid>
             </Grid>
           </LocalizationProvider>
+
+          <Grid container spacing={2} sx={{ mb: 2 }}>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth required>
+                <InputLabel>開始時段</InputLabel>
+                <Select
+                  value={formData.start_session}
+                  label="開始時段"
+                  onChange={(e) => setFormData(prev => ({ ...prev, start_session: e.target.value }))}
+                >
+                  <MenuItem value="AM">上午 (AM)</MenuItem>
+                  <MenuItem value="PM">下午 (PM)</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth required>
+                <InputLabel>結束時段</InputLabel>
+                <Select
+                  value={formData.end_session}
+                  label="結束時段"
+                  onChange={(e) => setFormData(prev => ({ ...prev, end_session: e.target.value }))}
+                >
+                  <MenuItem value="AM">上午 (AM)</MenuItem>
+                  <MenuItem value="PM">下午 (PM)</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
 
           <TextField
             fullWidth

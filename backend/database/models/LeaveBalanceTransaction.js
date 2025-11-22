@@ -3,6 +3,23 @@ const knex = require('../../config/database');
 class LeaveBalanceTransaction {
   static async create(transactionData) {
     try {
+      // 驗證必填欄位
+      if (!transactionData.start_date || !transactionData.end_date) {
+        throw new Error('有效開始日期和結束日期為必填項目');
+      }
+
+      // 驗證日期格式和邏輯
+      const startDate = new Date(transactionData.start_date);
+      const endDate = new Date(transactionData.end_date);
+      
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        throw new Error('有效日期格式不正確');
+      }
+      
+      if (endDate < startDate) {
+        throw new Error('有效結束日期不能早於開始日期');
+      }
+
       const [transaction] = await knex('leave_balance_transactions')
         .insert(transactionData)
         .returning('*');
@@ -89,6 +106,63 @@ class LeaveBalanceTransaction {
         return 0;
       }
       throw error;
+    }
+  }
+
+  // 檢查指定日期是否在有效假期餘額範圍內
+  static async isDateWithinValidPeriod(userId, leaveTypeId, applicationDate) {
+    try {
+      const date = new Date(applicationDate);
+      const year = date.getFullYear();
+      
+      const validTransactions = await knex('leave_balance_transactions')
+        .where({
+          user_id: userId,
+          leave_type_id: leaveTypeId,
+          year
+        })
+        .where('amount', '>', 0) // 只檢查正數交易（餘額分配）
+        .where('start_date', '<=', date)
+        .where('end_date', '>=', date);
+      
+      return validTransactions.length > 0;
+    } catch (error) {
+      console.error('isDateWithinValidPeriod error:', error);
+      return false;
+    }
+  }
+
+  // 取得適用於指定申請期間的有效餘額總額
+  static async getValidBalanceForPeriod(userId, leaveTypeId, startDate, endDate) {
+    try {
+      const year = new Date(startDate).getFullYear();
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      
+      // 找出所有與申請期間重疊的有效餘額交易
+      const validTransactions = await knex('leave_balance_transactions')
+        .where({
+          user_id: userId,
+          leave_type_id: leaveTypeId,
+          year
+        })
+        .where('amount', '>', 0) // 只計算正數交易（分配的餘額）
+        .where(function() {
+          // 交易有效期與申請期間有重疊
+          this.where(function() {
+            this.where('start_date', '<=', end)
+              .andWhere('end_date', '>=', start);
+          });
+        });
+      
+      const totalValidBalance = validTransactions.reduce((sum, transaction) => {
+        return sum + parseFloat(transaction.amount);
+      }, 0);
+      
+      return totalValidBalance;
+    } catch (error) {
+      console.error('getValidBalanceForPeriod error:', error);
+      return 0;
     }
   }
 }

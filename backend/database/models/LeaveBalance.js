@@ -113,42 +113,66 @@ class LeaveBalance {
   }
 
   // 扣除餘額：創建負數交易記錄
-  static async decrementBalance(userId, leaveTypeId, year, days, remarks = '假期申請已批准，扣除餘額') {
+  static async decrementBalance(userId, leaveTypeId, year, days, remarks = '假期申請已批准，扣除餘額', applicationStartDate = null, applicationEndDate = null) {
     // 檢查當前餘額是否足夠
     const currentBalance = await LeaveBalanceTransaction.getTotalBalance(userId, leaveTypeId, year);
     const daysToDeduct = parseFloat(days);
     
     if (currentBalance < daysToDeduct) {
-      throw new Error('Insufficient leave balance');
+      throw new Error('假期餘額不足');
+    }
+
+    // 如果提供了申請日期，檢查是否在有效期內
+    if (applicationStartDate && applicationEndDate) {
+      const validBalance = await LeaveBalanceTransaction.getValidBalanceForPeriod(
+        userId, 
+        leaveTypeId, 
+        applicationStartDate, 
+        applicationEndDate
+      );
+      
+      if (validBalance < daysToDeduct) {
+        throw new Error('申請日期超出假期餘額有效期範圍，可用餘額不足');
+      }
     }
 
     // 創建負數交易記錄來扣除餘額
-    await LeaveBalanceTransaction.create({
+    // 扣除交易的有效期設定為申請期間（如果有提供）或當年度
+    const transactionData = {
       user_id: userId,
       leave_type_id: leaveTypeId,
       year,
       amount: -daysToDeduct, // 負數表示扣除
       remarks,
-      created_by_id: null // 系統自動扣除
-    });
+      created_by_id: null, // 系統自動扣除
+      start_date: applicationStartDate || `${year}-01-01`,
+      end_date: applicationEndDate || `${year}-12-31`
+    };
+
+    await LeaveBalanceTransaction.create(transactionData);
 
     // 返回更新後的餘額信息
     return await this.findByUserAndType(userId, leaveTypeId, year);
   }
 
   // 增加餘額：創建正數交易記錄
-  static async incrementBalance(userId, leaveTypeId, year, days, remarks = '假期申請被拒絕或取消，退回餘額') {
+  static async incrementBalance(userId, leaveTypeId, year, days, remarks = '假期申請被拒絕或取消，退回餘額', startDate = null, endDate = null) {
     const daysToAdd = parseFloat(days);
     
     // 創建正數交易記錄來增加餘額
-    await LeaveBalanceTransaction.create({
+    // 如果沒有提供有效期，使用整年度
+    const transactionData = {
       user_id: userId,
       leave_type_id: leaveTypeId,
       year,
       amount: daysToAdd, // 正數表示增加
       remarks,
-      created_by_id: null // 系統自動退回
-    });
+      created_by_id: null, // 系統自動退回
+      start_date: startDate || `${year}-01-01`,
+      end_date: endDate || `${year}-12-31`
+    };
+
+    await LeaveBalanceTransaction.create(transactionData);
 
     // 返回更新後的餘額信息
     return await this.findByUserAndType(userId, leaveTypeId, year);

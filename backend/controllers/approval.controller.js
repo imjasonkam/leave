@@ -127,11 +127,14 @@ class ApprovalController {
                 updatedApplication.user_id,
                 updatedApplication.leave_type_id,
                 currentYear,
-                parseFloat(updatedApplication.total_days)
+                parseFloat(updatedApplication.total_days),
+                '假期申請被拒絕，退回餘額',
+                updatedApplication.start_date,
+                updatedApplication.end_date
               );
             }
           } else if (updatedApplication.is_reversal_transaction) {
-            updatedApplication = await LeaveApplication.finalizeReversal(updatedApplication);
+            await LeaveApplication.finalizeReversal(updatedApplication);
           } else {
             const leaveType = await require('../database/models/LeaveType').findById(updatedApplication.leave_type_id);
             if (leaveType && leaveType.requires_balance) {
@@ -140,7 +143,10 @@ class ApprovalController {
                 updatedApplication.user_id,
                 updatedApplication.leave_type_id,
                 currentYear,
-                parseFloat(updatedApplication.total_days)
+                parseFloat(updatedApplication.total_days),
+                '假期申請已批准，扣除餘額',
+                updatedApplication.start_date,
+                updatedApplication.end_date
               );
             }
           }
@@ -250,14 +256,24 @@ class ApprovalController {
       
       for (const app of allApplications) {
         let isApprover = false;
+        let userApprovalStage = null; // 記錄用戶在哪個階段批核的
         
         // 方法1：檢查是否直接設置為批核者
-        if ((app.checker_id === userId && app.checker_at) ||
-            (app.approver_1_id === userId && app.approver_1_at) ||
-            (app.approver_2_id === userId && app.approver_2_at) ||
-            (app.approver_3_id === userId && app.approver_3_at) ||
-            app.rejected_by_id === userId) {
+        if (app.checker_id === userId && app.checker_at) {
           isApprover = true;
+          userApprovalStage = 'checker';
+        } else if (app.approver_1_id === userId && app.approver_1_at) {
+          isApprover = true;
+          userApprovalStage = 'approver_1';
+        } else if (app.approver_2_id === userId && app.approver_2_at) {
+          isApprover = true;
+          userApprovalStage = 'approver_2';
+        } else if (app.approver_3_id === userId && app.approver_3_at) {
+          isApprover = true;
+          userApprovalStage = 'approver_3';
+        } else if (app.rejected_by_id === userId) {
+          isApprover = true;
+          userApprovalStage = 'rejected';
         }
         
         // 方法2：檢查是否為 paper-flow 且用戶是 HR Group 成員
@@ -281,6 +297,7 @@ class ApprovalController {
         
         if (!isApprover && isPaperFlow && app.status === 'approved' && isHRMember) {
           isApprover = true;
+          userApprovalStage = 'paper_flow';
           console.log(`[getApprovalHistory] Paper-flow 申請匹配並加入批核記錄:`, {
             applicationId: app.id,
             transaction_id: app.transaction_id,
@@ -305,12 +322,16 @@ class ApprovalController {
                 let stepApproved = false;
                 if (step.level === 'checker' && app.checker_at) {
                   stepApproved = true;
+                  userApprovalStage = 'checker';
                 } else if (step.level === 'approver_1' && app.approver_1_at) {
                   stepApproved = true;
+                  userApprovalStage = 'approver_1';
                 } else if (step.level === 'approver_2' && app.approver_2_at) {
                   stepApproved = true;
+                  userApprovalStage = 'approver_2';
                 } else if (step.level === 'approver_3' && app.approver_3_at) {
                   stepApproved = true;
+                  userApprovalStage = 'approver_3';
                 }
                 
                 if (stepApproved) {
@@ -323,6 +344,8 @@ class ApprovalController {
         }
         
         if (isApprover) {
+          // 添加用戶批核階段信息到申請對象
+          app.user_approval_stage = userApprovalStage;
           processedApplications.push(app);
         }
       }
@@ -362,6 +385,7 @@ class ApprovalController {
           applicant_name_zh: app.applicant_name_zh || app.user_name_zh,
           days: app.days !== undefined && app.days !== null ? app.days : app.total_days,
           is_paper_flow: isPaperFlow, // 確保前端能正確識別
+          user_approval_stage: app.user_approval_stage || null, // 記錄用戶在哪個階段批核的
           reversal_transactions: reversalTransactions.map(rev => ({
             ...rev,
             transaction_id: rev.transaction_id || `LA-${String(rev.id).padStart(6, '0')}`,

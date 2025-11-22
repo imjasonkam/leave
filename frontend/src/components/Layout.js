@@ -82,7 +82,7 @@ const Layout = ({ children }) => {
     <Box>
       <Toolbar sx={{ bgcolor: 'primary.main', color: 'white' }}>
         <Typography variant="h6" noWrap component="div">
-          假期管理系統
+          Big C HK Staff Portal
         </Typography>
       </Toolbar>
       <Divider />
