@@ -14,12 +14,14 @@ import {
   Button
 } from '@mui/material';
 import { Visibility as VisibilityIcon } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDate } from '../utils/dateFormat';
 
 const ApprovalList = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -63,10 +65,21 @@ const ApprovalList = () => {
     return false;
   };
 
+  const getStageText = (stage) => {
+    const stageMap = {
+      checker: t('approvalList.stageChecker'),
+      approver_1: t('approvalList.stageApprover1'),
+      approver_2: t('approvalList.stageApprover2'),
+      approver_3: t('approvalList.stageApprover3'),
+      completed: t('approvalList.stageCompleted')
+    };
+    return stageMap[stage] || stage;
+  };
+
   return (
     <Box>
       <Typography variant="h5" gutterBottom>
-        待批核申請
+        {t('approvalList.title')}
       </Typography>
 
       <Paper sx={{ mt: 2 }}>
@@ -74,24 +87,24 @@ const ApprovalList = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>交易編號</TableCell>
-                <TableCell>申請人</TableCell>
-                <TableCell>假期類型</TableCell>
-                <TableCell>年份</TableCell>
-                <TableCell>日期</TableCell>
-                <TableCell>天數</TableCell>
-                <TableCell>當前階段</TableCell>
-                <TableCell>操作</TableCell>
+                <TableCell>{t('approvalList.transactionId')}</TableCell>
+                <TableCell>{t('approvalList.applicant')}</TableCell>
+                <TableCell>{t('approvalList.leaveType')}</TableCell>
+                <TableCell>{t('approvalList.year')}</TableCell>
+                <TableCell>{t('approvalList.date')}</TableCell>
+                <TableCell>{t('approvalList.days')}</TableCell>
+                <TableCell>{t('approvalList.currentStage')}</TableCell>
+                <TableCell>{t('common.actions')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} align="center">載入中...</TableCell>
+                  <TableCell colSpan={8} align="center">{t('common.loading')}</TableCell>
                 </TableRow>
               ) : applications.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} align="center">沒有待批核申請</TableCell>
+                  <TableCell colSpan={8} align="center">{t('approvalList.noPendingApplications')}</TableCell>
                 </TableRow>
               ) : (
                 applications.map((app) => {
@@ -104,7 +117,7 @@ const ApprovalList = () => {
                       <TableCell>{app.applicant_display_name}</TableCell>
                       <TableCell>{app.leave_type_name_zh}</TableCell>
                       <TableCell>
-                        {app.year || (app.start_date ? new Date(app.start_date).getFullYear() : '-')}年
+                        {app.year || (app.start_date ? new Date(app.start_date).getFullYear() : '-')}{t('approvalList.yearSuffix')}
                       </TableCell>
                       <TableCell>
                         {formatDate(app.start_date)} ~ {formatDate(app.end_date)}
@@ -112,7 +125,7 @@ const ApprovalList = () => {
                       <TableCell>{app.days}</TableCell>
                       <TableCell>
                         <Chip
-                          label={stage === 'checker' ? '檢查' : stage === 'approver_1' ? '第一批核' : stage === 'approver_2' ? '第二批核' : stage === 'approver_3' ? '第三批核' : '已完成'}
+                          label={getStageText(stage)}
                           color={canApproveThis ? 'warning' : 'default'}
                           size="small"
                         />
@@ -124,7 +137,7 @@ const ApprovalList = () => {
                           onClick={() => navigate(`/approval/${app.id}`)}
                           startIcon={<VisibilityIcon />}
                         >
-                          查看詳情
+                          {t('approvalList.viewDetails')}
                         </Button>
                       </TableCell>
                     </TableRow>

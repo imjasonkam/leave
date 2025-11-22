@@ -23,12 +23,14 @@ import {
   Snackbar
 } from '@mui/material';
 import { Search as SearchIcon, Undo as UndoIcon } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { formatDate } from '../utils/dateFormat';
 
 const LeaveHistory = () => {
+  const { t } = useTranslation();
   const { user, isSystemAdmin, isDeptHead } = useAuth();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -73,9 +75,9 @@ const LeaveHistory = () => {
 
   const getStatusText = (status) => {
     const statusMap = {
-      pending: '待批核',
-      approved: '已批准',
-      rejected: '已拒絕'
+      pending: t('leaveHistory.pending'),
+      approved: t('leaveHistory.approved'),
+      rejected: t('leaveHistory.rejected')
     };
     return statusMap[status] || status;
   };
@@ -95,7 +97,7 @@ const LeaveHistory = () => {
       });
       
       // 使用後端返回的消息
-      const message = response.data.message || '銷假申請已提交';
+      const message = response.data.message || t('leaveHistory.reversalSubmitted');
       
       setSnackbar({
         open: true,
@@ -110,7 +112,7 @@ const LeaveHistory = () => {
       await fetchApplications();
     } catch (error) {
       console.error('Reversal error:', error);
-      const errorMessage = error.response?.data?.message || '提交銷假申請時發生錯誤';
+      const errorMessage = error.response?.data?.message || t('leaveHistory.reversalError');
       setSnackbar({
         open: true,
         message: errorMessage,
@@ -175,13 +177,13 @@ const LeaveHistory = () => {
   return (
     <Box>
       <Typography variant="h5" gutterBottom>
-        申請歷史
+        {t('leaveHistory.title')}
       </Typography>
 
       <Paper sx={{ mt: 2, p: 2 }}>
         <TextField
           fullWidth
-          placeholder="搜尋交易編號、假期類型或申請人..."
+          placeholder={t('leaveHistory.searchPlaceholder')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           InputProps={{
@@ -198,25 +200,25 @@ const LeaveHistory = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>交易編號</TableCell>
-                <TableCell>申請人</TableCell>
-                <TableCell>假期類型</TableCell>
-                <TableCell>年份</TableCell>
-                <TableCell>開始日期</TableCell>
-                <TableCell>結束日期</TableCell>
-                <TableCell>天數</TableCell>
-                <TableCell>狀態</TableCell>
-                <TableCell>操作</TableCell>
+                <TableCell>{t('leaveHistory.transactionId')}</TableCell>
+                <TableCell>{t('leaveHistory.applicant')}</TableCell>
+                <TableCell>{t('leaveHistory.leaveType')}</TableCell>
+                <TableCell>{t('leaveHistory.year')}</TableCell>
+                <TableCell>{t('leaveHistory.startDate')}</TableCell>
+                <TableCell>{t('leaveHistory.endDate')}</TableCell>
+                <TableCell>{t('leaveHistory.days')}</TableCell>
+                <TableCell>{t('leaveHistory.status')}</TableCell>
+                <TableCell>{t('common.actions')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={9} align="center">載入中...</TableCell>
+                  <TableCell colSpan={9} align="center">{t('common.loading')}</TableCell>
                 </TableRow>
               ) : filteredApplications.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} align="center">沒有申請記錄</TableCell>
+                  <TableCell colSpan={9} align="center">{t('leaveHistory.noApplications')}</TableCell>
                 </TableRow>
               ) : (
                 filteredApplications.map((app) => (
@@ -225,7 +227,7 @@ const LeaveHistory = () => {
                     <TableCell>{app.applicant_display_name}</TableCell>
                     <TableCell>{app.leave_type_name_zh}</TableCell>
                     <TableCell>
-                      {app.year || (app.start_date ? new Date(app.start_date).getFullYear() : '-')}年
+                      {app.year || (app.start_date ? new Date(app.start_date).getFullYear() : '-')}{t('leaveHistory.yearSuffix')}
                     </TableCell>
                     <TableCell>{formatDate(app.start_date)}</TableCell>
                     <TableCell>{formatDate(app.end_date)}</TableCell>
@@ -244,7 +246,7 @@ const LeaveHistory = () => {
                           variant="outlined"
                           onClick={() => navigate(`/approval/${app.id}`)}
                         >
-                          查看詳情
+                          {t('leaveHistory.viewDetails')}
                         </Button>
                         {canShowReversalButton(app) && (
                           <Button
@@ -254,7 +256,7 @@ const LeaveHistory = () => {
                             startIcon={<UndoIcon />}
                             onClick={() => handleReversalClick(app)}
                           >
-                            銷假
+                            {t('leaveHistory.reversal')}
                           </Button>
                         )}
                       </Box>
@@ -273,30 +275,30 @@ const LeaveHistory = () => {
         onClose={handleReversalCancel}
         aria-labelledby="reversal-dialog-title"
       >
-        <DialogTitle id="reversal-dialog-title">確認銷假</DialogTitle>
+        <DialogTitle id="reversal-dialog-title">{t('leaveHistory.confirmReversal')}</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            您確定要申請銷假嗎？此操作將創建一個銷假申請，需要經過批核流程。
+            {t('leaveHistory.confirmReversalMessage')}
             {selectedApplication && (
               <>
                 <br />
                 <br />
-                <strong>申請詳情：</strong>
+                <strong>{t('leaveHistory.applicationDetails')}</strong>
                 <br />
-                交易編號：{selectedApplication.transaction_id}
+                {t('leaveHistory.transactionIdLabel')}{selectedApplication.transaction_id}
                 <br />
-                假期類型：{selectedApplication.leave_type_name_zh}
+                {t('leaveHistory.leaveTypeLabel')}{selectedApplication.leave_type_name_zh}
                 <br />
-                日期：{formatDate(selectedApplication.start_date)} ~ {formatDate(selectedApplication.end_date)}
+                {t('leaveHistory.dateLabel')}{formatDate(selectedApplication.start_date)} ~ {formatDate(selectedApplication.end_date)}
                 <br />
-                天數：{selectedApplication.days} 天
+                {t('leaveHistory.daysLabel')}{selectedApplication.days} {t('leaveHistory.days')}
               </>
             )}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleReversalCancel} disabled={reversing}>
-            取消
+            {t('common.cancel')}
           </Button>
           <Button
             onClick={handleReversalConfirm}
@@ -304,7 +306,7 @@ const LeaveHistory = () => {
             variant="contained"
             disabled={reversing}
           >
-            {reversing ? '提交中...' : '確認銷假'}
+            {reversing ? t('leaveHistory.reversing') : t('leaveHistory.confirmReversal')}
           </Button>
         </DialogActions>
       </Dialog>

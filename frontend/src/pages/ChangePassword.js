@@ -8,9 +8,11 @@ import {
   Box,
   Alert
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 
 const ChangePassword = () => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -27,12 +29,12 @@ const ChangePassword = () => {
     setSuccess('');
 
     if (formData.newPassword !== formData.confirmPassword) {
-      setError('新密碼與確認密碼不一致');
+      setError(t('changePassword.passwordMismatch'));
       return;
     }
 
     if (formData.newPassword.length < 6) {
-      setError('新密碼長度至少需要6個字符');
+      setError(t('changePassword.passwordTooShort'));
       return;
     }
 
@@ -41,7 +43,7 @@ const ChangePassword = () => {
     const result = await changePassword(formData.currentPassword, formData.newPassword);
 
     if (result.success) {
-      setSuccess('密碼已成功更改');
+      setSuccess(t('changePassword.passwordChanged'));
       setFormData({
         currentPassword: '',
         newPassword: '',
@@ -58,7 +60,7 @@ const ChangePassword = () => {
     <Container maxWidth="sm">
       <Paper sx={{ p: 4, mt: 4 }}>
         <Typography variant="h5" gutterBottom>
-          更改密碼
+          {t('changePassword.title')}
         </Typography>
 
         {error && (
@@ -78,7 +80,7 @@ const ChangePassword = () => {
             margin="normal"
             required
             fullWidth
-            label="當前密碼"
+            label={t('changePassword.currentPassword')}
             type="password"
             value={formData.currentPassword}
             onChange={(e) => setFormData(prev => ({ ...prev, currentPassword: e.target.value }))}
@@ -88,7 +90,7 @@ const ChangePassword = () => {
             margin="normal"
             required
             fullWidth
-            label="新密碼"
+            label={t('changePassword.newPassword')}
             type="password"
             value={formData.newPassword}
             onChange={(e) => setFormData(prev => ({ ...prev, newPassword: e.target.value }))}
@@ -97,7 +99,7 @@ const ChangePassword = () => {
             margin="normal"
             required
             fullWidth
-            label="確認新密碼"
+            label={t('changePassword.confirmPassword')}
             type="password"
             value={formData.confirmPassword}
             onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
@@ -109,7 +111,7 @@ const ChangePassword = () => {
             sx={{ mt: 3, mb: 2 }}
             disabled={loading}
           >
-            {loading ? '更改中...' : '更改密碼'}
+            {loading ? t('changePassword.changing') : t('changePassword.changeButton')}
           </Button>
         </Box>
       </Paper>

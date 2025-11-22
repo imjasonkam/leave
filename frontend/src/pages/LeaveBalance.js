@@ -15,10 +15,12 @@ import {
   FormControl,
   InputLabel
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 
 const LeaveBalance = () => {
+  const { t } = useTranslation();
   const { user, isSystemAdmin, isDeptHead } = useAuth();
   const [balances, setBalances] = useState([]);
   const [year, setYear] = useState(new Date().getFullYear());
@@ -47,15 +49,15 @@ const LeaveBalance = () => {
   return (
     <Box>
       <Typography variant="h5" gutterBottom>
-        假期餘額
+        {t('leaveBalance.title')}
       </Typography>
 
       <Paper sx={{ mt: 2, p: 2 }}>
         <FormControl sx={{ mb: 2, minWidth: 200 }}>
-          <InputLabel>年份</InputLabel>
+          <InputLabel>{t('leaveBalance.year')}</InputLabel>
           <Select
             value={year}
-            label="年份"
+            label={t('leaveBalance.year')}
             onChange={(e) => setYear(e.target.value)}
           >
             {years.map((y) => (
@@ -70,20 +72,20 @@ const LeaveBalance = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>假期類型</TableCell>
-                <TableCell align="right">餘額</TableCell>
-                <TableCell align="right">已使用</TableCell>
-                <TableCell align="right">總額</TableCell>
+                <TableCell>{t('leaveBalance.leaveType')}</TableCell>
+                <TableCell align="right">{t('leaveBalance.balance')}</TableCell>
+                <TableCell align="right">{t('leaveBalance.taken')}</TableCell>
+                <TableCell align="right">{t('leaveBalance.total')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={4} align="center">載入中...</TableCell>
+                  <TableCell colSpan={4} align="center">{t('common.loading')}</TableCell>
                 </TableRow>
               ) : balances.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} align="center">沒有假期餘額記錄</TableCell>
+                  <TableCell colSpan={4} align="center">{t('leaveBalance.noBalanceRecords')}</TableCell>
                 </TableRow>
               ) : (
                 balances.map((balance) => (

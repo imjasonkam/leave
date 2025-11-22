@@ -128,7 +128,7 @@ const DepartmentGroupBalances = () => {
   return (
     <Box>
       <Typography variant="h5" gutterBottom>
-        部門群組假期餘額（只讀）
+        部門群組假期餘額
       </Typography>
 
       <Paper sx={{ mt: 2, p: 2 }}>

@@ -41,12 +41,14 @@ import {
   Close as CloseIcon,
   Undo as UndoIcon
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDateTime, formatDate } from '../utils/dateFormat';
 
 const ApprovalHistory = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -97,10 +99,10 @@ const ApprovalHistory = () => {
 
   const getStatusText = (status) => {
     const statusMap = {
-      pending: '待批核',
-      approved: '已批准',
-      rejected: '已拒絕',
-      cancelled: '已取消'
+      pending: t('approvalHistory.pending'),
+      approved: t('approvalHistory.approved'),
+      rejected: t('approvalHistory.rejected'),
+      cancelled: t('approvalHistory.cancelled')
     };
     return statusMap[status] || status;
   };
@@ -109,34 +111,34 @@ const ApprovalHistory = () => {
     // 優先使用後端返回的 user_approval_stage
     if (application.user_approval_stage) {
       const stageMap = {
-        checker: '待核實',
-        approver_1: '首階段批核',
-        approver_2: '次階段批核',
-        approver_3: '最後階段批核',
-        rejected: '拒絕',
-        paper_flow: '紙本申請'
+        checker: t('approvalHistory.stageChecker'),
+        approver_1: t('approvalHistory.stageApprover1'),
+        approver_2: t('approvalHistory.stageApprover2'),
+        approver_3: t('approvalHistory.stageApprover3'),
+        rejected: t('approvalHistory.stageRejected'),
+        paper_flow: t('approvalHistory.stagePaperFlow')
       };
-      return stageMap[application.user_approval_stage] || '未知';
+      return stageMap[application.user_approval_stage] || t('approvalHistory.stageUnknown');
     }
     
     // 如果是 paper-flow，顯示為「紙本申請」
     if (application.is_paper_flow) {
-      return '紙本申請';
+      return t('approvalHistory.stagePaperFlow');
     }
     
     // Fallback: 如果沒有 user_approval_stage，使用舊的邏輯檢查直接批核者
     if (application.checker_id === user.id && application.checker_at) {
-      return '待核實';
+      return t('approvalHistory.stageChecker');
     } else if (application.approver_1_id === user.id && application.approver_1_at) {
-      return '首階段批核';
+      return t('approvalHistory.stageApprover1');
     } else if (application.approver_2_id === user.id && application.approver_2_at) {
-      return '次階段批核';
+      return t('approvalHistory.stageApprover2');
     } else if (application.approver_3_id === user.id && application.approver_3_at) {
-      return '最後階段批核';
+      return t('approvalHistory.stageApprover3');
     } else if (application.rejected_by_id === user.id) {
-      return '拒絕';
+      return t('approvalHistory.stageRejected');
     }
-    return '未知';
+    return t('approvalHistory.stageUnknown');
   };
 
   const getApprovalDate = (application) => {
@@ -208,7 +210,7 @@ const ApprovalHistory = () => {
       setDocuments(response.data.documents || []);
     } catch (error) {
       console.error('Fetch documents error:', error);
-      setError('獲取檔案列表時發生錯誤');
+      setError(t('approvalHistory.fetchFilesError'));
     }
   };
 
@@ -234,19 +236,19 @@ const ApprovalHistory = () => {
         }
       });
 
-      setSuccess(`成功上載 ${files.length} 個檔案`);
+      setSuccess(t('approvalHistory.uploadSuccess', { count: files.length }));
       await fetchDocuments(selectedApplication.id);
       event.target.value = ''; // 重置文件輸入
     } catch (error) {
       console.error('Upload error:', error);
-      setError(error.response?.data?.message || '上載檔案時發生錯誤');
+      setError(error.response?.data?.message || t('approvalHistory.uploadError'));
     } finally {
       setUploading(false);
     }
   };
 
   const handleDeleteDocument = async (documentId) => {
-    if (!window.confirm('確定要刪除此檔案嗎？')) {
+    if (!window.confirm(t('approvalHistory.confirmDelete'))) {
       return;
     }
 
@@ -258,7 +260,7 @@ const ApprovalHistory = () => {
       console.log(`[handleDeleteDocument] 嘗試刪除檔案，documentId: ${documentId}`);
       const response = await axios.delete(`/api/leaves/documents/${documentId}`);
       console.log(`[handleDeleteDocument] 刪除成功:`, response.data);
-      setSuccess('檔案已刪除');
+      setSuccess(t('approvalHistory.fileDeleted'));
       await fetchDocuments(selectedApplication.id);
     } catch (error) {
       console.error('[handleDeleteDocument] 刪除錯誤:', error);
@@ -266,7 +268,7 @@ const ApprovalHistory = () => {
       const errorMessage = error.response?.data?.message || 
                           error.response?.data?.error || 
                           error.message || 
-                          '刪除檔案時發生錯誤';
+                          t('approvalHistory.deleteError');
       setError(errorMessage);
     } finally {
       setDeleting(false);
@@ -336,7 +338,7 @@ const ApprovalHistory = () => {
       });
       
       // 使用後端返回的消息
-      const message = response.data.message || '銷假申請已完成';
+      const message = response.data.message || t('approvalHistory.reversalCompleted');
       
       setSnackbar({
         open: true,
@@ -351,7 +353,7 @@ const ApprovalHistory = () => {
       await fetchApprovalHistory();
     } catch (error) {
       console.error('Reversal error:', error);
-      const errorMessage = error.response?.data?.message || '提交銷假申請時發生錯誤';
+      const errorMessage = error.response?.data?.message || t('approvalHistory.reversalError');
       setSnackbar({
         open: true,
         message: errorMessage,
@@ -374,12 +376,12 @@ const ApprovalHistory = () => {
   return (
     <Box>
       <Typography variant="h5" gutterBottom>
-        批核記錄
+        {t('approvalHistory.title')}
       </Typography>
 
       <Box sx={{ display: 'flex', gap: 2, mb: 2, mt: 2 }}>
         <TextField
-          placeholder="搜尋交易編號、申請人、假期類型..."
+          placeholder={t('approvalHistory.searchPlaceholder')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           InputProps={{
@@ -392,16 +394,16 @@ const ApprovalHistory = () => {
           sx={{ flexGrow: 1 }}
         />
         <FormControl sx={{ minWidth: 150 }}>
-          <InputLabel>狀態篩選</InputLabel>
+          <InputLabel>{t('approvalHistory.statusFilter')}</InputLabel>
           <Select
             value={statusFilter}
-            label="狀態篩選"
+            label={t('approvalHistory.statusFilter')}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
-            <MenuItem value="all">全部</MenuItem>
-            <MenuItem value="approved">已批准</MenuItem>
-            <MenuItem value="rejected">已拒絕</MenuItem>
-            <MenuItem value="cancelled">已取消</MenuItem>
+            <MenuItem value="all">{t('approvalHistory.all')}</MenuItem>
+            <MenuItem value="approved">{t('approvalHistory.approved')}</MenuItem>
+            <MenuItem value="rejected">{t('approvalHistory.rejected')}</MenuItem>
+            <MenuItem value="cancelled">{t('approvalHistory.cancelled')}</MenuItem>
           </Select>
         </FormControl>
       </Box>
@@ -410,28 +412,28 @@ const ApprovalHistory = () => {
         <TableContainer>
           <Table>
             <TableHead>
-              <TableRow>
-                <TableCell>交易編號</TableCell>
-                <TableCell>申請人</TableCell>
-                <TableCell>假期類型</TableCell>
-                <TableCell>年份</TableCell>
-                <TableCell>開始日期</TableCell>
-                <TableCell>結束日期</TableCell>
-                <TableCell>天數</TableCell>
-                <TableCell>批核階段</TableCell>
-                <TableCell>批核時間</TableCell>
-                <TableCell>狀態</TableCell>
-                <TableCell>操作</TableCell>
-              </TableRow>
+            <TableRow>
+              <TableCell>{t('approvalHistory.transactionId')}</TableCell>
+              <TableCell>{t('approvalHistory.applicant')}</TableCell>
+              <TableCell>{t('approvalHistory.leaveType')}</TableCell>
+              <TableCell>{t('approvalHistory.year')}</TableCell>
+              <TableCell>{t('approvalHistory.startDate')}</TableCell>
+              <TableCell>{t('approvalHistory.endDate')}</TableCell>
+              <TableCell>{t('approvalHistory.days')}</TableCell>
+              <TableCell>{t('approvalHistory.approvalStage')}</TableCell>
+              <TableCell>{t('approvalHistory.approvalTime')}</TableCell>
+              <TableCell>{t('approvalHistory.status')}</TableCell>
+              <TableCell>{t('approvalHistory.actions')}</TableCell>
+            </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={11} align="center">載入中...</TableCell>
+                  <TableCell colSpan={11} align="center">{t('common.loading')}</TableCell>
                 </TableRow>
               ) : filteredApplications.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} align="center">沒有批核記錄</TableCell>
+                  <TableCell colSpan={11} align="center">{t('approvalHistory.noRecords')}</TableCell>
                 </TableRow>
               ) : (
                 filteredApplications.map((app) => (
@@ -441,7 +443,7 @@ const ApprovalHistory = () => {
                       <TableCell>{app.applicant_display_name}</TableCell>
                       <TableCell>{app.leave_type_name_zh}</TableCell>
                       <TableCell>
-                        {app.year || (app.start_date ? new Date(app.start_date).getFullYear() : '-')}年
+                        {app.year || (app.start_date ? new Date(app.start_date).getFullYear() : '-')}{t('approvalHistory.yearSuffix')}
                       </TableCell>
                       <TableCell>{formatDate(app.start_date)}</TableCell>
                       <TableCell>{formatDate(app.end_date)}</TableCell>
@@ -469,7 +471,7 @@ const ApprovalHistory = () => {
                             onClick={() => navigate(`/approval/${app.id}`)}
                             startIcon={<VisibilityIcon />}
                           >
-                            查看詳情
+                            {t('approvalHistory.viewDetails')}
                           </Button>
                           {canManageFiles(app) && (
                             <Button
@@ -478,7 +480,7 @@ const ApprovalHistory = () => {
                               onClick={() => handleOpenFileDialog(app)}
                               startIcon={<AttachFileIcon />}
                             >
-                              管理檔案
+                              {t('approvalHistory.manageFiles')}
                             </Button>
                           )}
                           {canShowReversalButton(app) && (
@@ -489,7 +491,7 @@ const ApprovalHistory = () => {
                               startIcon={<UndoIcon />}
                               onClick={() => handleReversalClick(app)}
                             >
-                              銷假
+                              {t('approvalHistory.reversal')}
                             </Button>
                           )}
                         </Box>
@@ -502,7 +504,7 @@ const ApprovalHistory = () => {
                           <TableCell sx={{ pl: 4, position: 'relative' }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
-                                ↳ 銷假:
+                                {t('approvalHistory.reversalPrefix')}
                               </Typography>
                               {reversal.transaction_id}
                             </Box>
@@ -511,7 +513,7 @@ const ApprovalHistory = () => {
                           <TableCell>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Chip
-                                label="銷假"
+                                label={t('approvalHistory.reversalLabel')}
                                 color="info"
                                 size="small"
                                 sx={{ fontSize: '0.65rem', height: '20px' }}
@@ -520,7 +522,7 @@ const ApprovalHistory = () => {
                             </Box>
                           </TableCell>
                           <TableCell>
-                            {reversal.year || (reversal.start_date ? new Date(reversal.start_date).getFullYear() : '-')}年
+                            {reversal.year || (reversal.start_date ? new Date(reversal.start_date).getFullYear() : '-')}{t('approvalHistory.yearSuffix')}
                           </TableCell>
                           <TableCell>{formatDate(reversal.start_date)}</TableCell>
                           <TableCell>{formatDate(reversal.end_date)}</TableCell>
@@ -531,7 +533,7 @@ const ApprovalHistory = () => {
                           </TableCell>
                           <TableCell>
                             <Chip
-                              label="HR 銷假"
+                              label={t('approvalHistory.hrReversal')}
                               size="small"
                               color="info"
                             />
@@ -551,7 +553,7 @@ const ApprovalHistory = () => {
                               onClick={() => navigate(`/approval/${reversal.id}`)}
                               startIcon={<VisibilityIcon />}
                             >
-                              查看詳情
+                              {t('approvalHistory.viewDetails')}
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -575,7 +577,7 @@ const ApprovalHistory = () => {
         <DialogTitle>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h6">
-              管理檔案 - {selectedApplication?.transaction_id}
+              {t('approvalHistory.manageFilesTitle')} - {selectedApplication?.transaction_id}
             </Typography>
             <IconButton onClick={handleCloseFileDialog}>
               <CloseIcon />
@@ -612,20 +614,20 @@ const ApprovalHistory = () => {
                 disabled={uploading}
                 sx={{ mb: 2 }}
               >
-                {uploading ? '上載中...' : '上載檔案'}
+                {uploading ? t('approvalHistory.uploading') : t('approvalHistory.uploadFile')}
               </Button>
             </label>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              支援格式：PDF、JPG、JPEG、PNG、GIF、BMP、WEBP、TIFF（每個檔案最大 5MB）
+              {t('approvalHistory.supportedFormats')}
             </Typography>
           </Box>
 
           <Typography variant="h6" gutterBottom>
-            檔案列表
+            {t('approvalHistory.fileList')}
           </Typography>
           {documents.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
-              目前沒有檔案
+              {t('approvalHistory.noFiles')}
             </Typography>
           ) : (
             <List>
@@ -635,7 +637,7 @@ const ApprovalHistory = () => {
                   secondaryAction={
                     <IconButton
                       edge="end"
-                      aria-label="刪除"
+                      aria-label={t('approvalHistory.deleteFile')}
                       onClick={() => handleDeleteDocument(doc.id)}
                       disabled={deleting}
                       color="error"
@@ -664,7 +666,7 @@ const ApprovalHistory = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseFileDialog}>關閉</Button>
+          <Button onClick={handleCloseFileDialog}>{t('approvalHistory.close')}</Button>
         </DialogActions>
       </Dialog>
 
@@ -674,32 +676,32 @@ const ApprovalHistory = () => {
         onClose={handleReversalCancel}
         aria-labelledby="reversal-dialog-title"
       >
-        <DialogTitle id="reversal-dialog-title">確認銷假</DialogTitle>
+        <DialogTitle id="reversal-dialog-title">{t('approvalHistory.confirmReversal')}</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            您確定要對此申請進行銷假嗎？此操作將直接批准並完成銷假，無需批核流程。
+            {t('approvalHistory.confirmReversalMessage')}
             {selectedReversalApplication && (
               <>
                 <br />
                 <br />
-                <strong>申請詳情：</strong>
+                <strong>{t('approvalHistory.applicationDetails')}</strong>
                 <br />
-                交易編號：{selectedReversalApplication.transaction_id}
+                {t('approvalHistory.transactionIdLabel')}{selectedReversalApplication.transaction_id}
                 <br />
-                申請人：{selectedReversalApplication.applicant_display_name}
+                {t('approvalHistory.applicantLabel')}{selectedReversalApplication.applicant_display_name}
                 <br />
-                假期類型：{selectedReversalApplication.leave_type_name_zh}
+                {t('approvalHistory.leaveTypeLabel')}{selectedReversalApplication.leave_type_name_zh}
                 <br />
-                日期：{formatDate(selectedReversalApplication.start_date)} ~ {formatDate(selectedReversalApplication.end_date)}
+                {t('approvalHistory.dateLabel')}{formatDate(selectedReversalApplication.start_date)} ~ {formatDate(selectedReversalApplication.end_date)}
                 <br />
-                天數：{selectedReversalApplication.days} 天
+                {t('approvalHistory.daysLabel')}{selectedReversalApplication.days} {t('approvalHistory.days')}
               </>
             )}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleReversalCancel} disabled={reversing}>
-            取消
+            {t('common.cancel')}
           </Button>
           <Button
             onClick={handleReversalConfirm}
@@ -707,7 +709,7 @@ const ApprovalHistory = () => {
             variant="contained"
             disabled={reversing}
           >
-            {reversing ? '處理中...' : '確認銷假'}
+            {reversing ? t('approvalHistory.processing') : t('approvalHistory.confirmReversal')}
           </Button>
         </DialogActions>
       </Dialog>

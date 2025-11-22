@@ -26,11 +26,13 @@ import {
   useMediaQuery
 } from '@mui/material';
 import { Visibility as VisibilityIcon, GetApp as GetAppIcon, Description as DescriptionIcon, Image as ImageIcon, Close as CloseIcon } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDateTime, formatDate } from '../utils/dateFormat';
 
 const ApprovalDetail = () => {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -83,11 +85,11 @@ const ApprovalDetail = () => {
     } catch (error) {
       console.error('Fetch application error:', error);
       if (error.response?.status === 403) {
-        setError('無權限查看此申請');
+        setError(t('approvalDetail.noPermission'));
       } else if (error.response?.status === 404) {
-        setError('申請不存在');
+        setError(t('approvalDetail.applicationNotFound'));
       } else {
-        setError('獲取申請詳情時發生錯誤');
+        setError(t('approvalDetail.fetchError'));
       }
       setApplication(null);
     } finally {
@@ -127,13 +129,13 @@ const ApprovalDetail = () => {
     // 優先使用後端返回的 current_approval_stage
     if (app.current_approval_stage) {
       const stageMap = {
-        'checker': { stage: 'checker', text: '檢查' },
-        'approver_1': { stage: 'approver_1', text: '第一批核' },
-        'approver_2': { stage: 'approver_2', text: '第二批核' },
-        'approver_3': { stage: 'approver_3', text: '第三批核' },
-        'completed': { stage: 'completed', text: '已完成' }
+        'checker': { stage: 'checker', text: t('approvalDetail.stageChecker') },
+        'approver_1': { stage: 'approver_1', text: t('approvalDetail.stageApprover1') },
+        'approver_2': { stage: 'approver_2', text: t('approvalDetail.stageApprover2') },
+        'approver_3': { stage: 'approver_3', text: t('approvalDetail.stageApprover3') },
+        'completed': { stage: 'completed', text: t('approvalDetail.stageCompleted') }
       };
-      return stageMap[app.current_approval_stage] || { stage: 'checker', text: '檢查' };
+      return stageMap[app.current_approval_stage] || { stage: 'checker', text: t('approvalDetail.stageChecker') };
     }
     // Fallback: 如果沒有 current_approval_stage，使用舊的邏輯
     // if (!app.checker_at && app.checker_id) return { stage: 'checker', text: '檢查' };
@@ -224,12 +226,12 @@ const ApprovalDetail = () => {
         remarks: comment
       });
 
-      setSuccess(action === 'approve' ? '批核成功' : '已拒絕');
+      setSuccess(action === 'approve' ? t('approvalDetail.approvalSuccess') : t('approvalDetail.rejectionSuccess'));
       setTimeout(() => {
         navigate('/approval/list');
       }, 2000);
     } catch (error) {
-      setError(error.response?.data?.message || '操作失敗');
+      setError(error.response?.data?.message || t('approvalDetail.operationFailed'));
     } finally {
       setApproving(false);
     }
@@ -248,12 +250,12 @@ const ApprovalDetail = () => {
         remarks: hrRejectionReason || 'HR Group 拒絕申請'
       });
 
-      setSuccess('申請已拒絕');
+      setSuccess(t('approvalDetail.rejectionSuccess'));
       setTimeout(() => {
         navigate('/approval/list');
       }, 2000);
     } catch (error) {
-      setError(error.response?.data?.message || '拒絕操作失敗');
+      setError(error.response?.data?.message || t('approvalDetail.operationFailed'));
     } finally {
       setHrRejecting(false);
     }
@@ -289,9 +291,9 @@ const ApprovalDetail = () => {
       setFileDialogOpen(false);
       setViewingFile(null);
       if (error.response?.status === 403 || error.response?.status === 401) {
-        setError('無權限查看此文件');
+        setError(t('approvalDetail.noPermissionFile'));
       } else {
-        setError('無法打開文件，請檢查權限');
+        setError(t('approvalDetail.cannotOpenFile'));
       }
       setTimeout(() => setError(''), 5000);
     } finally {
@@ -309,11 +311,11 @@ const ApprovalDetail = () => {
   };
 
   if (loading) {
-    return <Box>載入中...</Box>;
+    return <Box>{t('common.loading')}</Box>;
   }
 
   if (!application) {
-    return <Box>申請不存在</Box>;
+    return <Box>{t('approvalDetail.applicationNotFound')}</Box>;
   }
 
   // 優先使用後端返回的 current_approval_stage
@@ -321,16 +323,16 @@ const ApprovalDetail = () => {
   const { text } = getCurrentStage(application);
   // 如果用戶有特定的批核階段，使用該階段；否則使用當前階段
   const displayStage = userApprovalStage || currentStage;
-  const displayText = userApprovalStage === 'checker' ? '檢查' :
-                      userApprovalStage === 'approver_1' ? '第一批核' :
-                      userApprovalStage === 'approver_2' ? '第二批核' :
-                      userApprovalStage === 'approver_3' ? '第三批核' :
+  const displayText = userApprovalStage === 'checker' ? t('approvalDetail.stageChecker') :
+                      userApprovalStage === 'approver_1' ? t('approvalDetail.stageApprover1') :
+                      userApprovalStage === 'approver_2' ? t('approvalDetail.stageApprover2') :
+                      userApprovalStage === 'approver_3' ? t('approvalDetail.stageApprover3') :
                       text;
 
   return (
     <Box>
       <Typography variant="h5" gutterBottom>
-        申請詳情
+        {t('approvalDetail.title')}
       </Typography>
 
       {error && (
@@ -349,13 +351,13 @@ const ApprovalDetail = () => {
         <Grid item xs={12} md={8}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
-              申請資訊
+              {t('approvalDetail.applicationInfo')}
             </Typography>
 
             <List>
               <ListItem>
                 <ListItemText 
-                  primary="交易編號"
+                  primary={t('approvalDetail.transactionId')}
                   secondary={application.transaction_id}
                   primaryTypographyProps={{ variant: 'caption' }}
                   secondaryTypographyProps={{ variant: 'body1' }}
@@ -363,7 +365,7 @@ const ApprovalDetail = () => {
               </ListItem>
               <ListItem>
                 <ListItemText 
-                  primary="申請人"
+                  primary={t('approvalDetail.applicant')}
                   secondary={application.applicant_display_name}
                   primaryTypographyProps={{ variant: 'caption' }}
                   secondaryTypographyProps={{ variant: 'body1' }}
@@ -371,7 +373,7 @@ const ApprovalDetail = () => {
               </ListItem>
               <ListItem>
                 <ListItemText 
-                  primary="假期類型"
+                  primary={t('approvalDetail.leaveType')}
                   secondary={application.leave_type_name_zh}
                   primaryTypographyProps={{ variant: 'caption' }}
                   secondaryTypographyProps={{ variant: 'body1' }}
@@ -379,15 +381,15 @@ const ApprovalDetail = () => {
               </ListItem>
               <ListItem>
                 <ListItemText 
-                  primary="年份"
-                  secondary={application.year || (application.start_date ? new Date(application.start_date).getFullYear() : '-') + '年'}
+                  primary={t('approvalDetail.year')}
+                  secondary={application.year || (application.start_date ? new Date(application.start_date).getFullYear() : '-') + t('approvalDetail.yearSuffix')}
                   primaryTypographyProps={{ variant: 'caption' }}
                   secondaryTypographyProps={{ variant: 'body1' }}
                 />
               </ListItem>
               <ListItem>
                 <ListItemText 
-                  primary="開始日期"
+                  primary={t('approvalDetail.startDate')}
                   secondary={formatDate(application.start_date)}
                   primaryTypographyProps={{ variant: 'caption' }}
                   secondaryTypographyProps={{ variant: 'body1' }}
@@ -395,7 +397,7 @@ const ApprovalDetail = () => {
               </ListItem>
               <ListItem>
                 <ListItemText 
-                  primary="結束日期"
+                  primary={t('approvalDetail.endDate')}
                   secondary={formatDate(application.end_date)}
                   primaryTypographyProps={{ variant: 'caption' }}
                   secondaryTypographyProps={{ variant: 'body1' }}
@@ -403,7 +405,7 @@ const ApprovalDetail = () => {
               </ListItem>
               <ListItem>
                 <ListItemText 
-                  primary="天數"
+                  primary={t('approvalDetail.days')}
                   secondary={application.days}
                   primaryTypographyProps={{ variant: 'caption' }}
                   secondaryTypographyProps={{ variant: 'body1' }}
@@ -411,10 +413,10 @@ const ApprovalDetail = () => {
               </ListItem>
               <ListItem>
                 <ListItemText 
-                  primary="狀態"
+                  primary={t('approvalDetail.status')}
                   secondary={
                     <Chip
-                      label={application.status === 'pending' ? '待批核' : application.status === 'approved' ? '已批准' : '已拒絕'}
+                      label={application.status === 'pending' ? t('approvalDetail.pending') : application.status === 'approved' ? t('approvalDetail.approved') : t('approvalDetail.rejected')}
                       color={application.status === 'pending' ? 'warning' : application.status === 'approved' ? 'success' : 'error'}
                       size="small"
                     />
@@ -425,9 +427,9 @@ const ApprovalDetail = () => {
               </ListItem>
               {application.reason && (
                 <ListItem>
-                  <ListItemText 
-                    primary="原因"
-                    secondary={application.reason}
+                <ListItemText 
+                  primary={t('approvalDetail.reason')}
+                  secondary={application.reason}
                     primaryTypographyProps={{ variant: 'caption' }}
                     secondaryTypographyProps={{ variant: 'body1' }}
                   />
@@ -438,19 +440,19 @@ const ApprovalDetail = () => {
             <Divider sx={{ my: 2 }} />
 
             <Typography variant="h6" gutterBottom>
-              批核流程
+              {t('approvalDetail.approvalProcess')}
             </Typography>
 
             <List>
               <ListItem>
                 <ListItemText
-                  primary="待核實"
+                  primary={t('approvalDetail.checkerStage')}
                   secondary={
                     <Box>
                       <Box>
                         {application.checker_at 
-                          ? `已檢查於 ${formatDateTime(application.checker_at)}${application.checker_name ? ` - ${application.checker_name}` : ''}` 
-                          : '待檢查'}
+                          ? `${t('approvalDetail.checkedAt')} ${formatDateTime(application.checker_at)}${application.checker_name ? ` - ${application.checker_name}` : ''}` 
+                          : t('approvalDetail.pendingCheck')}
                       </Box>
                       {application.checker_remarks && (
                         <Typography variant="body2" sx={{ color: '#1565C0', mt: 1 }}>
@@ -465,13 +467,13 @@ const ApprovalDetail = () => {
               </ListItem>
               <ListItem>
                 <ListItemText
-                  primary="首階段批核"
+                  primary={t('approvalDetail.approver1Stage')}
                   secondary={
                     <Box>
                       <Box>
                         {application.approver_1_at 
-                          ? `已批核於 ${formatDateTime(application.approver_1_at)}${application.approver_1_name ? ` - ${application.approver_1_name}` : ''}` 
-                          : application.checker_at ? '待批核' : '未開始'}
+                          ? `${t('approvalDetail.approvedAt')} ${formatDateTime(application.approver_1_at)}${application.approver_1_name ? ` - ${application.approver_1_name}` : ''}` 
+                          : application.checker_at ? t('approvalDetail.pendingApproval') : t('approvalDetail.notStarted')}
                       </Box>
                       {application.approver_1_remarks && (
                         <Typography variant="body2" sx={{ color: '#1565C0', mt: 1 }}>
@@ -486,13 +488,13 @@ const ApprovalDetail = () => {
               </ListItem>
               <ListItem>
                 <ListItemText
-                  primary="次階段批核"
+                  primary={t('approvalDetail.approver2Stage')}
                   secondary={
                     <Box>
                       <Box>
                         {application.approver_2_at 
-                          ? `已批核於 ${formatDateTime(application.approver_2_at)}${application.approver_2_name ? ` - ${application.approver_2_name}` : ''}` 
-                          : application.approver_1_at ? '待批核' : '未開始'}
+                          ? `${t('approvalDetail.approvedAt')} ${formatDateTime(application.approver_2_at)}${application.approver_2_name ? ` - ${application.approver_2_name}` : ''}` 
+                          : application.approver_1_at ? t('approvalDetail.pendingApproval') : t('approvalDetail.notStarted')}
                       </Box>
                       {application.approver_2_remarks && (
                         <Typography variant="body2" sx={{ color: '#1565C0', mt: 1 }}>
@@ -507,13 +509,13 @@ const ApprovalDetail = () => {
               </ListItem>
               <ListItem>
                 <ListItemText
-                  primary="最終批核"
+                  primary={t('approvalDetail.approver3Stage')}
                   secondary={
                     <Box>
                       <Box>
                         {application.approver_3_at 
-                          ? `已批核於 ${formatDateTime(application.approver_3_at)}${application.approver_3_name ? ` - ${application.approver_3_name}` : ''}` 
-                          : application.approver_2_at ? '待批核' : '未開始'}
+                          ? `${t('approvalDetail.approvedAt')} ${formatDateTime(application.approver_3_at)}${application.approver_3_name ? ` - ${application.approver_3_name}` : ''}` 
+                          : application.approver_2_at ? t('approvalDetail.pendingApproval') : t('approvalDetail.notStarted')}
                       </Box>
                       {application.approver_3_remarks && (
                         <Typography variant="body2" sx={{ color: '#1565C0', mt: 1 }}>
@@ -529,11 +531,11 @@ const ApprovalDetail = () => {
               {application.status === 'rejected' && application.rejected_by_name && (
                 <ListItem>
                   <ListItemText
-                    primary="拒絕"
+                    primary={t('approvalDetail.rejection')}
                     secondary={
                       <Box>
                         <Box>
-                          已拒絕於 {formatDateTime(application.rejected_at)} - {application.rejected_by_name}
+                          {t('approvalDetail.rejectedAt')} {formatDateTime(application.rejected_at)} - {application.rejected_by_name}
                         </Box>
                         {application.rejection_reason && (
                           <Typography variant="body2" sx={{ color: '#1565C0', mt: 1 }}>
@@ -553,7 +555,7 @@ const ApprovalDetail = () => {
               <>
                 <Divider sx={{ my: 2 }} />
                 <Typography variant="h6" gutterBottom>
-                  附件
+                  {t('approvalDetail.attachments')}
                 </Typography>
                 <List dense>
                   {documents.map((doc) => (
@@ -562,7 +564,7 @@ const ApprovalDetail = () => {
                       secondaryAction={
                         <IconButton
                           edge="end"
-                          aria-label="查看"
+                          aria-label={t('approvalDetail.view')}
                           onClick={async () => {
                             await handleOpenFile(doc);
                           }}
@@ -599,7 +601,7 @@ const ApprovalDetail = () => {
               <>
                 <Divider sx={{ my: 2 }} />
                 <Typography variant="h6" gutterBottom>
-                  相關銷假交易
+                  {t('approvalDetail.relatedReversalTransactions')}
                 </Typography>
                 <List>
                   {application.reversal_transactions.map((reversal) => (
@@ -608,36 +610,36 @@ const ApprovalDetail = () => {
                         primary={
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Chip
-                              label="銷假"
+                              label={t('approvalDetail.reversal')}
                               color="info"
                               size="small"
                             />
                             <Typography variant="body1" component="span">
-                              交易編號：{reversal.transaction_id}
+                              {t('approvalDetail.transactionIdLabel')}{reversal.transaction_id}
                             </Typography>
                           </Box>
                         }
                         secondary={
                           <Box sx={{ mt: 1 }}>
                             <Typography variant="body2" color="text.secondary">
-                              申請人：{reversal.applicant_display_name}
+                              {t('approvalDetail.applicantLabel')}{reversal.applicant_display_name}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                              假期類型：{reversal.leave_type_name_zh}
+                              {t('approvalDetail.leaveTypeLabel')}{reversal.leave_type_name_zh}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                              年份：{reversal.year || (reversal.start_date ? new Date(reversal.start_date).getFullYear() : '-')}年
+                              {t('approvalDetail.yearLabel')}{reversal.year || (reversal.start_date ? new Date(reversal.start_date).getFullYear() : '-')}{t('approvalDetail.yearSuffix')}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                              日期：{formatDate(reversal.start_date)} ~ {formatDate(reversal.end_date)}
+                              {t('approvalDetail.dateLabel')}{formatDate(reversal.start_date)} ~ {formatDate(reversal.end_date)}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                              天數：{Math.abs(reversal.days)} 天
+                              {t('approvalDetail.daysLabel')}{Math.abs(reversal.days)} {t('approvalDetail.days')}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                              狀態：
+                              {t('approvalDetail.statusLabel')}
                               <Chip
-                                label={reversal.status === 'approved' ? '已批准' : reversal.status === 'pending' ? '待批核' : reversal.status === 'rejected' ? '已拒絕' : reversal.status}
+                                label={reversal.status === 'approved' ? t('approvalDetail.approved') : reversal.status === 'pending' ? t('approvalDetail.pending') : reversal.status === 'rejected' ? t('approvalDetail.rejected') : reversal.status}
                                 color={reversal.status === 'approved' ? 'success' : reversal.status === 'pending' ? 'warning' : reversal.status === 'rejected' ? 'error' : 'default'}
                                 size="small"
                                 sx={{ ml: 1 }}
@@ -645,7 +647,7 @@ const ApprovalDetail = () => {
                             </Typography>
                             {reversal.created_at && (
                               <Typography variant="body2" color="text.secondary">
-                                創建時間：{formatDateTime(reversal.created_at)}
+                                {t('approvalDetail.createdAt')}{formatDateTime(reversal.created_at)}
                               </Typography>
                             )}
                           </Box>
@@ -666,17 +668,17 @@ const ApprovalDetail = () => {
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  批核操作
+                  {t('approvalDetail.approvalAction')}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  批核階段：{displayText}
+                  {t('approvalDetail.approvalStage')}：{displayText}
                 </Typography>
 
                 <TextField
                   fullWidth
                   multiline
                   rows={4}
-                  label="批核意見"
+                  label={t('approvalDetail.approvalComment')}
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   sx={{ mb: 2 }}
@@ -690,7 +692,7 @@ const ApprovalDetail = () => {
                       onClick={() => setAction('approve')}
                       fullWidth
                     >
-                      批准
+                      {t('approvalDetail.approve')}
                     </Button>
                   )}
                   {canRejectThis && (
@@ -700,7 +702,7 @@ const ApprovalDetail = () => {
                       onClick={() => setAction('reject')}
                       fullWidth
                     >
-                      拒絕
+                      {t('approvalDetail.reject')}
                     </Button>
                   )}
                 </Box>
@@ -719,7 +721,7 @@ const ApprovalDetail = () => {
                     }
                   }}
                 >
-                  {approving ? '處理中...' : !action ? '請選擇批准或拒絕' : '提交'}
+                  {approving ? t('approvalDetail.processing') : !action ? t('approvalDetail.selectAction') : t('approvalDetail.submit')}
                 </Button>
               </CardContent>
             </Card>
@@ -734,20 +736,20 @@ const ApprovalDetail = () => {
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  HR Group 拒絕操作
+                  {t('approvalDetail.hrRejectionAction')}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  當前階段：{displayText}
+                  {t('approvalDetail.currentStage')}：{displayText}
                 </Typography>
 
                 <TextField
                   fullWidth
                   multiline
                   rows={4}
-                  label="拒絕原因"
+                  label={t('approvalDetail.rejectionReason')}
                   value={hrRejectionReason}
                   onChange={(e) => setHrRejectionReason(e.target.value)}
-                  placeholder="請輸入拒絕原因..."
+                  placeholder={t('approvalDetail.rejectionReasonPlaceholder')}
                   sx={{ mb: 2 }}
                 />
 
@@ -764,7 +766,7 @@ const ApprovalDetail = () => {
                     }
                   }}
                 >
-                  {hrRejecting ? '處理中...' : '拒絕申請'}
+                  {hrRejecting ? t('approvalDetail.processing') : t('approvalDetail.rejectApplication')}
                 </Button>
               </CardContent>
             </Card>
@@ -783,7 +785,7 @@ const ApprovalDetail = () => {
         <DialogTitle>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h6">
-              {viewingFile?.file_name || '查看文件'}
+              {viewingFile?.file_name || t('approvalDetail.viewFile')}
             </Typography>
             <IconButton onClick={handleCloseFileDialog}>
               <CloseIcon />
@@ -795,7 +797,7 @@ const ApprovalDetail = () => {
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
               <CircularProgress />
               <Typography variant="body2" sx={{ ml: 2 }}>
-                載入中...
+                {t('common.loading')}
               </Typography>
             </Box>
           ) : fileBlobUrl && viewingFile ? (

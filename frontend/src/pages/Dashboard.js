@@ -13,10 +13,12 @@ import {
   AccountBalance as AccountBalanceIcon,
   History as HistoryIcon
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 
 const Dashboard = () => {
+  const { t } = useTranslation();
   const { user, isSystemAdmin, isDeptHead } = useAuth();
   const [stats, setStats] = useState({
     pendingApplications: 0,
@@ -54,28 +56,28 @@ const Dashboard = () => {
 
   const cards = [
     {
-      title: '待批核申請',
+      titleKey: 'pendingApplications',
       value: stats.pendingApplications,
       icon: <AssignmentIcon />,
       color: '#ff9800',
       show: true
     },
     {
-      title: '待批核項目',
+      titleKey: 'pendingApprovals',
       value: stats.pendingApprovals,
       icon: <CheckCircleIcon />,
       color: '#2196f3',
       show: isDeptHead || isSystemAdmin
     },
     {
-      title: '總假期餘額',
+      titleKey: 'totalBalance',
       value: stats.totalBalance.toFixed(1),
       icon: <AccountBalanceIcon />,
       color: '#4caf50',
       show: true
     },
     {
-      title: '已批准申請',
+      titleKey: 'approvedApplications',
       value: stats.approvedApplications,
       icon: <HistoryIcon />,
       color: '#9c27b0',
@@ -86,7 +88,7 @@ const Dashboard = () => {
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
-        歡迎，{user?.display_name || `${user?.surname} ${user?.given_name}`}
+        {t('dashboard.welcome', { name: user?.display_name || `${user?.surname} ${user?.given_name}` })}
       </Typography>
       <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
         {user?.department_name_zh} - {user?.position_name_zh}
@@ -100,7 +102,7 @@ const Dashboard = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <Box>
                     <Typography color="text.secondary" gutterBottom variant="body2">
-                      {card.title}
+                      {t(`dashboard.${card.titleKey}`)}
                     </Typography>
                     <Typography variant="h4">
                       {card.value}

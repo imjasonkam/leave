@@ -35,13 +35,16 @@ import {
   Settings as SettingsIcon,
   Lock as LockIcon,
   ExitToApp as ExitToAppIcon,
-  Description as DescriptionIcon
+  Description as DescriptionIcon,
+  Language as LanguageIcon
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 
 const drawerWidth = 260;
 
 const Layout = ({ children }) => {
+  const { t, i18n } = useTranslation();
   const { user, logout, isSystemAdmin, isDeptHead } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -49,25 +52,31 @@ const Layout = ({ children }) => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
+  const [langAnchorEl, setLangAnchorEl] = useState(null);
 
   const menuItems = [
-    { text: '儀表板', icon: <DashboardIcon />, path: '/', show: true },
-    { text: '申請假期', icon: <AssignmentIcon />, path: '/leave/apply', show: true },
-    { text: '申請歷史', icon: <HistoryIcon />, path: '/leave/history', show: true },
-    { text: '假期餘額', icon: <AccountBalanceIcon />, path: '/leave/balance', show: true },
-    { text: '我的文件', icon: <DescriptionIcon />, path: '/documents/my', show: true },
-    { text: '待批核', icon: <CheckCircleIcon />, path: '/approval/list', show: true },
-    { text: '批核記錄', icon: <HistoryIcon />, path: '/approval/history', show: true },
-    { text: '部門群組餘額', icon: <AccountBalanceIcon />, path: '/department-group-balances', show: true },
-    { text: '文件發放', icon: <DescriptionIcon />, path: '/documents/upload', show: isSystemAdmin },
-    { text: 'Paper Flow', icon: <DescriptionIcon />, path: '/admin/paper-flow', show: isSystemAdmin },
-    { text: '用戶管理', icon: <PeopleIcon />, path: '/admin/users', show: isSystemAdmin },
-    { text: '假期類型', icon: <EventNoteIcon />, path: '/admin/leave-types', show: isSystemAdmin },
-    { text: '假期餘額管理', icon: <AccountBalanceWalletIcon />, path: '/admin/balances', show: isSystemAdmin },
-    { text: '部門管理', icon: <BusinessIcon />, path: '/admin/departments', show: isSystemAdmin },
-    { text: '職位管理', icon: <WorkIcon />, path: '/admin/positions', show: isSystemAdmin },
-    { text: '群組管理', icon: <GroupIcon />, path: '/admin/groups', show: isSystemAdmin }
+    { key: 'dashboard', icon: <DashboardIcon />, path: '/', show: true },
+    { key: 'applyLeave', icon: <AssignmentIcon />, path: '/leave/apply', show: true },
+    { key: 'leaveHistory', icon: <HistoryIcon />, path: '/leave/history', show: true },
+    { key: 'leaveBalance', icon: <AccountBalanceIcon />, path: '/leave/balance', show: true },
+    { key: 'myDocuments', icon: <DescriptionIcon />, path: '/documents/my', show: true },
+    { key: 'pendingApproval', icon: <CheckCircleIcon />, path: '/approval/list', show: true },
+    { key: 'approvalHistory', icon: <HistoryIcon />, path: '/approval/history', show: true },
+    { key: 'departmentGroupBalances', icon: <AccountBalanceIcon />, path: '/department-group-balances', show: true },
+    { key: 'documentUpload', icon: <DescriptionIcon />, path: '/documents/upload', show: isSystemAdmin },
+    { key: 'paperFlow', icon: <DescriptionIcon />, path: '/admin/paper-flow', show: isSystemAdmin },
+    { key: 'userManagement', icon: <PeopleIcon />, path: '/admin/users', show: isSystemAdmin },
+    { key: 'leaveTypeManagement', icon: <EventNoteIcon />, path: '/admin/leave-types', show: isSystemAdmin },
+    { key: 'balanceManagement', icon: <AccountBalanceWalletIcon />, path: '/admin/balances', show: isSystemAdmin },
+    { key: 'departmentManagement', icon: <BusinessIcon />, path: '/admin/departments', show: isSystemAdmin },
+    { key: 'positionManagement', icon: <WorkIcon />, path: '/admin/positions', show: isSystemAdmin },
+    { key: 'groupManagement', icon: <GroupIcon />, path: '/admin/groups', show: isSystemAdmin }
   ];
+
+  const handleLanguageChange = (lang) => {
+    i18n.changeLanguage(lang);
+    setLangAnchorEl(null);
+  };
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -85,7 +94,7 @@ const Layout = ({ children }) => {
     <Box>
       <Toolbar sx={{ bgcolor: 'primary.main', color: 'white' }}>
         <Typography variant="h6" noWrap component="div">
-          Big C HK Staff Portal
+          {t('layout.appTitle')}
         </Typography>
       </Toolbar>
       <Divider />
@@ -102,7 +111,7 @@ const Layout = ({ children }) => {
               <ListItemIcon sx={{ color: location.pathname === item.path ? 'primary.main' : 'inherit' }}>
                 {item.icon}
               </ListItemIcon>
-              <ListItemText primary={item.text} />
+              <ListItemText primary={t(`layout.${item.key}`)} />
             </ListItemButton>
           </ListItem>
         ))}
@@ -130,9 +139,33 @@ const Layout = ({ children }) => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            {menuItems.find(item => item.path === location.pathname)?.text || '假期管理系統'}
+            {menuItems.find(item => item.path === location.pathname) ? 
+              t(`layout.${menuItems.find(item => item.path === location.pathname)?.key}`) : 
+              t('layout.systemTitle')}
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <IconButton 
+              onClick={(e) => setLangAnchorEl(e.currentTarget)}
+              sx={{ color: 'white' }}
+              title={t('language.selectLanguage')}
+            >
+              <LanguageIcon />
+            </IconButton>
+            <Menu
+              anchorEl={langAnchorEl}
+              open={Boolean(langAnchorEl)}
+              onClose={() => setLangAnchorEl(null)}
+            >
+              <MenuItem onClick={() => handleLanguageChange('zh-TW')}>
+                {t('language.zhTW')}
+              </MenuItem>
+              <MenuItem onClick={() => handleLanguageChange('zh-CN')}>
+                {t('language.zhCN')}
+              </MenuItem>
+              <MenuItem onClick={() => handleLanguageChange('en')}>
+                {t('language.en')}
+              </MenuItem>
+            </Menu>
             <Typography variant="body2">{user?.display_name || `${user?.surname} ${user?.given_name}`}</Typography>
             <IconButton onClick={handleMenuOpen} sx={{ p: 0 }}>
               <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
@@ -149,7 +182,7 @@ const Layout = ({ children }) => {
               <ListItemIcon>
                 <LockIcon fontSize="small" />
               </ListItemIcon>
-              <ListItemText>更改密碼</ListItemText>
+              <ListItemText>{t('layout.changePassword')}</ListItemText>
             </MenuItem>
             <Divider />
             <MenuItem onClick={() => { 
@@ -160,7 +193,7 @@ const Layout = ({ children }) => {
               <ListItemIcon>
                 <ExitToAppIcon fontSize="small" />
               </ListItemIcon>
-              <ListItemText>登出</ListItemText>
+              <ListItemText>{t('layout.logout')}</ListItemText>
             </MenuItem>
           </Menu>
         </Toolbar>

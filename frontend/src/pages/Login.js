@@ -7,18 +7,30 @@ import {
   Button,
   Typography,
   Box,
-  Alert
+  Alert,
+  IconButton,
+  Menu,
+  MenuItem
 } from '@mui/material';
+import { Language as LanguageIcon } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import logo from '../components/logo.webp';
 
 const Login = () => {
+  const { t, i18n } = useTranslation();
   const [employeeNumber, setEmployeeNumber] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [langAnchorEl, setLangAnchorEl] = useState(null);
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  const handleLanguageChange = (lang) => {
+    i18n.changeLanguage(lang);
+    setLangAnchorEl(null);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -36,7 +48,7 @@ const Login = () => {
       navigate('/');
     } else {
       console.error('Login failed:', result.message);
-      setError(result.message || '登入失敗，請檢查員工編號和密碼');
+      setError(result.message || t('login.loginFailed'));
     }
     
     setLoading(false);
@@ -50,8 +62,37 @@ const Login = () => {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
+          position: 'relative'
         }}
       >
+        <IconButton
+          onClick={(e) => setLangAnchorEl(e.currentTarget)}
+          sx={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            mt: 2,
+            mr: 2
+          }}
+          title={t('language.selectLanguage')}
+        >
+          <LanguageIcon />
+        </IconButton>
+        <Menu
+          anchorEl={langAnchorEl}
+          open={Boolean(langAnchorEl)}
+          onClose={() => setLangAnchorEl(null)}
+        >
+          <MenuItem onClick={() => handleLanguageChange('zh-TW')}>
+            {t('language.zhTW')}
+          </MenuItem>
+          <MenuItem onClick={() => handleLanguageChange('zh-CN')}>
+            {t('language.zhCN')}
+          </MenuItem>
+          <MenuItem onClick={() => handleLanguageChange('en')}>
+            {t('language.en')}
+          </MenuItem>
+        </Menu>
         <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
           <Box
             sx={{
@@ -74,10 +115,10 @@ const Login = () => {
             />
           </Box>
           <Typography component="h1" variant="h4" align="center" gutterBottom>
-          Staff Portal
+          {t('login.title')}
           </Typography>
           <Typography component="h2" variant="h6" align="center" color="text.secondary" sx={{ mb: 3 }}>
-          Hong Kong
+          {t('login.subtitle')}
           </Typography>
           
           {error && (
@@ -92,7 +133,7 @@ const Login = () => {
               required
               fullWidth
               id="employee_number"
-              label="員工編號"
+              label={t('login.employeeNumber')}
               name="employee_number"
               autoComplete="username"
               autoFocus
@@ -104,7 +145,7 @@ const Login = () => {
               required
               fullWidth
               name="password"
-              label="密碼"
+              label={t('login.password')}
               type="password"
               id="password"
               autoComplete="current-password"
@@ -118,7 +159,7 @@ const Login = () => {
               sx={{ mt: 3, mb: 2 }}
               disabled={loading}
             >
-              {loading ? '登入中...' : '登入'}
+              {loading ? t('login.loggingIn') : t('login.loginButton')}
             </Button>
           </Box>
         </Paper>

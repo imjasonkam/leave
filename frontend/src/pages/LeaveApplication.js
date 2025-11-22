@@ -25,11 +25,13 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { Delete as DeleteIcon, AttachFile as AttachFileIcon, CameraAlt as CameraIcon } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 
 const LeaveApplication = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [formData, setFormData] = useState({
     leave_type_id: '',
@@ -203,9 +205,9 @@ const LeaveApplication = () => {
       const isValidSize = file.size <= maxSize;
       
       if (!isValidType) {
-        errors.push(`${file.name}: 不支援的檔案類型。只允許：${allowedExtensions.join(', ')}`);
+        errors.push(`${file.name}: ${t('leaveApplication.unsupportedFileType', { types: allowedExtensions.join(', ') })}`);
       } else if (!isValidSize) {
-        errors.push(`${file.name}: 檔案大小超過 5MB`);
+        errors.push(`${file.name}: ${t('leaveApplication.fileSizeLimit')}`);
       } else {
         validFiles.push(file);
       }
@@ -254,7 +256,7 @@ const LeaveApplication = () => {
 
     if (!formData.leave_type_id || !formData.start_date || !formData.start_session || 
         !formData.end_date || !formData.end_session || !formData.days) {
-      setError('請填寫所有必填欄位');
+      setError(t('leaveApplication.fillAllFields'));
       setLoading(false);
       return;
     }
@@ -284,7 +286,7 @@ const LeaveApplication = () => {
         }
       });
       
-      setSuccess(`申請已提交，交易編號：${response.data.application.transaction_id}`);
+      setSuccess(t('leaveApplication.applicationSubmitted', { transactionId: response.data.application.transaction_id }));
       setFormData({
         leave_type_id: '',
         year: new Date().getFullYear(), // 重置為當前年份
@@ -300,7 +302,7 @@ const LeaveApplication = () => {
       setIncludeWeekends(true); // 重置為預設值
       setYearManuallySet(false); // 重置年份手動設置標記
     } catch (error) {
-      setError(error.response?.data?.message || '提交申請時發生錯誤');
+      setError(error.response?.data?.message || t('leaveApplication.submitError'));
     } finally {
       setLoading(false);
     }
@@ -312,7 +314,7 @@ const LeaveApplication = () => {
     <Container maxWidth="md">
       <Paper sx={{ p: 4 }}>
         <Typography variant="h5" gutterBottom>
-          申請假期
+          {t('leaveApplication.title')}
         </Typography>
 
         {error && (
@@ -329,10 +331,10 @@ const LeaveApplication = () => {
 
         <Box component="form" onSubmit={handleSubmit}>
           <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>假期類型</InputLabel>
+            <InputLabel>{t('leaveApplication.leaveType')}</InputLabel>
             <Select
               value={formData.leave_type_id}
-              label="假期類型"
+              label={t('leaveApplication.leaveType')}
               onChange={(e) => setFormData(prev => ({ ...prev, leave_type_id: e.target.value }))}
               required
             >
@@ -345,10 +347,10 @@ const LeaveApplication = () => {
           </FormControl>
 
           <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>假期所屬年份</InputLabel>
+            <InputLabel>{t('leaveApplication.year')}</InputLabel>
             <Select
               value={formData.year}
-              label="假期所屬年份"
+              label={t('leaveApplication.year')}
               onChange={(e) => {
                 setFormData(prev => ({ ...prev, year: e.target.value }));
                 setYearManuallySet(true); // 標記為手動設置
@@ -359,7 +361,7 @@ const LeaveApplication = () => {
                 const year = new Date().getFullYear() - 1 + i; // 從去年到後年（共5年）
                 return (
                   <MenuItem key={year} value={year}>
-                    {year}年
+                    {year}{t('leaveApplication.yearSuffix')}
                   </MenuItem>
                 );
               })}
@@ -369,7 +371,7 @@ const LeaveApplication = () => {
           {selectedLeaveType?.requires_balance && balance && (
             <Box sx={{ mb: 2 }}>
               <Chip
-                label={`可用餘額：${parseFloat(balance.balance).toFixed(1)} 天`}
+                label={t('leaveApplication.availableBalance', { days: parseFloat(balance.balance).toFixed(1) })}
                 color={parseFloat(balance.balance) >= parseFloat(formData.days || 0) ? 'success' : 'error'}
                 sx={{ mb: 1 }}
               />
@@ -380,7 +382,7 @@ const LeaveApplication = () => {
             <Grid container spacing={2} sx={{ mb: 2 }}>
               <Grid item xs={12} sm={6}>
                 <DatePicker
-                  label="開始日期"
+                  label={t('leaveApplication.startDate')}
                   value={formData.start_date}
                   onChange={(date) => setFormData(prev => ({ ...prev, start_date: date }))}
                   format="DD/MM/YYYY"
@@ -389,21 +391,21 @@ const LeaveApplication = () => {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth required>
-                  <InputLabel>開始時段</InputLabel>
+                  <InputLabel>{t('leaveApplication.startSession')}</InputLabel>
                   <Select
                     value={formData.start_session}
-                    label="開始時段"
+                    label={t('leaveApplication.startSession')}
                     onChange={(e) => setFormData(prev => ({ ...prev, start_session: e.target.value }))}
                     required
                   >
-                    <MenuItem value="AM">上午</MenuItem>
-                    <MenuItem value="PM">下午</MenuItem>
+                    <MenuItem value="AM">{t('leaveApplication.sessionAM')}</MenuItem>
+                    <MenuItem value="PM">{t('leaveApplication.sessionPM')}</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
               <Grid item xs={12} sm={6}>
                 <DatePicker
-                  label="結束日期"
+                  label={t('leaveApplication.endDate')}
                   value={formData.end_date}
                   onChange={(date) => setFormData(prev => ({ ...prev, end_date: date }))}
                   format="DD/MM/YYYY"
@@ -413,15 +415,15 @@ const LeaveApplication = () => {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth required>
-                  <InputLabel>結束時段</InputLabel>
+                  <InputLabel>{t('leaveApplication.endSession')}</InputLabel>
                   <Select
                     value={formData.end_session}
-                    label="結束時段"
+                    label={t('leaveApplication.endSession')}
                     onChange={(e) => setFormData(prev => ({ ...prev, end_session: e.target.value }))}
                     required
                   >
-                    <MenuItem value="AM">上午</MenuItem>
-                    <MenuItem value="PM">下午</MenuItem>
+                    <MenuItem value="AM">{t('leaveApplication.sessionAM')}</MenuItem>
+                    <MenuItem value="PM">{t('leaveApplication.sessionPM')}</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
@@ -437,18 +439,18 @@ const LeaveApplication = () => {
                   color="primary"
                 />
               }
-              label="計算星期六及星期日"
+              label={t('leaveApplication.includeWeekends')}
             />
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
               {includeWeekends 
-                ? '將計算開始日期至結束日期之間的所有天數（包括星期六及星期日）'
-                : '只計算工作日（星期一至星期五），星期六及星期日將不計入假期天數'}
+                ? t('leaveApplication.includeWeekendsDescription1')
+                : t('leaveApplication.includeWeekendsDescription2')}
             </Typography>
           </Box>
 
           <TextField
             fullWidth
-            label="天數"
+            label={t('leaveApplication.days')}
             type="number"
             value={formData.days}
             onChange={(e) => setFormData(prev => ({ ...prev, days: e.target.value }))}
@@ -459,7 +461,7 @@ const LeaveApplication = () => {
 
           <TextField
             fullWidth
-            label="原因 / 備註"
+            label={t('leaveApplication.reason')}
             multiline
             rows={4}
             value={formData.reason}
@@ -469,7 +471,7 @@ const LeaveApplication = () => {
 
           <Box sx={{ mb: 2 }}>
             <Typography variant="subtitle2" gutterBottom>
-              附件（可選，支持 PDF、JPEG、JPG、TIFF 及其他圖片格式，每個文件不超過 5MB）
+              {t('leaveApplication.attachFilesTitle')}
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
               <Button
@@ -477,7 +479,7 @@ const LeaveApplication = () => {
                 component="label"
                 startIcon={<AttachFileIcon />}
               >
-                選擇文件
+                {t('leaveApplication.selectFile')}
                 <input
                   type="file"
                   hidden
@@ -491,7 +493,7 @@ const LeaveApplication = () => {
                 startIcon={<CameraIcon />}
                 onClick={handleCameraCapture}
               >
-                拍照
+                {t('leaveApplication.takePhoto')}
               </Button>
             </Box>
             {files.length > 0 && (
@@ -502,7 +504,7 @@ const LeaveApplication = () => {
                     secondaryAction={
                       <IconButton
                         edge="end"
-                        aria-label="刪除"
+                        aria-label={t('leaveApplication.removeFileLabel')}
                         onClick={() => handleRemoveFile(index)}
                       >
                         <DeleteIcon />
@@ -529,7 +531,7 @@ const LeaveApplication = () => {
             fullWidth
             disabled={loading}
           >
-            {loading ? '提交中...' : '提交申請'}
+            {loading ? t('leaveApplication.submitting') : t('leaveApplication.submitButton')}
           </Button>
         </Box>
       </Paper>

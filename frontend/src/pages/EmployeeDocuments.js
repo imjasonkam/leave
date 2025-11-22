@@ -20,10 +20,12 @@ import {
   CircularProgress
 } from '@mui/material';
 import { Download as DownloadIcon } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { formatDate } from '../utils/dateFormat';
 
 const EmployeeDocuments = () => {
+  const { t } = useTranslation();
   const [documents, setDocuments] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -49,7 +51,7 @@ const EmployeeDocuments = () => {
       setDocuments(response.data.documents || []);
     } catch (error) {
       console.error('Fetch documents error:', error);
-      setError('獲取文件列表時發生錯誤');
+      setError(t('employeeDocuments.fetchError'));
     } finally {
       setLoading(false);
     }
@@ -79,7 +81,7 @@ const EmployeeDocuments = () => {
       link.remove();
     } catch (error) {
       console.error('Download error:', error);
-      setError(error.response?.data?.message || '下載文件時發生錯誤');
+      setError(error.response?.data?.message || t('employeeDocuments.downloadError'));
     }
   };
 
@@ -103,9 +105,9 @@ const EmployeeDocuments = () => {
   return (
     <Box>
       <Box sx={{ mb: 3 }}>
-        <Typography variant="h4">我的文件</Typography>
+        <Typography variant="h4">{t('employeeDocuments.title')}</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          您可以在此查看和下載HR發放給您的文件
+          {t('employeeDocuments.description')}
         </Typography>
       </Box>
 
@@ -118,13 +120,13 @@ const EmployeeDocuments = () => {
       <Paper sx={{ p: 2, mb: 2 }}>
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
           <FormControl sx={{ minWidth: 150 }}>
-            <InputLabel>文件類別</InputLabel>
+            <InputLabel>{t('employeeDocuments.category')}</InputLabel>
             <Select
               value={filters.category}
-              label="文件類別"
+              label={t('employeeDocuments.category')}
               onChange={(e) => setFilters(prev => ({ ...prev, category: e.target.value }))}
             >
-              <MenuItem value="">全部</MenuItem>
+              <MenuItem value="">{t('employeeDocuments.allCategories')}</MenuItem>
               {categories.map(cat => (
                 <MenuItem key={cat} value={cat}>{cat}</MenuItem>
               ))}
@@ -132,10 +134,10 @@ const EmployeeDocuments = () => {
           </FormControl>
 
           <TextField
-            label="搜尋"
+            label={t('employeeDocuments.search')}
             value={filters.search}
             onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-            placeholder="文件名稱"
+            placeholder={t('employeeDocuments.fileNamePlaceholder')}
             sx={{ minWidth: 250 }}
           />
         </Box>
@@ -145,11 +147,11 @@ const EmployeeDocuments = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>文件名稱</TableCell>
-              <TableCell>類別</TableCell>
-              <TableCell>文件大小</TableCell>
-              <TableCell>發放時間</TableCell>
-              <TableCell align="right">操作</TableCell>
+              <TableCell>{t('employeeDocuments.fileName')}</TableCell>
+              <TableCell>{t('employeeDocuments.category')}</TableCell>
+              <TableCell>{t('employeeDocuments.fileSize')}</TableCell>
+              <TableCell>{t('employeeDocuments.releaseTime')}</TableCell>
+              <TableCell align="right">{t('employeeDocuments.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -162,7 +164,7 @@ const EmployeeDocuments = () => {
             ) : filteredDocuments.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} align="center">
-                  沒有文件
+                  {t('employeeDocuments.noDocuments')}
                 </TableCell>
               </TableRow>
             ) : (
@@ -178,7 +180,7 @@ const EmployeeDocuments = () => {
                     <IconButton
                       size="small"
                       onClick={() => handleDownload(doc.id, doc.display_name, doc.file_name)}
-                      title="下載"
+                      title={t('employeeDocuments.download')}
                     >
                       <DownloadIcon />
                     </IconButton>
