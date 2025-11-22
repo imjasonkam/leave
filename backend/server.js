@@ -38,6 +38,7 @@ const groupRoutes = require('./routes/group.routes');
 const leaveTypeRoutes = require('./routes/leaveType.routes');
 const approvalRoutes = require('./routes/approval.routes');
 const adminRoutes = require('./routes/admin.routes');
+const documentRoutes = require('./routes/document.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -48,6 +49,7 @@ app.use('/api/groups', groupRoutes);
 app.use('/api/leave-types', leaveTypeRoutes);
 app.use('/api/approvals', approvalRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/documents', documentRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -20,6 +20,8 @@ import AdminPositions from './pages/AdminPositions';
 import AdminGroups from './pages/AdminGroups';
 import AdminPaperFlow from './pages/AdminPaperFlow';
 import ChangePassword from './pages/ChangePassword';
+import HRDocumentUpload from './pages/HRDocumentUpload';
+import EmployeeDocuments from './pages/EmployeeDocuments';
 
 const theme = createTheme({
   palette: {
@@ -54,6 +56,8 @@ function App() {
             <Route path="/admin/departments" element={<PrivateRoute><AdminDepartments /></PrivateRoute>} />
             <Route path="/admin/positions" element={<PrivateRoute><AdminPositions /></PrivateRoute>} />
             <Route path="/admin/groups" element={<PrivateRoute><AdminGroups /></PrivateRoute>} />
+            <Route path="/documents/upload" element={<PrivateRoute><HRDocumentUpload /></PrivateRoute>} />
+            <Route path="/documents/my" element={<PrivateRoute><EmployeeDocuments /></PrivateRoute>} />
             <Route path="/change-password" element={<PrivateRoute><ChangePassword /></PrivateRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
