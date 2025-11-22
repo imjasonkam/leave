@@ -459,7 +459,7 @@ const LeaveApplication = () => {
 
           <TextField
             fullWidth
-            label="原因"
+            label="原因 / 備註"
             multiline
             rows={4}
             value={formData.reason}

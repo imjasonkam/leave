@@ -4,7 +4,7 @@ exports.up = function(knex) {
     table.integer('user_id').unsigned().notNullable().references('id').inTable('users').onDelete('CASCADE');
     table.string('file_name').notNullable();
     table.string('display_name').notNullable(); // 顯示名稱（用戶輸入的）
-    table.string('category', 50).nullable(); // 文件類別：Salary Advice、IR56B、IR56F、IR56G、Work Proof、Service Letter、Others
+    table.string('category', 50).nullable(); // 文件類別：Salary Advice、IR56B、IR56F、IR56G、Others
     table.string('file_path').notNullable();
     table.string('file_type').nullable(); // MIME type
     table.integer('file_size').nullable(); // bytes
@@ -21,7 +21,7 @@ exports.up = function(knex) {
     return knex.raw(`
       ALTER TABLE employee_documents 
       ADD CONSTRAINT employee_documents_category_check 
-      CHECK (category IS NULL OR category IN ('Salary Advice', 'IR56B', 'IR56F', 'IR56G', 'Work Proof', 'Service Letter', 'Others'))
+      CHECK (category IS NULL OR category IN ('Salary Advice', 'IR56B', 'IR56F', 'IR56G', 'Others'))
     `);
   });
 };

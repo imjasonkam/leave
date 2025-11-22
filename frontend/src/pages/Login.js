@@ -77,7 +77,7 @@ const Login = () => {
           Staff Portal
           </Typography>
           <Typography component="h2" variant="h6" align="center" color="text.secondary" sx={{ mb: 3 }}>
-          Big C HK
+          Hong Kong
           </Typography>
           
           {error && (

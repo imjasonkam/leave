@@ -21,8 +21,10 @@ import {
   DialogActions,
   Tabs,
   Tab,
-  Chip
+  Chip,
+  IconButton
 } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -38,6 +40,7 @@ const AdminBalances = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedLeaveTypeId, setSelectedLeaveTypeId] = useState('');
   const [open, setOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState(null);
   const [tabValue, setTabValue] = useState(0);
   const [formData, setFormData] = useState({
     user_id: '',
@@ -110,6 +113,7 @@ const AdminBalances = () => {
   };
 
   const handleOpen = () => {
+    setEditingTransaction(null);
     setFormData({
       user_id: selectedUserId || '',
       leave_type_id: selectedLeaveTypeId || '',
@@ -122,6 +126,20 @@ const AdminBalances = () => {
     setOpen(true);
   };
 
+  const handleEdit = (transaction) => {
+    setEditingTransaction(transaction);
+    setFormData({
+      user_id: transaction.user_id,
+      leave_type_id: transaction.leave_type_id,
+      amount: transaction.amount.toString(),
+      year: transaction.year,
+      start_date: transaction.start_date ? dayjs(transaction.start_date) : null,
+      end_date: transaction.end_date ? dayjs(transaction.end_date) : null,
+      remarks: transaction.remarks || ''
+    });
+    setOpen(true);
+  };
+
   const handleSubmit = async () => {
     try {
       const submitData = {
@@ -129,8 +147,17 @@ const AdminBalances = () => {
         start_date: formData.start_date ? dayjs(formData.start_date).format('YYYY-MM-DD') : null,
         end_date: formData.end_date ? dayjs(formData.end_date).format('YYYY-MM-DD') : null
       };
-      await axios.post('/api/admin/balance-transactions', submitData);
+      
+      if (editingTransaction) {
+        // 更新現有交易
+        await axios.put(`/api/admin/balance-transactions/${editingTransaction.id}`, submitData);
+      } else {
+        // 創建新交易
+        await axios.post('/api/admin/balance-transactions', submitData);
+      }
+      
       setOpen(false);
+      setEditingTransaction(null);
       fetchBalances();
       fetchTransactions();
     } catch (error) {
@@ -205,6 +232,8 @@ const AdminBalances = () => {
               ))}
             </Select>
           </FormControl>
+        </Box>
+        <Box>
           <Button variant="contained" onClick={handleOpen} disabled={!selectedUserId}>
             添加餘額
           </Button>
@@ -271,19 +300,20 @@ const AdminBalances = () => {
                       <TableCell>有效期</TableCell>
                       <TableCell>備註</TableCell>
                       <TableCell>操作人</TableCell>
+                      <TableCell align="center">操作</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {transactions.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} align="center">沒有交易記錄</TableCell>
+                        <TableCell colSpan={7} align="center">沒有交易記錄</TableCell>
                       </TableRow>
                     ) : (
                       <>
                         {Object.keys(totalsByType).length > 0 && (
                           <TableRow sx={{ backgroundColor: 'action.hover' }}>
                             <TableCell colSpan={2}><strong>假期類型總計</strong></TableCell>
-                            <TableCell colSpan={4}></TableCell>
+                            <TableCell colSpan={5}></TableCell>
                           </TableRow>
                         )}
                         {Object.entries(totalsByType).map(([typeId, typeData]) => (
@@ -299,11 +329,11 @@ const AdminBalances = () => {
                                 size="small"
                               />
                             </TableCell>
-                            <TableCell colSpan={3}></TableCell>
+                            <TableCell colSpan={4}></TableCell>
                           </TableRow>
                         ))}
                         <TableRow sx={{ backgroundColor: 'action.hover' }}>
-                          <TableCell colSpan={6}><strong>交易明細</strong></TableCell>
+                          <TableCell colSpan={7}><strong>交易明細</strong></TableCell>
                         </TableRow>
                         {transactions.map((transaction) => (
                           <TableRow key={transaction.id}>
@@ -322,11 +352,11 @@ const AdminBalances = () => {
                             </TableCell>
                             <TableCell>
                               {transaction.start_date && transaction.end_date ? (
-                                `${transaction.start_date} 至 ${transaction.end_date}`
+                                `${dayjs(transaction.start_date).format('YYYY-MM-DD')} 至 ${dayjs(transaction.end_date).format('YYYY-MM-DD')}`
                               ) : transaction.start_date ? (
-                                `自 ${transaction.start_date} 起`
+                                `自 ${dayjs(transaction.start_date).format('YYYY-MM-DD')} 起`
                               ) : transaction.end_date ? (
-                                `至 ${transaction.end_date} 止`
+                                `至 ${dayjs(transaction.end_date).format('YYYY-MM-DD')} 止`
                               ) : (
                                 '-'
                               )}
@@ -335,6 +365,15 @@ const AdminBalances = () => {
                             <TableCell>
                               {transaction.created_by_name || '-'}
                               {transaction.created_by_employee_number && ` (${transaction.created_by_employee_number})`}
+                            </TableCell>
+                            <TableCell align="center">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleEdit(transaction)}
+                                color="primary"
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -348,8 +387,11 @@ const AdminBalances = () => {
         </>
       )}
 
-      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>添加假期餘額</DialogTitle>
+      <Dialog open={open} onClose={() => {
+        setOpen(false);
+        setEditingTransaction(null);
+      }} maxWidth="sm" fullWidth>
+        <DialogTitle>{editingTransaction ? '編輯假期餘額交易' : '添加假期餘額'}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
             <FormControl>
@@ -359,6 +401,7 @@ const AdminBalances = () => {
                 label="假期類型"
                 onChange={(e) => setFormData(prev => ({ ...prev, leave_type_id: e.target.value }))}
                 required
+                disabled={!!editingTransaction}
               >
                 {leaveTypes.filter(lt => lt.requires_balance).map((lt) => (
                   <MenuItem key={lt.id} value={lt.id}>
@@ -382,17 +425,18 @@ const AdminBalances = () => {
               value={formData.year}
               onChange={(e) => setFormData(prev => ({ ...prev, year: parseInt(e.target.value) }))}
               required
+              disabled={!!editingTransaction}
             />
             <LocalizationProvider dateAdapter={AdapterDayjs}>
               <DatePicker
-                label="有效開始日期（可選）"
+                label="有效開始日期"
                 value={formData.start_date}
                 onChange={(date) => setFormData(prev => ({ ...prev, start_date: date }))}
                 format="DD/MM/YYYY"
                 slotProps={{ textField: { fullWidth: true } }}
               />
               <DatePicker
-                label="有效結束日期（可選）"
+                label="有效結束日期"
                 value={formData.end_date}
                 onChange={(date) => setFormData(prev => ({ ...prev, end_date: date }))}
                 format="DD/MM/YYYY"
@@ -401,7 +445,7 @@ const AdminBalances = () => {
               />
             </LocalizationProvider>
             <TextField
-              label="備註（可選）"
+              label="備註"
               multiline
               rows={3}
               value={formData.remarks}
@@ -410,8 +454,13 @@ const AdminBalances = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpen(false)}>取消</Button>
-          <Button onClick={handleSubmit} variant="contained">添加</Button>
+          <Button onClick={() => {
+            setOpen(false);
+            setEditingTransaction(null);
+          }}>取消</Button>
+          <Button onClick={handleSubmit} variant="contained">
+            {editingTransaction ? '更新' : '添加'}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

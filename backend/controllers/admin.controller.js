@@ -303,6 +303,70 @@ class AdminController {
     }
   }
 
+  async updateBalanceTransaction(req, res) {
+    try {
+      const { id } = req.params;
+      const { amount, year, remarks, start_date, end_date } = req.body;
+
+      console.log('updateBalanceTransaction request:', { id, amount, year, start_date, end_date });
+
+      // 檢查交易是否存在
+      const existingTransaction = await LeaveBalanceTransaction.findById(id);
+      if (!existingTransaction) {
+        return res.status(404).json({ message: '交易記錄不存在' });
+      }
+
+      // 驗證必填欄位
+      if (amount === undefined || parseFloat(amount) === 0) {
+        return res.status(400).json({ message: '數量不能為0' });
+      }
+
+      // 驗證日期範圍
+      const finalStartDate = start_date || existingTransaction.start_date;
+      const finalEndDate = end_date || existingTransaction.end_date;
+      
+      if (finalStartDate && finalEndDate && new Date(finalStartDate) > new Date(finalEndDate)) {
+        return res.status(400).json({ message: '有效開始日期不能晚於結束日期' });
+      }
+
+      // 構建更新數據
+      const updateData = {};
+      if (amount !== undefined) updateData.amount = parseFloat(amount);
+      if (year !== undefined) updateData.year = year;
+      if (remarks !== undefined) updateData.remarks = remarks;
+      if (start_date !== undefined) updateData.start_date = start_date;
+      if (end_date !== undefined) updateData.end_date = end_date;
+
+      // 更新交易記錄
+      const updatedTransaction = await LeaveBalanceTransaction.update(id, updateData);
+
+      console.log('Transaction updated:', updatedTransaction);
+
+      // 獲取更新後的餘額信息
+      const balanceInfo = await LeaveBalance.findByUserAndType(
+        existingTransaction.user_id,
+        existingTransaction.leave_type_id,
+        updatedTransaction.year || existingTransaction.year
+      );
+
+      console.log('Balance info:', balanceInfo);
+
+      res.json({
+        message: '假期餘額交易已更新',
+        transaction: updatedTransaction,
+        balance: balanceInfo
+      });
+    } catch (error) {
+      console.error('Update balance transaction error:', error);
+      console.error('Error stack:', error.stack);
+      res.status(500).json({ 
+        message: '更新假期餘額交易時發生錯誤', 
+        error: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
+    }
+  }
+
   async createDepartment(req, res) {
     try {
       const { name, name_zh, description } = req.body;

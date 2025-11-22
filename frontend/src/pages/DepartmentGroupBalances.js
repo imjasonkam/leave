@@ -24,6 +24,7 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import dayjs from 'dayjs';
 
 const DepartmentGroupBalances = () => {
   const { user } = useAuth();
@@ -189,6 +190,7 @@ const DepartmentGroupBalances = () => {
                             <TableCell align="right">餘額</TableCell>
                             <TableCell align="right">已使用</TableCell>
                             <TableCell align="right">總額</TableCell>
+                            <TableCell>有效期</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -225,6 +227,17 @@ const DepartmentGroupBalances = () => {
                                     <TableCell align="right">
                                       {(parseFloat(balance.balance) + parseFloat(balance.taken)).toFixed(1)}
                                     </TableCell>
+                                    <TableCell>
+                                      {balance.start_date && balance.end_date ? (
+                                        `${dayjs(balance.start_date).format('YYYY-MM-DD')} 至 ${dayjs(balance.end_date).format('YYYY-MM-DD')}`
+                                      ) : balance.start_date ? (
+                                        `自 ${dayjs(balance.start_date).format('YYYY-MM-DD')} 起`
+                                      ) : balance.end_date ? (
+                                        `至 ${dayjs(balance.end_date).format('YYYY-MM-DD')} 止`
+                                      ) : (
+                                        '-'
+                                      )}
+                                    </TableCell>
                                   </TableRow>
                                 ))
                               ) : (
@@ -235,7 +248,7 @@ const DepartmentGroupBalances = () => {
                                   </TableCell>
                                   <TableCell>{member.department_name_zh || member.department_name}</TableCell>
                                   <TableCell>{member.position_name_zh || member.position_name}</TableCell>
-                                  <TableCell colSpan={4} align="center">
+                                  <TableCell colSpan={5} align="center">
                                     無假期餘額記錄
                                   </TableCell>
                                 </TableRow>

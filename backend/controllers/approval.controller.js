@@ -112,40 +112,52 @@ class ApprovalController {
         // 執行批核（使用自動確定的階段）
         const updatedApplication = await LeaveApplication.approve(id, req.user.id, currentLevel, remarks);
 
+        // 當申請完全批准（status === 'approved'）時，處理餘額扣除或發還
         if (updatedApplication.status === 'approved') {
-          if (updatedApplication.is_cancellation_request) {
-            await LeaveApplication.cancel(
-              updatedApplication.original_application_id,
-              req.user.id,
-              updatedApplication.reason
-            );
-
-            const leaveType = await require('../database/models/LeaveType').findById(updatedApplication.leave_type_id);
-            if (leaveType && leaveType.requires_balance) {
-              // 使用申請的year字段來退回對應年份的quota
-              const applicationYear = updatedApplication.year || new Date(updatedApplication.start_date).getFullYear();
+          const LeaveType = require('../database/models/LeaveType');
+          const leaveType = await LeaveType.findById(updatedApplication.leave_type_id);
+          
+          // 使用申請的year字段來處理對應年份的quota
+          const applicationYear = updatedApplication.year || new Date(updatedApplication.start_date).getFullYear();
+          const daysToProcess = parseFloat(updatedApplication.total_days || 0);
+          
+          if (leaveType && leaveType.requires_balance && daysToProcess > 0) {
+            // 處理取消申請：退回餘額
+            if (updatedApplication.is_cancellation_request) {
+              // 取消原始申請
+              await LeaveApplication.cancel(
+                updatedApplication.original_application_id,
+                req.user.id,
+                updatedApplication.reason
+              );
+              
+              // 退回餘額（因為取消申請意味著退回已扣除的假期）
+              // 注意：餘額會從 leave_applications 表自動計算，這裡只做驗證
               await LeaveBalance.incrementBalance(
                 updatedApplication.user_id,
                 updatedApplication.leave_type_id,
                 applicationYear,
-                parseFloat(updatedApplication.total_days),
-                '假期申請被拒絕，退回餘額',
+                daysToProcess,
+                '取消假期申請，退回餘額',
                 updatedApplication.start_date,
                 updatedApplication.end_date
               );
-            }
-          } else if (updatedApplication.is_reversal_transaction) {
-            await LeaveApplication.finalizeReversal(updatedApplication);
-          } else {
-            const leaveType = await require('../database/models/LeaveType').findById(updatedApplication.leave_type_id);
-            if (leaveType && leaveType.requires_balance) {
-              // 使用申請的year字段來扣除對應年份的quota
-              const applicationYear = updatedApplication.year || new Date(updatedApplication.start_date).getFullYear();
+            } 
+            // 處理銷假申請：發還餘額
+            else if (updatedApplication.is_reversal_transaction) {
+              await LeaveApplication.finalizeReversal(updatedApplication);
+              // finalizeReversal 內部會處理餘額發還
+            } 
+            // 處理正常假期申請：扣除餘額
+            else {
+              // 驗證餘額是否足夠並扣除
+              // 注意：餘額是動態計算的（從 leave_applications 表計算已批准的申請）
+              // 這裡主要驗證餘額是否足夠，實際扣除會通過查詢 leave_applications 表反映
               await LeaveBalance.decrementBalance(
                 updatedApplication.user_id,
                 updatedApplication.leave_type_id,
                 applicationYear,
-                parseFloat(updatedApplication.total_days),
+                daysToProcess,
                 '假期申請已批准，扣除餘額',
                 updatedApplication.start_date,
                 updatedApplication.end_date

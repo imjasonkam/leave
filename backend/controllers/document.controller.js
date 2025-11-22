@@ -9,8 +9,6 @@ const ALLOWED_CATEGORIES = [
   'IR56B',
   'IR56F',
   'IR56G',
-  'Work Proof',
-  'Service Letter',
   'Others'
 ];
 

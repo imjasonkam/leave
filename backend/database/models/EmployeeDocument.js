@@ -96,7 +96,6 @@ class EmployeeDocument {
       'IR56B',
       'IR56F',
       'IR56G',
-      'Work Proof',
       'Service Letter',
       'Others'
     ];

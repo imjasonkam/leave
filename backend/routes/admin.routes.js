@@ -17,6 +17,7 @@ router.get('/leave-types', adminController.getLeaveTypes);
 router.post('/balances', adminController.updateBalance);
 router.post('/balance-transactions', adminController.addBalanceTransaction);
 router.get('/balance-transactions', adminController.getBalanceTransactions);
+router.put('/balance-transactions/:id', adminController.updateBalanceTransaction);
 
 router.post('/departments', adminController.createDepartment);
 router.put('/departments/:id', adminController.updateDepartment);

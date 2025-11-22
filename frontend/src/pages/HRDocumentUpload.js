@@ -498,8 +498,6 @@ const HRDocumentUpload = () => {
                 <MenuItem value="IR56B">IR56B</MenuItem>
                 <MenuItem value="IR56F">IR56F</MenuItem>
                 <MenuItem value="IR56G">IR56G</MenuItem>
-                <MenuItem value="Work Proof">Work Proof</MenuItem>
-                <MenuItem value="Service Letter">Service Letter</MenuItem>
                 <MenuItem value="Others">Others</MenuItem>
               </Select>
             </FormControl>
@@ -575,8 +573,6 @@ const HRDocumentUpload = () => {
                 <MenuItem value="IR56B">IR56B</MenuItem>
                 <MenuItem value="IR56F">IR56F</MenuItem>
                 <MenuItem value="IR56G">IR56G</MenuItem>
-                <MenuItem value="Work Proof">Work Proof</MenuItem>
-                <MenuItem value="Service Letter">Service Letter</MenuItem>
                 <MenuItem value="Others">Others</MenuItem>
               </Select>
             </FormControl>

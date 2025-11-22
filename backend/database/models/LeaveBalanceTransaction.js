@@ -44,6 +44,7 @@ class LeaveBalanceTransaction {
           leave_type_id: leaveTypeId,
           year
         })
+        .whereNotNull('leave_balance_transactions.created_by_id') // 只返回 HR 成員創建的記錄
         .orderBy('leave_balance_transactions.created_at', 'desc');
     } catch (error) {
       console.error('findByUserAndType error:', error);
@@ -71,6 +72,7 @@ class LeaveBalanceTransaction {
           user_id: userId,
           year
         })
+        .whereNotNull('leave_balance_transactions.created_by_id') // 只返回 HR 成員創建的記錄
         .orderBy('leave_balance_transactions.created_at', 'desc');
     } catch (error) {
       console.error('findByUser error:', error);
@@ -90,6 +92,7 @@ class LeaveBalanceTransaction {
           leave_type_id: leaveTypeId,
           year
         })
+        .whereNotNull('created_by_id') // 只計算 HR 成員創建的記錄
         .sum('amount as total')
         .first();
       
@@ -122,6 +125,7 @@ class LeaveBalanceTransaction {
           year
         })
         .where('amount', '>', 0) // 只檢查正數交易（餘額分配）
+        .whereNotNull('created_by_id') // 只檢查 HR 成員創建的記錄
         .where('start_date', '<=', date)
         .where('end_date', '>=', date);
       
@@ -139,7 +143,7 @@ class LeaveBalanceTransaction {
       const start = new Date(startDate);
       const end = new Date(endDate);
       
-      // 找出所有與申請期間重疊的有效餘額交易
+      // 找出所有與申請期間重疊的有效餘額交易（只考慮 HR 成員創建的記錄）
       const validTransactions = await knex('leave_balance_transactions')
         .where({
           user_id: userId,
@@ -147,6 +151,7 @@ class LeaveBalanceTransaction {
           year
         })
         .where('amount', '>', 0) // 只計算正數交易（分配的餘額）
+        .whereNotNull('created_by_id') // 只考慮 HR 成員創建的記錄
         .where(function() {
           // 交易有效期與申請期間有重疊
           this.where(function() {
@@ -163,6 +168,59 @@ class LeaveBalanceTransaction {
     } catch (error) {
       console.error('getValidBalanceForPeriod error:', error);
       return 0;
+    }
+  }
+
+  static async findById(id) {
+    try {
+      const transaction = await knex('leave_balance_transactions')
+        .leftJoin('leave_types', 'leave_balance_transactions.leave_type_id', 'leave_types.id')
+        .leftJoin('users as creator', 'leave_balance_transactions.created_by_id', 'creator.id')
+        .select(
+          'leave_balance_transactions.*',
+          'leave_types.code as leave_type_code',
+          'leave_types.name_zh as leave_type_name_zh',
+          'creator.name_zh as created_by_name',
+          'creator.employee_number as created_by_employee_number'
+        )
+        .where('leave_balance_transactions.id', id)
+        .first();
+      return transaction;
+    } catch (error) {
+      console.error('findById error:', error);
+      throw error;
+    }
+  }
+
+  static async update(id, updateData) {
+    try {
+      // 如果更新了日期，驗證日期格式和邏輯
+      if (updateData.start_date || updateData.end_date) {
+        const transaction = await knex('leave_balance_transactions')
+          .where('id', id)
+          .first();
+        
+        const startDate = new Date(updateData.start_date || transaction.start_date);
+        const endDate = new Date(updateData.end_date || transaction.end_date);
+        
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          throw new Error('有效日期格式不正確');
+        }
+        
+        if (endDate < startDate) {
+          throw new Error('有效結束日期不能早於開始日期');
+        }
+      }
+
+      const [updated] = await knex('leave_balance_transactions')
+        .where('id', id)
+        .update(updateData)
+        .returning('*');
+      
+      return updated;
+    } catch (error) {
+      console.error('LeaveBalanceTransaction.update error:', error);
+      throw error;
     }
   }
 }
