@@ -593,6 +593,72 @@ class LeaveController {
       res.status(500).json({ message: '獲取待批核申請時發生錯誤' });
     }
   }
+
+  // 獲取用戶有權限查看的部門群組及其成員的假期餘額
+  async getDepartmentGroupBalances(req, res) {
+    try {
+      const { year } = req.query;
+      const currentYear = year || new Date().getFullYear();
+      const userId = req.user.id;
+
+      // 獲取用戶所屬的授權群組
+      const userDelegationGroups = await User.getDelegationGroups(userId);
+      const userDelegationGroupIds = userDelegationGroups.map(g => Number(g.id));
+
+      if (userDelegationGroupIds.length === 0) {
+        return res.json({ departmentGroups: [] });
+      }
+
+      // 獲取所有部門群組
+      const allDepartmentGroups = await DepartmentGroup.findAll();
+
+      // 過濾出用戶有權限查看的部門群組
+      // 用戶有權限如果該部門群組的任一授權群組（checker_id, approver_1_id, approver_2_id, approver_3_id）包含用戶
+      const accessibleGroups = allDepartmentGroups.filter(deptGroup => {
+        const checkerId = deptGroup.checker_id ? Number(deptGroup.checker_id) : null;
+        const approver1Id = deptGroup.approver_1_id ? Number(deptGroup.approver_1_id) : null;
+        const approver2Id = deptGroup.approver_2_id ? Number(deptGroup.approver_2_id) : null;
+        const approver3Id = deptGroup.approver_3_id ? Number(deptGroup.approver_3_id) : null;
+
+        return userDelegationGroupIds.includes(checkerId) ||
+               userDelegationGroupIds.includes(approver1Id) ||
+               userDelegationGroupIds.includes(approver2Id) ||
+               userDelegationGroupIds.includes(approver3Id);
+      });
+
+      // 為每個部門群組獲取成員及其假期餘額
+      const result = await Promise.all(
+        accessibleGroups.map(async (deptGroup) => {
+          // 獲取部門群組的成員
+          const members = await DepartmentGroup.getMembers(deptGroup.id);
+
+          // 為每個成員獲取假期餘額
+          const membersWithBalances = await Promise.all(
+            members.map(async (member) => {
+              const balances = await LeaveBalance.findByUser(member.id, currentYear);
+              return {
+                ...member,
+                balances
+              };
+            })
+          );
+
+          return {
+            ...deptGroup,
+            members: membersWithBalances
+          };
+        })
+      );
+
+      res.json({ 
+        departmentGroups: result,
+        year: currentYear
+      });
+    } catch (error) {
+      console.error('Get department group balances error:', error);
+      res.status(500).json({ message: '獲取部門群組假期餘額時發生錯誤', error: error.message });
+    }
+  }
 }
 
 module.exports = new LeaveController();

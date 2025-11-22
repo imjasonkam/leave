@@ -58,6 +58,7 @@ const Layout = ({ children }) => {
     { text: '我的文件', icon: <DescriptionIcon />, path: '/documents/my', show: true },
     { text: '待批核', icon: <CheckCircleIcon />, path: '/approval/list', show: true },
     { text: '批核記錄', icon: <HistoryIcon />, path: '/approval/history', show: true },
+    { text: '部門群組餘額', icon: <AccountBalanceIcon />, path: '/department-group-balances', show: true },
     { text: '文件發放', icon: <DescriptionIcon />, path: '/documents/upload', show: isSystemAdmin },
     { text: 'Paper Flow', icon: <DescriptionIcon />, path: '/admin/paper-flow', show: isSystemAdmin },
     { text: '用戶管理', icon: <PeopleIcon />, path: '/admin/users', show: isSystemAdmin },

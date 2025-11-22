@@ -6,9 +6,11 @@ class LeaveBalance {
     // 從交易記錄計算總餘額（所有交易記錄的總和）
     const totalBalance = await LeaveBalanceTransaction.getTotalBalance(userId, leaveTypeId, year);
     
-    // 計算已使用的天數（所有負數交易的絕對值總和）
+    // 計算已使用的天數
+    // 已使用 = 所有負數交易的絕對值總和 - 所有銷假相關的正數交易
     let taken = 0;
     try {
+      // 計算所有負數交易（扣除餘額的交易）
       const usedResult = await knex('leave_balance_transactions')
         .where({
           user_id: userId,
@@ -16,13 +18,39 @@ class LeaveBalance {
           year
         })
         .where('amount', '<', 0)
-        .sum(knex.raw('ABS(amount) as used'))
+        .sum(knex.raw('ABS(amount)'))
         .first();
       
-      const used = usedResult?.used;
-      if (used !== null && used !== undefined) {
-        taken = parseFloat(used);
+      let used = 0;
+      const usedSum = usedResult?.sum || usedResult?.used;
+      if (usedSum !== null && usedSum !== undefined) {
+        used = parseFloat(usedSum);
       }
+
+      // 計算所有銷假相關的正數交易（退回餘額的交易）
+      const reversalResult = await knex('leave_balance_transactions')
+        .where({
+          user_id: userId,
+          leave_type_id: leaveTypeId,
+          year
+        })
+        .where('amount', '>', 0)
+        .where(function() {
+          this.where('remarks', 'like', '%銷假%')
+            .orWhere('remarks', 'like', '%Reversal%')
+            .orWhere('remarks', 'like', '%reversal%');
+        })
+        .sum('amount')
+        .first();
+      
+      let reversed = 0;
+      const reversedSum = reversalResult?.sum || reversalResult?.reversed;
+      if (reversedSum !== null && reversedSum !== undefined) {
+        reversed = parseFloat(reversedSum);
+      }
+
+      // 已使用 = 扣除的總額 - 退回的總額
+      taken = Math.max(0, used - reversed);
     } catch (error) {
       console.error('Error calculating taken days:', error);
       // 如果表不存在，taken 保持為 0
@@ -55,8 +83,10 @@ class LeaveBalance {
         );
         
         // 計算已使用的天數
+        // 已使用 = 所有負數交易的絕對值總和 - 所有銷假相關的正數交易
         let taken = 0;
         try {
+          // 計算所有負數交易（扣除餘額的交易）
           const usedResult = await knex('leave_balance_transactions')
             .where({
               user_id: userId,
@@ -64,13 +94,39 @@ class LeaveBalance {
               year
             })
             .where('amount', '<', 0)
-            .sum(knex.raw('ABS(amount) as used'))
+            .sum(knex.raw('ABS(amount)'))
             .first();
           
-          const used = usedResult?.used;
-          if (used !== null && used !== undefined) {
-            taken = parseFloat(used);
+          let used = 0;
+          const usedSum = usedResult?.sum || usedResult?.used;
+          if (usedSum !== null && usedSum !== undefined) {
+            used = parseFloat(usedSum);
           }
+
+          // 計算所有銷假相關的正數交易（退回餘額的交易）
+          const reversalResult = await knex('leave_balance_transactions')
+            .where({
+              user_id: userId,
+              leave_type_id: leaveType.id,
+              year
+            })
+            .where('amount', '>', 0)
+            .where(function() {
+              this.where('remarks', 'like', '%銷假%')
+                .orWhere('remarks', 'like', '%Reversal%')
+                .orWhere('remarks', 'like', '%reversal%');
+            })
+            .sum('amount')
+            .first();
+          
+          let reversed = 0;
+          const reversedSum = reversalResult?.sum || reversalResult?.reversed;
+          if (reversedSum !== null && reversedSum !== undefined) {
+            reversed = parseFloat(reversedSum);
+          }
+
+          // 已使用 = 扣除的總額 - 退回的總額
+          taken = Math.max(0, used - reversed);
         } catch (error) {
           console.error('Error calculating taken days:', error);
           // 如果表不存在，taken 保持為 0
