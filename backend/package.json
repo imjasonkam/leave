@@ -22,7 +22,9 @@
     "dotenv": "^16.3.1",
     "cors": "^2.8.5",
     "multer": "^1.4.5-lts.1",
-    "express-validator": "^7.0.1"
+    "express-validator": "^7.0.1",
+    "nodemailer": "^6.9.8",
+    "googleapis": "^128.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

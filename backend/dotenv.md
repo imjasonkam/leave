@@ -16,3 +16,12 @@ NODE_ENV=development
 # File Upload Configuration
 UPLOAD_DIR=./uploads
 MAX_FILE_SIZE=5242880
+
+# Email Configuration (SMTP)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+
+# Frontend URL (for email links)
+FRONTEND_URL=http://localhost:3000

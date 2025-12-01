@@ -5,6 +5,7 @@ const LeaveType = require('../database/models/LeaveType');
 const User = require('../database/models/User');
 const DepartmentGroup = require('../database/models/DepartmentGroup');
 const DelegationGroup = require('../database/models/DelegationGroup');
+const emailService = require('../utils/emailService');
 const path = require('path');
 
 class LeaveController {
@@ -135,6 +136,33 @@ class LeaveController {
       }
 
       const application = await LeaveApplication.create(applicationData);
+
+      // 如果是 e-flow 申請，發送通知給當前批核階段的批核群組成員
+      if (actualFlowType === 'e-flow' && application.status === 'pending') {
+        try {
+          const currentStage = application.current_approval_stage || 'checker';
+          
+          // 獲取當前批核階段的授權群組
+          if (departmentGroups && departmentGroups.length > 0) {
+            const deptGroup = departmentGroups[0];
+            const approvalFlow = await DepartmentGroup.getApprovalFlow(deptGroup.id);
+            const currentStep = approvalFlow.find(step => step.level === currentStage);
+            
+            if (currentStep && currentStep.delegation_group_id) {
+              // 獲取該授權群組的所有成員
+              const approvers = await DelegationGroup.getMembers(currentStep.delegation_group_id);
+              
+              if (approvers && approvers.length > 0) {
+                // 發送通知給所有批核群組成員
+                await emailService.sendApprovalNotification(application, approvers, currentStage);
+              }
+            }
+          }
+        } catch (error) {
+          // Email 發送失敗不應該影響申請創建
+          console.error('[LeaveController] 發送 email 通知失敗:', error);
+        }
+      }
 
       // 處理上傳的檔案（如果有的話）
       // 注意：檔案上傳需要在創建申請後進行，因為需要 application.id

@@ -2,7 +2,9 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import axios from 'axios';
 import './i18n/config';
+import './utils/axiosConfig';
 import { AuthProvider } from './contexts/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
 import Login from './pages/Login';
@@ -24,6 +26,9 @@ import ChangePassword from './pages/ChangePassword';
 import HRDocumentUpload from './pages/HRDocumentUpload';
 import EmployeeDocuments from './pages/EmployeeDocuments';
 import DepartmentGroupBalances from './pages/DepartmentGroupBalances';
+
+// 設定後端 API 地址
+axios.defaults.baseURL = 'http://localhost:8080';
 
 const theme = createTheme({
   palette: {

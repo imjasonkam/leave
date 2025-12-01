@@ -1,6 +1,9 @@
 const LeaveApplication = require('../database/models/LeaveApplication');
 const LeaveBalance = require('../database/models/LeaveBalance');
 const User = require('../database/models/User');
+const DepartmentGroup = require('../database/models/DepartmentGroup');
+const DelegationGroup = require('../database/models/DelegationGroup');
+const emailService = require('../utils/emailService');
 const knex = require('../config/database');
 
 class ApprovalController {
@@ -68,6 +71,21 @@ class ApprovalController {
         }
         
         await LeaveApplication.reject(id, req.user.id, remarks || '已拒絕');
+        
+        // 發送拒絕通知給申請者
+        try {
+          const rejectedApplication = await LeaveApplication.findById(id);
+          if (rejectedApplication) {
+            await emailService.sendRejectionNotification(
+              rejectedApplication, 
+              rejectedApplication.rejection_reason || remarks || '已拒絕'
+            );
+          }
+        } catch (error) {
+          // Email 發送失敗不應該影響拒絕流程
+          console.error('[ApprovalController] 發送拒絕通知失敗:', error);
+        }
+        
         return res.json({ message: '申請已拒絕' });
       }
 
@@ -111,6 +129,40 @@ class ApprovalController {
 
         // 執行批核（使用自動確定的階段）
         const updatedApplication = await LeaveApplication.approve(id, req.user.id, currentLevel, remarks);
+
+        // 發送 email 通知
+        try {
+          // 如果申請已完成，發送完成通知給申請者
+          if (updatedApplication.status === 'approved') {
+            await emailService.sendApprovalCompleteNotification(updatedApplication);
+          } 
+          // 如果還有下一階段，發送通知給下一階段的批核群組成員
+          else if (updatedApplication.status === 'pending' && updatedApplication.current_approval_stage !== 'completed') {
+            const nextStage = updatedApplication.current_approval_stage;
+            
+            // 獲取申請人所屬的部門群組
+            const departmentGroups = await DepartmentGroup.findByUserId(updatedApplication.user_id);
+            
+            if (departmentGroups && departmentGroups.length > 0) {
+              const deptGroup = departmentGroups[0];
+              const approvalFlow = await DepartmentGroup.getApprovalFlow(deptGroup.id);
+              const nextStep = approvalFlow.find(step => step.level === nextStage);
+              
+              if (nextStep && nextStep.delegation_group_id) {
+                // 獲取下一階段授權群組的所有成員
+                const approvers = await DelegationGroup.getMembers(nextStep.delegation_group_id);
+                
+                if (approvers && approvers.length > 0) {
+                  // 發送通知給下一階段的所有批核群組成員
+                  await emailService.sendApprovalNotification(updatedApplication, approvers, nextStage);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          // Email 發送失敗不應該影響批核流程
+          console.error('[ApprovalController] 發送 email 通知失敗:', error);
+        }
 
         // 當申請完全批准（status === 'approved'）時，處理餘額扣除或發還
         if (updatedApplication.status === 'approved') {
