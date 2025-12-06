@@ -85,6 +85,24 @@ class ApprovalController {
           // Email 發送失敗不應該影響拒絕流程
           console.error('[ApprovalController] 發送拒絕通知失敗:', error);
         }
+
+        // 如果是 HR Group 成員拒絕的 e-flow 申請，發送通知給 HR Group 其他成員
+        try {
+          const rejectedApplication = await LeaveApplication.findById(id);
+          if (rejectedApplication && rejectedApplication.flow_type === 'e-flow') {
+            const isHRMember = await User.isHRMember(req.user.id);
+            if (isHRMember) {
+              await emailService.sendHRRejectionNotification(
+                rejectedApplication,
+                rejectedApplication.rejection_reason || remarks || '已拒絕',
+                req.user.id
+              );
+            }
+          }
+        } catch (error) {
+          // Email 發送失敗不應該影響拒絕流程
+          console.error('[ApprovalController] 發送 HR Group 拒絕通知失敗:', error);
+        }
         
         return res.json({ message: '申請已拒絕' });
       }

@@ -207,7 +207,7 @@ class EmailService {
       }
       
       const mailOptions = {
-        from: `"假期管理系統" <${fromEmail}>`,
+        from: `"Leave Management System" <${fromEmail}>`,
         to: to,
         subject: subject,
         html: html,
@@ -268,10 +268,10 @@ class EmailService {
     }
 
     const stageNames = {
-      checker: '檢查',
-      approver_1: '第一批核',
-      approver_2: '第二批核',
-      approver_3: '第三批核'
+      checker: 'Checker',
+      approver_1: 'First Approval',
+      approver_2: 'Second Approval',
+      approver_3: 'Third Approval'
     };
 
     const stageName = stageNames[stage] || stage;
@@ -283,11 +283,12 @@ class EmailService {
     const applicant = await User.findById(application.user_id);
     const leaveType = await LeaveType.findById(application.leave_type_id);
 
-    const applicantName = applicant?.display_name || applicant?.name_zh || '申請人';
-    const leaveTypeName = leaveType?.name_zh || leaveType?.name || '假期';
+    const applicantName = applicant?.display_name || applicant?.name_zh || 'Applicant';
+    const staffId = applicant?.employee_number || '';
+    const leaveTypeName = leaveType?.name || leaveType?.name_zh || 'Leave';
     const transactionId = application.transaction_id || `LA-${String(application.id).padStart(6, '0')}`;
 
-    const subject = `【假期管理系統】新的假期申請需要批核 - ${stageName}`;
+    const subject = `[Leave Management System] New Leave Application Requires Approval - ${stageName}`;
     
     const html = `
       <!DOCTYPE html>
@@ -307,44 +308,49 @@ class EmailService {
       <body>
         <div class="container">
           <div class="header">
-            <h2>假期申請批核通知</h2>
+            <h2>Leave Application Approval Notification</h2>
           </div>
           <div class="content">
-            <p>您好，</p>
-            <p>您有一份新的假期申請需要進行 <strong>${stageName}</strong> 批核。</p>
+            <p>Hello,</p>
+            <p>You have a new leave application that requires <strong>${stageName}</strong> approval.</p>
             <div class="info-row">
-              <span class="label">申請編號：</span> ${transactionId}
+              <span class="label">Application ID:</span> ${transactionId}
             </div>
             <div class="info-row">
-              <span class="label">申請人：</span> ${applicantName}
+              <span class="label">Applicant:</span> ${applicantName}
+            </div>
+            ${staffId ? `
+            <div class="info-row">
+              <span class="label">Staff ID:</span> ${staffId}
+            </div>
+            ` : ''}
+            <div class="info-row">
+              <span class="label">Leave Type:</span> ${leaveTypeName}
             </div>
             <div class="info-row">
-              <span class="label">假期類型：</span> ${leaveTypeName}
+              <span class="label">Start Date:</span> ${new Date(application.start_date).toLocaleDateString('en-US')}
             </div>
             <div class="info-row">
-              <span class="label">開始日期：</span> ${new Date(application.start_date).toLocaleDateString('zh-TW')}
+              <span class="label">End Date:</span> ${new Date(application.end_date).toLocaleDateString('en-US')}
             </div>
             <div class="info-row">
-              <span class="label">結束日期：</span> ${new Date(application.end_date).toLocaleDateString('zh-TW')}
-            </div>
-            <div class="info-row">
-              <span class="label">天數：</span> ${application.total_days} 天
+              <span class="label">Days:</span> ${application.total_days} day(s)
             </div>
             ${application.reason ? `
             <div class="info-row">
-              <span class="label">申請原因：</span> ${application.reason}
+              <span class="label">Reason:</span> ${application.reason}
             </div>
             ` : ''}
             <p style="margin-top: 20px;">
               <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/approvals/${application.id}" 
                  style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                前往批核
+                Review Application
               </a>
             </p>
           </div>
           <div class="footer">
-            <p>此為系統自動發送的郵件，請勿直接回覆。</p>
-            <p>假期管理系統</p>
+            <p>This is an automated email. Please do not reply directly.</p>
+            <p>Leave Management System</p>
           </div>
         </div>
       </body>
@@ -378,11 +384,12 @@ class EmailService {
       return;
     }
 
-    const applicantName = applicant.display_name || applicant.name_zh || '申請人';
-    const leaveTypeName = leaveType?.name_zh || leaveType?.name || '假期';
+    const applicantName = applicant.display_name || applicant.name_zh || 'Applicant';
+    const staffId = applicant?.employee_number || '';
+    const leaveTypeName = leaveType?.name || leaveType?.name_zh || 'Leave';
     const transactionId = application.transaction_id || `LA-${String(application.id).padStart(6, '0')}`;
 
-    const subject = `【假期管理系統】您的假期申請已批准`;
+    const subject = `[Leave Management System] Your Leave Application Has Been Approved`;
     
     const html = `
       <!DOCTYPE html>
@@ -402,41 +409,46 @@ class EmailService {
       <body>
         <div class="container">
           <div class="header">
-            <h2>假期申請已批准</h2>
+            <h2>Leave Application Approved</h2>
           </div>
           <div class="content">
-            <p>${applicantName}，您好</p>
-            <p>您的假期申請已通過所有批核階段，現已批准。</p>
+            <p>Hello ${applicantName},</p>
+            <p>Your leave application has been approved after passing all approval stages.</p>
             <div class="info-row">
-              <span class="label">申請編號：</span> ${transactionId}
+              <span class="label">Application ID:</span> ${transactionId}
+            </div>
+            ${staffId ? `
+            <div class="info-row">
+              <span class="label">Staff ID:</span> ${staffId}
+            </div>
+            ` : ''}
+            <div class="info-row">
+              <span class="label">Leave Type:</span> ${leaveTypeName}
             </div>
             <div class="info-row">
-              <span class="label">假期類型：</span> ${leaveTypeName}
+              <span class="label">Start Date:</span> ${new Date(application.start_date).toLocaleDateString('en-US')}
             </div>
             <div class="info-row">
-              <span class="label">開始日期：</span> ${new Date(application.start_date).toLocaleDateString('zh-TW')}
+              <span class="label">End Date:</span> ${new Date(application.end_date).toLocaleDateString('en-US')}
             </div>
             <div class="info-row">
-              <span class="label">結束日期：</span> ${new Date(application.end_date).toLocaleDateString('zh-TW')}
-            </div>
-            <div class="info-row">
-              <span class="label">天數：</span> ${application.total_days} 天
+              <span class="label">Days:</span> ${application.total_days} day(s)
             </div>
             ${application.reason ? `
             <div class="info-row">
-              <span class="label">申請原因：</span> ${application.reason}
+              <span class="label">Reason:</span> ${application.reason}
             </div>
             ` : ''}
             <p style="margin-top: 20px;">
               <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/leaves/${application.id}" 
                  style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                查看詳情
+                View Details
               </a>
             </p>
           </div>
           <div class="footer">
-            <p>此為系統自動發送的郵件，請勿直接回覆。</p>
-            <p>假期管理系統</p>
+            <p>This is an automated email. Please do not reply directly.</p>
+            <p>Leave Management System</p>
           </div>
         </div>
       </body>
@@ -463,11 +475,12 @@ class EmailService {
       return;
     }
 
-    const applicantName = applicant.display_name || applicant.name_zh || '申請人';
-    const leaveTypeName = leaveType?.name_zh || leaveType?.name || '假期';
+    const applicantName = applicant.display_name || applicant.name_zh || 'Applicant';
+    const staffId = applicant?.employee_number || '';
+    const leaveTypeName = leaveType?.name || leaveType?.name_zh || 'Leave';
     const transactionId = application.transaction_id || `LA-${String(application.id).padStart(6, '0')}`;
 
-    const subject = `【假期管理系統】您的假期申請已被拒絕`;
+    const subject = `[Leave Management System] Your Leave Application Has Been Rejected`;
     
     const html = `
       <!DOCTYPE html>
@@ -488,42 +501,47 @@ class EmailService {
       <body>
         <div class="container">
           <div class="header">
-            <h2>假期申請已被拒絕</h2>
+            <h2>Leave Application Rejected</h2>
           </div>
           <div class="content">
-            <p>${applicantName}，您好</p>
-            <p>很抱歉，您的假期申請已被拒絕。</p>
+            <p>Hello ${applicantName},</p>
+            <p>We regret to inform you that your leave application has been rejected.</p>
             <div class="info-row">
-              <span class="label">申請編號：</span> ${transactionId}
+              <span class="label">Application ID:</span> ${transactionId}
+            </div>
+            ${staffId ? `
+            <div class="info-row">
+              <span class="label">Staff ID:</span> ${staffId}
+            </div>
+            ` : ''}
+            <div class="info-row">
+              <span class="label">Leave Type:</span> ${leaveTypeName}
             </div>
             <div class="info-row">
-              <span class="label">假期類型：</span> ${leaveTypeName}
+              <span class="label">Start Date:</span> ${new Date(application.start_date).toLocaleDateString('en-US')}
             </div>
             <div class="info-row">
-              <span class="label">開始日期：</span> ${new Date(application.start_date).toLocaleDateString('zh-TW')}
+              <span class="label">End Date:</span> ${new Date(application.end_date).toLocaleDateString('en-US')}
             </div>
             <div class="info-row">
-              <span class="label">結束日期：</span> ${new Date(application.end_date).toLocaleDateString('zh-TW')}
-            </div>
-            <div class="info-row">
-              <span class="label">天數：</span> ${application.total_days} 天
+              <span class="label">Days:</span> ${application.total_days} day(s)
             </div>
             ${rejectionReason ? `
             <div class="rejection-reason">
-              <strong>拒絕原因：</strong><br>
+              <strong>Rejection Reason:</strong><br>
               ${rejectionReason}
             </div>
             ` : ''}
             <p style="margin-top: 20px;">
               <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/leaves/${application.id}" 
                  style="background-color: #2196F3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                查看詳情
+                View Details
               </a>
             </p>
           </div>
           <div class="footer">
-            <p>此為系統自動發送的郵件，請勿直接回覆。</p>
-            <p>假期管理系統</p>
+            <p>This is an automated email. Please do not reply directly.</p>
+            <p>Leave Management System</p>
           </div>
         </div>
       </body>
@@ -531,6 +549,138 @@ class EmailService {
     `;
 
     await this.sendEmail({ to: applicant.email, subject, html });
+  }
+
+  // 發送拒絕通知給 HR Group 成員（當 HR Group 成員拒絕申請時）
+  async sendHRRejectionNotification(application, rejectionReason, rejectorId) {
+    if (!application) {
+      return;
+    }
+
+    const DelegationGroup = require('../database/models/DelegationGroup');
+    const User = require('../database/models/User');
+    const LeaveType = require('../database/models/LeaveType');
+    const knex = require('../config/database');
+    
+    // 找到 HR Group
+    const hrGroup = await knex('delegation_groups')
+      .where('name', 'HR Group')
+      .first();
+    
+    if (!hrGroup) {
+      console.log('[EmailService] HR Group 不存在，跳過發送 HR 拒絕通知');
+      return;
+    }
+
+    // 獲取 HR Group 的所有成員
+    const hrMembers = await DelegationGroup.getMembers(hrGroup.id);
+    
+    if (!hrMembers || hrMembers.length === 0) {
+      console.log('[EmailService] HR Group 沒有成員，跳過發送 HR 拒絕通知');
+      return;
+    }
+
+    // 過濾掉拒絕者本人
+    const otherHRMembers = hrMembers.filter(member => Number(member.id) !== Number(rejectorId));
+    
+    if (otherHRMembers.length === 0) {
+      console.log('[EmailService] HR Group 沒有其他成員，跳過發送 HR 拒絕通知');
+      return;
+    }
+
+    // 獲取申請人和拒絕者信息
+    const applicant = await User.findById(application.user_id);
+    const rejector = await User.findById(rejectorId);
+    const leaveType = await LeaveType.findById(application.leave_type_id);
+
+    const applicantName = applicant?.display_name || applicant?.name_zh || 'Applicant';
+    const staffId = applicant?.employee_number || '';
+    const rejectorName = rejector?.display_name || rejector?.name_zh || 'Rejector';
+    const leaveTypeName = leaveType?.name || leaveType?.name_zh || 'Leave';
+    const transactionId = application.transaction_id || `LA-${String(application.id).padStart(6, '0')}`;
+
+    const subject = `[Leave Management System] HR Group Member Has Rejected Leave Application`;
+    
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background-color: #f44336; color: white; padding: 20px; text-align: center; }
+          .content { background-color: #f9f9f9; padding: 20px; margin-top: 20px; }
+          .info-row { margin: 10px 0; }
+          .label { font-weight: bold; }
+          .rejection-reason { background-color: #ffebee; padding: 15px; margin: 15px 0; border-left: 4px solid #f44336; }
+          .footer { margin-top: 20px; padding: 10px; text-align: center; color: #666; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h2>Leave Application Rejected by HR Group Member</h2>
+          </div>
+          <div class="content">
+            <p>Hello,</p>
+            <p>HR Group member <strong>${rejectorName}</strong> has rejected a leave application.</p>
+            <div class="info-row">
+              <span class="label">Application ID:</span> ${transactionId}
+            </div>
+            <div class="info-row">
+              <span class="label">Applicant:</span> ${applicantName}
+            </div>
+            ${staffId ? `
+            <div class="info-row">
+              <span class="label">Staff ID:</span> ${staffId}
+            </div>
+            ` : ''}
+            <div class="info-row">
+              <span class="label">Leave Type:</span> ${leaveTypeName}
+            </div>
+            <div class="info-row">
+              <span class="label">Start Date:</span> ${new Date(application.start_date).toLocaleDateString('en-US')}
+            </div>
+            <div class="info-row">
+              <span class="label">End Date:</span> ${new Date(application.end_date).toLocaleDateString('en-US')}
+            </div>
+            <div class="info-row">
+              <span class="label">Days:</span> ${application.total_days} day(s)
+            </div>
+            <div class="info-row">
+              <span class="label">Rejected By:</span> ${rejectorName}
+            </div>
+            ${rejectionReason ? `
+            <div class="rejection-reason">
+              <strong>Rejection Reason:</strong><br>
+              ${rejectionReason}
+            </div>
+            ` : ''}
+            <p style="margin-top: 20px;">
+              <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/approvals/${application.id}" 
+                 style="background-color: #2196F3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                View Details
+              </a>
+            </p>
+          </div>
+          <div class="footer">
+            <p>This is an automated email. Please do not reply directly.</p>
+            <p>Leave Management System</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // 獲取所有 HR Group 其他成員的 email
+    const hrMemberEmails = otherHRMembers
+      .map(member => member.email)
+      .filter(email => email && email.trim());
+
+    if (hrMemberEmails.length > 0) {
+      await this.sendBulkEmails(hrMemberEmails, { subject, html });
+    }
   }
 }
 
