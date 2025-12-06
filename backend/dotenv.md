@@ -20,15 +20,13 @@ MAX_FILE_SIZE=5242880
 # Email Configuration (SMTP)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASSWORD=your-app-password-here
+SMTP_USER=bigchk.hr@gmail.com
+SMTP_PASSWORD=
 
 # Frontend URL (for email links)
 FRONTEND_URL=http://localhost:3000
 
 # Gmail OAuth2 Configuration
-# 請參考 EMAIL_SETUP.md 獲取這些值
-GMAIL_CLIENT_ID=your-google-oauth-client-id.apps.googleusercontent.com
-GMAIL_CLIENT_SECRET=your-google-oauth-client-secret
-GMAIL_REFRESH_TOKEN=your-google-oauth-refresh-token
-GMAIL_USER_EMAIL=your-email@gmail.com
+GMAIL_CLIENT_ID=
+GMAIL_CLIENT_SECRET=
+GMAIL_USER_EMAIL=bigchk.hr@gmail.com
