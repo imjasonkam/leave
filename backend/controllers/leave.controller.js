@@ -142,9 +142,12 @@ class LeaveController {
         try {
           const currentStage = application.current_approval_stage || 'checker';
           
+          // 重新獲取使用者所屬的部門群組（因為 departmentGroups 變數可能不在作用域內）
+          const departmentGroupsForEmail = await DepartmentGroup.findByUserId(applicantId);
+          
           // 獲取當前批核階段的授權群組
-          if (departmentGroups && departmentGroups.length > 0) {
-            const deptGroup = departmentGroups[0];
+          if (departmentGroupsForEmail && departmentGroupsForEmail.length > 0) {
+            const deptGroup = departmentGroupsForEmail[0];
             const approvalFlow = await DepartmentGroup.getApprovalFlow(deptGroup.id);
             const currentStep = approvalFlow.find(step => step.level === currentStage);
             
