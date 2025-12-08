@@ -7,7 +7,6 @@ import {
   Typography,
   Box,
   MenuItem,
-  Alert,
   Grid,
   InputLabel,
   Select,
@@ -29,6 +28,7 @@ import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import Swal from 'sweetalert2';
 
 const LeaveApplication = () => {
   const { t } = useTranslation();
@@ -45,8 +45,6 @@ const LeaveApplication = () => {
   });
   const [leaveTypes, setLeaveTypes] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [balance, setBalance] = useState(null);
   const [files, setFiles] = useState([]);
   const [includeWeekends, setIncludeWeekends] = useState(true); // 預設包含週末
@@ -188,7 +186,7 @@ const LeaveApplication = () => {
     }
   };
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const selectedFiles = Array.from(e.target.files);
     
     // 驗證文件類型和大小
@@ -214,8 +212,13 @@ const LeaveApplication = () => {
     });
     
     if (errors.length > 0) {
-      setError(errors.join('\n'));
-      setTimeout(() => setError(''), 5000);
+      await Swal.fire({
+        icon: 'error',
+        title: '檔案上傳錯誤',
+        html: errors.join('<br>'),
+        confirmButtonText: '確定',
+        confirmButtonColor: '#d33'
+      });
     }
     
     if (validFiles.length > 0) {
@@ -228,9 +231,9 @@ const LeaveApplication = () => {
     input.type = 'file';
     input.accept = 'image/*';
     input.capture = 'environment'; // 使用後置攝像頭
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
       if (e.target.files && e.target.files.length > 0) {
-        handleFileChange(e);
+        await handleFileChange(e);
       }
     };
     input.click();
@@ -250,13 +253,17 @@ const LeaveApplication = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
     setLoading(true);
 
     if (!formData.leave_type_id || !formData.start_date || !formData.start_session || 
         !formData.end_date || !formData.end_session || !formData.days) {
-      setError(t('leaveApplication.fillAllFields'));
+      await Swal.fire({
+        icon: 'warning',
+        title: '請填寫所有欄位',
+        text: t('leaveApplication.fillAllFields'),
+        confirmButtonText: '確定',
+        confirmButtonColor: '#3085d6'
+      });
       setLoading(false);
       return;
     }
@@ -286,7 +293,14 @@ const LeaveApplication = () => {
         }
       });
       
-      setSuccess(t('leaveApplication.applicationSubmitted', { transactionId: response.data.application.transaction_id }));
+      // 使用 Sweet Alert 顯示成功訊息
+      await Swal.fire({
+        icon: 'success',
+        title: t('leaveApplication.applicationSubmitted', { transactionId: response.data.application.transaction_id }),
+        confirmButtonText: '確定',
+        confirmButtonColor: '#3085d6'
+      });
+      
       setFormData({
         leave_type_id: '',
         year: new Date().getFullYear(), // 重置為當前年份
@@ -302,7 +316,14 @@ const LeaveApplication = () => {
       setIncludeWeekends(true); // 重置為預設值
       setYearManuallySet(false); // 重置年份手動設置標記
     } catch (error) {
-      setError(error.response?.data?.message || t('leaveApplication.submitError'));
+      // 使用 Sweet Alert 顯示錯誤訊息
+      await Swal.fire({
+        icon: 'error',
+        title: '申請失敗',
+        text: error.response?.data?.message || t('leaveApplication.submitError'),
+        confirmButtonText: '確定',
+        confirmButtonColor: '#d33'
+      });
     } finally {
       setLoading(false);
     }
@@ -317,17 +338,6 @@ const LeaveApplication = () => {
           {t('leaveApplication.title')}
         </Typography>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
-        {success && (
-          <Alert severity="success" sx={{ mb: 2 }}>
-            {success}
-          </Alert>
-        )}
 
         <Box component="form" onSubmit={handleSubmit}>
           <FormControl fullWidth sx={{ mb: 2 }}>

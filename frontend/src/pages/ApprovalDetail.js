@@ -8,7 +8,6 @@ import {
   TextField,
   Button,
   Chip,
-  Alert,
   Divider,
   List,
   ListItem,
@@ -30,6 +29,7 @@ import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDateTime, formatDate } from '../utils/dateFormat';
+import Swal from 'sweetalert2';
 
 const ApprovalDetail = () => {
   const { t } = useTranslation();
@@ -43,8 +43,6 @@ const ApprovalDetail = () => {
   const [approving, setApproving] = useState(false);
   const [comment, setComment] = useState('');
   const [action, setAction] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [canApproveThis, setCanApproveThis] = useState(false);
   const [canRejectThis, setCanRejectThis] = useState(false);
   const [userApprovalStage, setUserApprovalStage] = useState(null);
@@ -79,18 +77,25 @@ const ApprovalDetail = () => {
   const fetchApplication = async () => {
     try {
       setLoading(true);
-      setError('');
       const response = await axios.get(`/api/leaves/${id}`);
       setApplication(response.data.application);
     } catch (error) {
       console.error('Fetch application error:', error);
+      let errorMessage = t('approvalDetail.fetchError');
       if (error.response?.status === 403) {
-        setError(t('approvalDetail.noPermission'));
+        errorMessage = t('approvalDetail.noPermission');
       } else if (error.response?.status === 404) {
-        setError(t('approvalDetail.applicationNotFound'));
-      } else {
-        setError(t('approvalDetail.fetchError'));
+        errorMessage = t('approvalDetail.applicationNotFound');
       }
+      
+      await Swal.fire({
+        icon: 'error',
+        title: '載入申請詳情失敗',
+        text: errorMessage,
+        confirmButtonText: '確定',
+        confirmButtonColor: '#d33'
+      });
+      
       setApplication(null);
     } finally {
       setLoading(false);
@@ -216,8 +221,6 @@ const ApprovalDetail = () => {
   const handleSubmit = async () => {
     if (!application) return;
 
-    setError('');
-    setSuccess('');
     setApproving(true);
 
     try {
@@ -226,12 +229,24 @@ const ApprovalDetail = () => {
         remarks: comment
       });
 
-      setSuccess(action === 'approve' ? t('approvalDetail.approvalSuccess') : t('approvalDetail.rejectionSuccess'));
-      setTimeout(() => {
-        navigate('/approval/list');
-      }, 2000);
+      // 使用 Sweet Alert 顯示成功訊息
+      await Swal.fire({
+        icon: 'success',
+        title: action === 'approve' ? t('approvalDetail.approvalSuccess') : t('approvalDetail.rejectionSuccess'),
+        confirmButtonText: '確定',
+        confirmButtonColor: '#3085d6'
+      });
+      
+      navigate('/approval/list');
     } catch (error) {
-      setError(error.response?.data?.message || t('approvalDetail.operationFailed'));
+      // 使用 Sweet Alert 顯示錯誤訊息
+      await Swal.fire({
+        icon: 'error',
+        title: '操作失敗',
+        text: error.response?.data?.message || t('approvalDetail.operationFailed'),
+        confirmButtonText: '確定',
+        confirmButtonColor: '#d33'
+      });
     } finally {
       setApproving(false);
     }
@@ -240,8 +255,6 @@ const ApprovalDetail = () => {
   const handleHRReject = async () => {
     if (!application) return;
 
-    setError('');
-    setSuccess('');
     setHrRejecting(true);
 
     try {
@@ -250,12 +263,24 @@ const ApprovalDetail = () => {
         remarks: hrRejectionReason || 'HR Group 拒絕申請'
       });
 
-      setSuccess(t('approvalDetail.rejectionSuccess'));
-      setTimeout(() => {
-        navigate('/approval/list');
-      }, 2000);
+      // 使用 Sweet Alert 顯示成功訊息
+      await Swal.fire({
+        icon: 'success',
+        title: t('approvalDetail.rejectionSuccess'),
+        confirmButtonText: '確定',
+        confirmButtonColor: '#3085d6'
+      });
+      
+      navigate('/approval/list');
     } catch (error) {
-      setError(error.response?.data?.message || t('approvalDetail.operationFailed'));
+      // 使用 Sweet Alert 顯示錯誤訊息
+      await Swal.fire({
+        icon: 'error',
+        title: '操作失敗',
+        text: error.response?.data?.message || t('approvalDetail.operationFailed'),
+        confirmButtonText: '確定',
+        confirmButtonColor: '#d33'
+      });
     } finally {
       setHrRejecting(false);
     }
@@ -290,12 +315,19 @@ const ApprovalDetail = () => {
       console.error('下載文件錯誤:', error);
       setFileDialogOpen(false);
       setViewingFile(null);
+      
+      let errorMessage = t('approvalDetail.cannotOpenFile');
       if (error.response?.status === 403 || error.response?.status === 401) {
-        setError(t('approvalDetail.noPermissionFile'));
-      } else {
-        setError(t('approvalDetail.cannotOpenFile'));
+        errorMessage = t('approvalDetail.noPermissionFile');
       }
-      setTimeout(() => setError(''), 5000);
+      
+      await Swal.fire({
+        icon: 'error',
+        title: '無法開啟檔案',
+        text: errorMessage,
+        confirmButtonText: '確定',
+        confirmButtonColor: '#d33'
+      });
     } finally {
       setLoadingFile(false);
     }
@@ -335,17 +367,6 @@ const ApprovalDetail = () => {
         {t('approvalDetail.title')}
       </Typography>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          {success}
-        </Alert>
-      )}
 
       <Grid container spacing={2}>
         <Grid item xs={12} md={8}>
