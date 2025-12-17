@@ -29,9 +29,10 @@ import dayjs from 'dayjs';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import Swal from 'sweetalert2';
+import YearSelector from '../components/YearSelector';
 
 const LeaveApplication = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const [formData, setFormData] = useState({
     leave_type_id: '',
@@ -348,35 +349,32 @@ const LeaveApplication = () => {
               onChange={(e) => setFormData(prev => ({ ...prev, leave_type_id: e.target.value }))}
               required
             >
-              {leaveTypes.map((lt) => (
-                <MenuItem key={lt.id} value={lt.id}>
-                  {lt.name_zh} ({lt.name})
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>{t('leaveApplication.year')}</InputLabel>
-            <Select
-              value={formData.year}
-              label={t('leaveApplication.year')}
-              onChange={(e) => {
-                setFormData(prev => ({ ...prev, year: e.target.value }));
-                setYearManuallySet(true); // 標記為手動設置
-              }}
-              required
-            >
-              {Array.from({ length: 5 }, (_, i) => {
-                const year = new Date().getFullYear() - 1 + i; // 從去年到後年（共5年）
+              {leaveTypes.map((lt) => {
+                // 根據當前語言選擇顯示順序
+                const displayName = i18n.language === 'en'
+                  ? `${lt.name || lt.name_zh || ''}${lt.name_zh && lt.name !== lt.name_zh ? ` (${lt.name_zh})` : ''}`
+                  : `${lt.name_zh || lt.name || ''}${lt.name && lt.name !== lt.name_zh ? ` (${lt.name})` : ''}`;
                 return (
-                  <MenuItem key={year} value={year}>
-                    {year}{t('leaveApplication.yearSuffix')}
+                  <MenuItem key={lt.id} value={lt.id}>
+                    {displayName}
                   </MenuItem>
                 );
               })}
             </Select>
           </FormControl>
+
+          <YearSelector
+            value={formData.year}
+            onChange={(year) => {
+              setFormData(prev => ({ ...prev, year }));
+              setYearManuallySet(true); // 標記為手動設置
+            }}
+            labelKey="leaveApplication.year"
+            suffix={t('leaveApplication.yearSuffix')}
+            fullWidth
+            required
+            sx={{ mb: 2 }}
+          />
 
           {selectedLeaveType?.requires_balance && balance && (
             <Box sx={{ mb: 2 }}>

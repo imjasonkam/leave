@@ -21,7 +21,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { formatDate } from '../utils/dateFormat';
 
 const ApprovalList = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -115,7 +115,12 @@ const ApprovalList = () => {
                     <TableRow key={app.id} hover>
                       <TableCell>{app.transaction_id}</TableCell>
                       <TableCell>{app.applicant_display_name}</TableCell>
-                      <TableCell>{app.leave_type_name_zh}</TableCell>
+                      <TableCell>
+                        {i18n.language === 'en' 
+                          ? (app.leave_type_name || app.leave_type_name_zh || '')
+                          : (app.leave_type_name_zh || app.leave_type_name || '')
+                        }
+                      </TableCell>
                       <TableCell>
                         {app.year || (app.start_date ? new Date(app.start_date).getFullYear() : '-')}{t('approvalList.yearSuffix')}
                       </TableCell>

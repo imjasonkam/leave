@@ -32,7 +32,7 @@ import { formatDateTime, formatDate } from '../utils/dateFormat';
 import Swal from 'sweetalert2';
 
 const ApprovalDetail = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -387,15 +387,28 @@ const ApprovalDetail = () => {
               <ListItem>
                 <ListItemText 
                   primary={t('approvalDetail.applicant')}
-                  secondary={application.applicant_display_name}
+                  secondary={
+                    <Box>
+                      <Typography variant="body1" component="span">
+                        {application.applicant_display_name}
+                      </Typography>
+                      {(application.applicant_employee_number || application.user_employee_number) && (
+                        <Typography variant="body2" color="text.secondary" component="span" sx={{ ml: 1 }}>
+                          ({application.applicant_employee_number || application.user_employee_number})
+                        </Typography>
+                      )}
+                    </Box>
+                  }
                   primaryTypographyProps={{ variant: 'caption' }}
-                  secondaryTypographyProps={{ variant: 'body1' }}
+                  secondaryTypographyProps={{ variant: 'body1', component: 'div' }}
                 />
               </ListItem>
               <ListItem>
                 <ListItemText 
                   primary={t('approvalDetail.leaveType')}
-                  secondary={application.leave_type_name_zh}
+                  secondary={i18n.language === 'en' 
+                    ? (application.leave_type_name || application.leave_type_name_zh || '')
+                    : (application.leave_type_name_zh || application.leave_type_name || '')}
                   primaryTypographyProps={{ variant: 'caption' }}
                   secondaryTypographyProps={{ variant: 'body1' }}
                 />
@@ -476,7 +489,7 @@ const ApprovalDetail = () => {
                           : t('approvalDetail.pendingCheck')}
                       </Box>
                       {application.checker_remarks && (
-                        <Typography variant="body2" sx={{ color: '#1565C0', mt: 1 }}>
+                        <Typography variant="body2" sx={{ color: '#1565C0', mt: 1, fontWeight: 'bold' }}>
                           {application.checker_remarks}
                         </Typography>
                       )}
@@ -497,7 +510,7 @@ const ApprovalDetail = () => {
                           : application.checker_at ? t('approvalDetail.pendingApproval') : t('approvalDetail.notStarted')}
                       </Box>
                       {application.approver_1_remarks && (
-                        <Typography variant="body2" sx={{ color: '#1565C0', mt: 1 }}>
+                        <Typography variant="body2" sx={{ color: '#1565C0', mt: 1, fontWeight: 'bold' }}>
                           {application.approver_1_remarks}
                         </Typography>
                       )}
@@ -518,7 +531,7 @@ const ApprovalDetail = () => {
                           : application.approver_1_at ? t('approvalDetail.pendingApproval') : t('approvalDetail.notStarted')}
                       </Box>
                       {application.approver_2_remarks && (
-                        <Typography variant="body2" sx={{ color: '#1565C0', mt: 1 }}>
+                        <Typography variant="body2" sx={{ color: '#1565C0', mt: 1, fontWeight: 'bold' }}>
                           {application.approver_2_remarks}
                         </Typography>
                       )}
@@ -539,7 +552,7 @@ const ApprovalDetail = () => {
                           : application.approver_2_at ? t('approvalDetail.pendingApproval') : t('approvalDetail.notStarted')}
                       </Box>
                       {application.approver_3_remarks && (
-                        <Typography variant="body2" sx={{ color: '#1565C0', mt: 1 }}>
+                        <Typography variant="body2" sx={{ color: '#1565C0', mt: 1, fontWeight: 'bold' }}>
                           {application.approver_3_remarks}
                         </Typography>
                       )}
@@ -559,7 +572,7 @@ const ApprovalDetail = () => {
                           {t('approvalDetail.rejectedAt')} {formatDateTime(application.rejected_at)} - {application.rejected_by_name}
                         </Box>
                         {application.rejection_reason && (
-                          <Typography variant="body2" sx={{ color: '#1565C0', mt: 1 }}>
+                          <Typography variant="body2" sx={{ color: '#1565C0', mt: 1, fontWeight: 'bold' }}>
                             {application.rejection_reason}
                           </Typography>
                         )}
@@ -646,7 +659,9 @@ const ApprovalDetail = () => {
                               {t('approvalDetail.applicantLabel')}{reversal.applicant_display_name}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                              {t('approvalDetail.leaveTypeLabel')}{reversal.leave_type_name_zh}
+                              {t('approvalDetail.leaveTypeLabel')}{i18n.language === 'en' 
+                                ? (reversal.leave_type_name || reversal.leave_type_name_zh || '')
+                                : (reversal.leave_type_name_zh || reversal.leave_type_name || '')}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
                               {t('approvalDetail.yearLabel')}{reversal.year || (reversal.start_date ? new Date(reversal.start_date).getFullYear() : '-')}{t('approvalDetail.yearSuffix')}

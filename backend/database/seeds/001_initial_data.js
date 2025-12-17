@@ -614,7 +614,7 @@ exports.seed = async function (knex) {
   await knex('leave_types').insert([
     { code: 'AL', name: 'Annual Leave', name_zh: '年假', requires_balance: true },
     { code: 'BL', name: 'Birthday Leave', name_zh: '生日假', requires_balance: true },
-    { code: 'CL', name: 'Compensatory Leave', name_zh: '補假', requires_balance: true },
+    { code: 'CL', name: 'Compensatory Leave', name_zh: '補假', requires_balance: false },
     { code: 'FPSL', name: 'Full Paid Sick Leave', name_zh: '全薪病假', requires_balance: true },
     { code: 'SAL', name: 'Sick Leave (Sickness Allowance)', name_zh: '病假 (疾病津貼)', requires_balance: false },
     { code: 'MGL', name: 'Marriage Leave', name_zh: '婚假', requires_balance: false },
@@ -663,49 +663,6 @@ exports.seed = async function (knex) {
   const annualLeave = leaveTypes.find(lt => lt.code === 'AL');
   const sickLeave = leaveTypes.find(lt => lt.code === 'PSL');
 
-  // 為測試用戶建立假期餘額（使用 transaction 方式）
-  // 注意：現在使用 leave_balance_transactions 表來管理餘額
-  // 如果需要為測試用戶添加初始餘額，可以使用以下方式：
-  // await knex('leave_balance_transactions').insert([
-  //   {
-  //     user_id: john.id,
-  //     leave_type_id: annualLeave.id,
-  //     year: 2025,
-  //     amount: 14.0,
-  //     start_date: '2025-01-01', // 假期有效開始日期
-  //     end_date: '2025-12-31', // 假期有效結束日期
-  //     remarks: '年度假期配額'
-  //   },
-  //   {
-  //     user_id: john.id,
-  //     leave_type_id: sickLeave.id,
-  //     year: 2025,
-  //     amount: 12.0,
-  //     start_date: '2025-01-01',
-  //     end_date: '2025-12-31',
-  //     remarks: '病假配額'
-  //   },
-  //   {
-  //     user_id: jason.id,
-  //     leave_type_id: annualLeave.id,
-  //     year: 2025,
-  //     amount: 14.0,
-  //     start_date: '2025-01-01',
-  //     end_date: '2025-12-31',
-  //     remarks: '年度假期配額'
-  //   },
-  //   {
-  //     user_id: jason.id,
-  //     leave_type_id: sickLeave.id,
-  //     year: 2025,
-  //     amount: 12.0,
-  //     start_date: '2025-01-01',
-  //     end_date: '2025-12-31',
-  //     remarks: '病假配額'
-  //   }
-  // ]);
-
- 
 
   // 建立個人待辦事項示例數據
   // 為前幾個用戶創建一些示例個人待辦事項

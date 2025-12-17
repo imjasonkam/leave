@@ -30,7 +30,7 @@ import { useNavigate } from 'react-router-dom';
 import { formatDate } from '../utils/dateFormat';
 
 const LeaveHistory = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user, isSystemAdmin, isDeptHead } = useAuth();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -42,21 +42,35 @@ const LeaveHistory = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchApplications();
-  }, []);
+    if (user) {
+      fetchApplications();
+    }
+  }, [user]);
 
   const fetchApplications = async () => {
+    if (!user) return;
+    
     try {
       setLoading(true);
+      // 只獲取使用者本人的申請記錄，不包含批核清單
       const params = {};
 
-      if (isSystemAdmin || isDeptHead) {
-        // 管理角色可選擇查看自身與批核清單
-        params.include_approver = 'true';
-      }
-
       const response = await axios.get('/api/leaves', { params });
-      setApplications(response.data.applications || []);
+      const allApplications = response.data.applications || [];
+      
+      // 過濾只顯示使用者本人的申請，且必須是 e-flow 或 paper-flow
+      const myApplications = allApplications.filter(app => {
+        // 確保是使用者本人的申請
+        const isMyApplication = app.user_id === user.id;
+        
+        // 確保是 e-flow 或 paper-flow
+        const isEFlow = app.flow_type === 'e-flow';
+        const isPaperFlow = app.flow_type === 'paper-flow' || app.is_paper_flow === true;
+        
+        return isMyApplication && (isEFlow || isPaperFlow);
+      });
+      
+      setApplications(myApplications);
     } catch (error) {
       console.error('Fetch applications error:', error);
     } finally {
@@ -64,22 +78,32 @@ const LeaveHistory = () => {
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (application) => {
+    // 如果已被銷假，顯示特殊顏色
+    if (application.is_reversed === true) {
+      return 'info';
+    }
+    
     const statusMap = {
       pending: 'warning',
       approved: 'success',
       rejected: 'error'
     };
-    return statusMap[status] || 'default';
+    return statusMap[application.status] || 'default';
   };
 
-  const getStatusText = (status) => {
+  const getStatusText = (application) => {
+    // 如果已被銷假，顯示「已銷假」
+    if (application.is_reversed === true) {
+      return t('leaveHistory.reversed');
+    }
+    
     const statusMap = {
       pending: t('leaveHistory.pending'),
       approved: t('leaveHistory.approved'),
       rejected: t('leaveHistory.rejected')
     };
-    return statusMap[status] || status;
+    return statusMap[application.status] || application.status;
   };
 
   const handleReversalClick = (application) => {
@@ -161,16 +185,26 @@ const LeaveHistory = () => {
     return application.user_id === user.id;
   };
 
+  const getFlowTypeText = (application) => {
+    const isPaperFlow = application.is_paper_flow === true || application.flow_type === 'paper-flow';
+    return isPaperFlow ? t('leaveHistory.paperFlow') : t('leaveHistory.eFlow');
+  };
+
   const filteredApplications = applications.filter(app => {
     const keyword = search.toLowerCase();
     const transactionId = app.transaction_id?.toString().toLowerCase() || '';
-    const leaveTypeNameZh = app.leave_type_name_zh?.toLowerCase() || '';
+    // 根據語言選擇假期類型名稱用於搜索
+    const leaveTypeName = i18n.language === 'en'
+      ? (app.leave_type_name || app.leave_type_name_zh || '').toLowerCase()
+      : (app.leave_type_name_zh || app.leave_type_name || '').toLowerCase();
     const applicantNameZh = app.applicant_display_name?.toLowerCase() || '';
+    const flowTypeText = getFlowTypeText(app).toLowerCase();
 
     return (
       transactionId.includes(keyword) ||
-      leaveTypeNameZh.includes(keyword) ||
-      applicantNameZh.includes(keyword)
+      leaveTypeName.includes(keyword) ||
+      applicantNameZh.includes(keyword) ||
+      flowTypeText.includes(keyword)
     );
   });
 
@@ -203,6 +237,7 @@ const LeaveHistory = () => {
                 <TableCell>{t('leaveHistory.transactionId')}</TableCell>
                 <TableCell>{t('leaveHistory.applicant')}</TableCell>
                 <TableCell>{t('leaveHistory.leaveType')}</TableCell>
+                <TableCell>{t('leaveHistory.flowType')}</TableCell>
                 <TableCell>{t('leaveHistory.year')}</TableCell>
                 <TableCell>{t('leaveHistory.startDate')}</TableCell>
                 <TableCell>{t('leaveHistory.endDate')}</TableCell>
@@ -214,18 +249,30 @@ const LeaveHistory = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={9} align="center">{t('common.loading')}</TableCell>
+                  <TableCell colSpan={10} align="center">{t('common.loading')}</TableCell>
                 </TableRow>
               ) : filteredApplications.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} align="center">{t('leaveHistory.noApplications')}</TableCell>
+                  <TableCell colSpan={10} align="center">{t('leaveHistory.noApplications')}</TableCell>
                 </TableRow>
               ) : (
                 filteredApplications.map((app) => (
                   <TableRow key={app.id} hover>
                     <TableCell>{app.transaction_id}</TableCell>
                     <TableCell>{app.applicant_display_name}</TableCell>
-                    <TableCell>{app.leave_type_name_zh}</TableCell>
+                    <TableCell>
+                      {i18n.language === 'en' 
+                        ? (app.leave_type_name || app.leave_type_name_zh || '')
+                        : (app.leave_type_name_zh || app.leave_type_name || '')
+                      }
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={getFlowTypeText(app)}
+                        color={app.is_paper_flow === true || app.flow_type === 'paper-flow' ? 'secondary' : 'primary'}
+                        size="small"
+                      />
+                    </TableCell>
                     <TableCell>
                       {app.year || (app.start_date ? new Date(app.start_date).getFullYear() : '-')}{t('leaveHistory.yearSuffix')}
                     </TableCell>
@@ -234,8 +281,8 @@ const LeaveHistory = () => {
                     <TableCell>{app.days}</TableCell>
                     <TableCell>
                       <Chip
-                        label={getStatusText(app.status)}
-                        color={getStatusColor(app.status)}
+                        label={getStatusText(app)}
+                        color={getStatusColor(app)}
                         size="small"
                       />
                     </TableCell>
@@ -287,7 +334,11 @@ const LeaveHistory = () => {
                 <br />
                 {t('leaveHistory.transactionIdLabel')}{selectedApplication.transaction_id}
                 <br />
-                {t('leaveHistory.leaveTypeLabel')}{selectedApplication.leave_type_name_zh}
+                {t('leaveHistory.leaveTypeLabel')}
+                {i18n.language === 'en' 
+                  ? (selectedApplication.leave_type_name || selectedApplication.leave_type_name_zh || '')
+                  : (selectedApplication.leave_type_name_zh || selectedApplication.leave_type_name || '')
+                }
                 <br />
                 {t('leaveHistory.dateLabel')}{formatDate(selectedApplication.start_date)} ~ {formatDate(selectedApplication.end_date)}
                 <br />

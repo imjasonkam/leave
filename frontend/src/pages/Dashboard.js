@@ -44,7 +44,7 @@ import { formatDate } from '../utils/dateFormat';
 import Swal from 'sweetalert2';
 
 const Dashboard = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user, isSystemAdmin, isDeptHead } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -414,7 +414,10 @@ const Dashboard = () => {
         color="text.secondary" 
         sx={{ mb: 3, wordBreak: 'break-word' }}
       >
-        {user?.department_name_zh} - {user?.position_name_zh}
+        {i18n.language === 'en' 
+          ? `${user?.department_name || user?.department_name_zh || ''} - ${user?.position_name || user?.position_name_zh || ''}`
+          : `${user?.department_name_zh || user?.department_name || ''} - ${user?.position_name_zh || user?.position_name || ''}`
+        }
       </Typography>
 
       {/* HR 待處理清單（僅 HR Group 成員可見） */}

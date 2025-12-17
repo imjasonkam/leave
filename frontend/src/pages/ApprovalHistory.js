@@ -48,7 +48,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { formatDateTime, formatDate } from '../utils/dateFormat';
 
 const ApprovalHistory = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -87,24 +87,56 @@ const ApprovalHistory = () => {
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (application) => {
+    // 如果已被銷假，顯示特殊顏色
+    if (application.is_reversed === true) {
+      return 'info';
+    }
+    
+    // 如果 application 是字符串（舊的調用方式），則按字符串處理
+    if (typeof application === 'string') {
+      const statusMap = {
+        pending: 'warning',
+        approved: 'success',
+        rejected: 'error',
+        cancelled: 'default'
+      };
+      return statusMap[application] || 'default';
+    }
+    
     const statusMap = {
       pending: 'warning',
       approved: 'success',
       rejected: 'error',
       cancelled: 'default'
     };
-    return statusMap[status] || 'default';
+    return statusMap[application.status] || 'default';
   };
 
-  const getStatusText = (status) => {
+  const getStatusText = (application) => {
+    // 如果已被銷假，顯示「已銷假」
+    if (application && application.is_reversed === true) {
+      return t('approvalHistory.reversed');
+    }
+    
+    // 如果 application 是字符串（舊的調用方式），則按字符串處理
+    if (typeof application === 'string') {
+      const statusMap = {
+        pending: t('approvalHistory.pending'),
+        approved: t('approvalHistory.approved'),
+        rejected: t('approvalHistory.rejected'),
+        cancelled: t('approvalHistory.cancelled')
+      };
+      return statusMap[application] || application;
+    }
+    
     const statusMap = {
       pending: t('approvalHistory.pending'),
       approved: t('approvalHistory.approved'),
       rejected: t('approvalHistory.rejected'),
       cancelled: t('approvalHistory.cancelled')
     };
-    return statusMap[status] || status;
+    return statusMap[application.status] || application.status;
   };
 
   const getApprovalStage = (application) => {
@@ -173,6 +205,19 @@ const ApprovalHistory = () => {
       return application.rejected_at;
     }
     return null;
+  };
+
+  const getLeaveTypeDisplay = (application) => {
+    // 根據當前語言選擇使用 name_zh 或 name
+    const leaveTypeName = i18n.language === 'en' 
+      ? (application.leave_type_name || application.leave_type_name_zh || '')
+      : (application.leave_type_name_zh || application.leave_type_name || '');
+    
+    // 如果是銷假交易，在假期類型後加上「(銷假)」
+    if (application.is_reversal_transaction === true) {
+      return `${leaveTypeName} (${t('approvalHistory.reversal')})`;
+    }
+    return leaveTypeName;
   };
 
   const filteredApplications = applications.filter(app => {
@@ -441,7 +486,7 @@ const ApprovalHistory = () => {
                     <TableRow hover>
                       <TableCell>{app.transaction_id}</TableCell>
                       <TableCell>{app.applicant_display_name}</TableCell>
-                      <TableCell>{app.leave_type_name_zh}</TableCell>
+                      <TableCell>{getLeaveTypeDisplay(app)}</TableCell>
                       <TableCell>
                         {app.year || (app.start_date ? new Date(app.start_date).getFullYear() : '-')}{t('approvalHistory.yearSuffix')}
                       </TableCell>
@@ -458,8 +503,8 @@ const ApprovalHistory = () => {
                       <TableCell>{formatDateTime(getApprovalDate(app))}</TableCell>
                       <TableCell>
                         <Chip
-                          label={getStatusText(app.status)}
-                          color={getStatusColor(app.status)}
+                          label={getStatusText(app)}
+                          color={getStatusColor(app)}
                           size="small"
                         />
                       </TableCell>
@@ -518,7 +563,7 @@ const ApprovalHistory = () => {
                                 size="small"
                                 sx={{ fontSize: '0.65rem', height: '20px' }}
                               />
-                              <Typography variant="body2">{reversal.leave_type_name_zh}</Typography>
+                              <Typography variant="body2">{getLeaveTypeDisplay(reversal)}</Typography>
                             </Box>
                           </TableCell>
                           <TableCell>
@@ -541,8 +586,8 @@ const ApprovalHistory = () => {
                           <TableCell>{formatDateTime(reversal.created_at)}</TableCell>
                           <TableCell>
                             <Chip
-                              label={getStatusText(reversal.status)}
-                              color={getStatusColor(reversal.status)}
+                              label={getStatusText(reversal)}
+                              color={getStatusColor(reversal)}
                               size="small"
                             />
                           </TableCell>

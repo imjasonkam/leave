@@ -18,6 +18,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import YearSelector from '../components/YearSelector';
 
 const LeaveBalance = () => {
   const { t } = useTranslation();
@@ -44,8 +45,6 @@ const LeaveBalance = () => {
     }
   };
 
-  const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
-
   return (
     <Box>
       <Typography variant="h5" gutterBottom>
@@ -53,20 +52,12 @@ const LeaveBalance = () => {
       </Typography>
 
       <Paper sx={{ mt: 2, p: 2 }}>
-        <FormControl sx={{ mb: 2, minWidth: 200 }}>
-          <InputLabel>{t('leaveBalance.year')}</InputLabel>
-          <Select
-            value={year}
-            label={t('leaveBalance.year')}
-            onChange={(e) => setYear(e.target.value)}
-          >
-            {years.map((y) => (
-              <MenuItem key={y} value={y}>
-                {y}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <YearSelector
+          value={year}
+          onChange={(year) => setYear(year)}
+          labelKey="leaveBalance.year"
+          sx={{ mb: 2, minWidth: 200 }}
+        />
 
         <TableContainer>
           <Table>

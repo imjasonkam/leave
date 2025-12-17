@@ -20,7 +20,7 @@ import { formatDate } from '../utils/dateFormat';
 import UserFormDialog from '../components/UserFormDialog';
 
 const AdminUsers = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [users, setUsers] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -144,7 +144,12 @@ const AdminUsers = () => {
                   <TableCell>{u.employee_number}</TableCell>
                   <TableCell>{u.display_name || u.name_zh || '-'}</TableCell>
                   <TableCell>{u.email}</TableCell>
-                  <TableCell>{u.department_name_zh || '-'}</TableCell>
+                  <TableCell>
+                    {i18n.language === 'en' 
+                      ? (u.department_name || u.department_name_zh || '-')
+                      : (u.department_name_zh || u.department_name || '-')
+                    }
+                  </TableCell>
                   <TableCell>{u.position_name_zh || '-'}</TableCell>
                   <TableCell>{formatDate(u.hire_date)}</TableCell>
                   <TableCell>

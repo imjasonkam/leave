@@ -26,6 +26,7 @@ import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
+import YearSelector from '../components/YearSelector';
 
 const DepartmentGroupBalances = () => {
   const { user } = useAuth();
@@ -68,7 +69,6 @@ const DepartmentGroupBalances = () => {
     });
   };
 
-  const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 
   const getRoleChips = (deptGroup) => {
     const chips = [];
@@ -134,20 +134,12 @@ const DepartmentGroupBalances = () => {
       </Typography>
 
       <Paper sx={{ mt: 2, p: 2 }}>
-        <FormControl sx={{ mb: 2, minWidth: 200 }}>
-          <InputLabel>{t('departmentGroupBalances.year')}</InputLabel>
-          <Select
-            value={year}
-            label={t('departmentGroupBalances.year')}
-            onChange={(e) => setYear(e.target.value)}
-          >
-            {years.map((y) => (
-              <MenuItem key={y} value={y}>
-                {y}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <YearSelector
+          value={year}
+          onChange={(year) => setYear(year)}
+          labelKey="departmentGroupBalances.year"
+          sx={{ mb: 2, minWidth: 200 }}
+        />
 
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>

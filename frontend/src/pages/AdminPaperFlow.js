@@ -21,6 +21,7 @@ import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import Swal from 'sweetalert2';
+import YearSelector from '../components/YearSelector';
 
 const AdminPaperFlow = () => {
   const { user } = useAuth();
@@ -293,26 +294,18 @@ const AdminPaperFlow = () => {
             </Select>
           </FormControl>
 
-          <FormControl fullWidth sx={{ mb: 2 }} required>
-            <InputLabel>{t('adminPaperFlow.year')}</InputLabel>
-            <Select
-              value={formData.year}
-              label={t('adminPaperFlow.year')}
-              onChange={(e) => {
-                setFormData(prev => ({ ...prev, year: e.target.value }));
-                setYearManuallySet(true); // 標記為手動設置
-              }}
-            >
-              {Array.from({ length: 5 }, (_, i) => {
-                const year = new Date().getFullYear() - 1 + i; // 從去年到後年（共5年）
-                return (
-                  <MenuItem key={year} value={year}>
-                    {year}{t('adminPaperFlow.yearSuffix')}
-                  </MenuItem>
-                );
-              })}
-            </Select>
-          </FormControl>
+          <YearSelector
+            value={formData.year}
+            onChange={(year) => {
+              setFormData(prev => ({ ...prev, year }));
+              setYearManuallySet(true); // 標記為手動設置
+            }}
+            labelKey="adminPaperFlow.year"
+            suffix={t('adminPaperFlow.yearSuffix')}
+            fullWidth
+            required
+            sx={{ mb: 2 }}
+          />
 
           {selectedLeaveType?.requires_balance && balance && (
             <Box sx={{ mb: 2 }}>

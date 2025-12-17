@@ -24,13 +24,16 @@ class AdminController {
         deactivated
       } = req.body;
 
-      if (!employee_number || !surname || !given_name || !name_zh || !email || !password) {
+      if (!employee_number || !surname || !given_name || !name_zh || !password) {
         return res.status(400).json({ message: '請填寫所有必填欄位' });
       }
 
-      const existingUser = await User.findByEmail(email);
-      if (existingUser) {
-        return res.status(400).json({ message: '電子郵件已被使用' });
+      // 只有在提供 email 時才檢查是否重複
+      if (email) {
+        const existingUser = await User.findByEmail(email);
+        if (existingUser) {
+          return res.status(400).json({ message: '電子郵件已被使用' });
+        }
       }
 
       const existingEmployeeNumber = await User.findByEmployeeNumber(employee_number);
@@ -47,7 +50,7 @@ class AdminController {
         alias,
         name_zh,
         display_name: name_zh, // 同時設置 display_name 以便前端顯示
-        email,
+        email: email || null, // email 為可選，如果沒有提供則設為 null
         password_hash: passwordHash,
         department_id: department_id || null,
         position_id: position_id || null,

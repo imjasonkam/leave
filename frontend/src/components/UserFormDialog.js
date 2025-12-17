@@ -166,7 +166,6 @@ const UserFormDialog = ({ open, editing, onClose, onSuccess, initialData = null 
             type="email"
             value={formData.email}
             onChange={handleChange('email')}
-            required
           />
           <TextField
             label={editing ? '新密碼（留空則不更改）' : '密碼'}

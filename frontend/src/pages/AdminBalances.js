@@ -31,6 +31,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
+import YearSelector from '../components/YearSelector';
 
 const AdminBalances = () => {
   const { t } = useTranslation();
@@ -167,7 +168,6 @@ const AdminBalances = () => {
     }
   };
 
-  const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 
   // 計算每個假期類型的總計
   const totalsByType = transactions.reduce((acc, transaction) => {
@@ -205,20 +205,12 @@ const AdminBalances = () => {
               ))}
             </Select>
           </FormControl>
-          <FormControl sx={{ minWidth: 150 }}>
-            <InputLabel>{t('adminBalances.year')}</InputLabel>
-            <Select
-              value={selectedYear}
-              label={t('adminBalances.year')}
-              onChange={(e) => setSelectedYear(e.target.value)}
-            >
-              {years.map((y) => (
-                <MenuItem key={y} value={y}>
-                  {y}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <YearSelector
+            value={selectedYear}
+            onChange={(year) => setSelectedYear(year)}
+            labelKey="adminBalances.year"
+            sx={{ minWidth: 150 }}
+          />
           <FormControl sx={{ minWidth: 200 }}>
             <InputLabel>{t('adminBalances.leaveTypeOptional')}</InputLabel>
             <Select
@@ -421,11 +413,10 @@ const AdminBalances = () => {
               inputProps={{ step: 0.5 }}
               helperText={t('adminBalances.amountHelper')}
             />
-            <TextField
-              label={t('adminBalances.year')}
-              type="number"
+            <YearSelector
               value={formData.year}
-              onChange={(e) => setFormData(prev => ({ ...prev, year: parseInt(e.target.value) }))}
+              onChange={(year) => setFormData(prev => ({ ...prev, year }))}
+              labelKey="adminBalances.year"
               required
               disabled={!!editingTransaction}
             />
