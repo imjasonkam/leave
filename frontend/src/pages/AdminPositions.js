@@ -19,8 +19,10 @@ import {
 } from '@mui/material';
 import { Add as AddIcon, Edit as EditIcon } from '@mui/icons-material';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
 const AdminPositions = () => {
+  const { t } = useTranslation();
   const [positions, setPositions] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -93,7 +95,7 @@ const AdminPositions = () => {
       setOpen(false);
       fetchPositions();
     } catch (error) {
-      alert(error.response?.data?.message || '操作失敗');
+      alert(error.response?.data?.message || t('adminPositions.operationFailed'));
     }
   };
 
@@ -110,17 +112,17 @@ const AdminPositions = () => {
         }}
       >
         <Typography variant="h5" sx={{ flexGrow: 1 }}>
-          職位管理
+          {t('adminPositions.title')}
         </Typography>
         <TextField
           size="small"
-          placeholder="搜尋職位名稱 / 中文名稱 / 描述"
+          placeholder={t('adminPositions.searchPlaceholder')}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           sx={{ minWidth: 260 }}
         />
         <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpen}>
-          新增職位
+          {t('adminPositions.addPosition')}
         </Button>
       </Box>
 
@@ -129,10 +131,10 @@ const AdminPositions = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>名稱</TableCell>
-                <TableCell>中文名稱</TableCell>
-                <TableCell>描述</TableCell>
-                <TableCell>操作</TableCell>
+                <TableCell>{t('adminPositions.name')}</TableCell>
+                <TableCell>{t('adminPositions.chineseName')}</TableCell>
+                <TableCell>{t('adminPositions.description')}</TableCell>
+                <TableCell>{t('adminPositions.actions')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -154,23 +156,23 @@ const AdminPositions = () => {
       </Paper>
 
       <Dialog open={open} onClose={() => setOpen(false)}>
-        <DialogTitle>{editing ? '編輯職位' : '新增職位'}</DialogTitle>
+        <DialogTitle>{editing ? t('adminPositions.editDialogTitle') : t('adminPositions.addDialogTitle')}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1, minWidth: 400 }}>
             <TextField
-              label="名稱"
+              label={t('adminPositions.name')}
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               required
             />
             <TextField
-              label="中文名稱"
+              label={t('adminPositions.chineseName')}
               value={formData.name_zh}
               onChange={(e) => setFormData(prev => ({ ...prev, name_zh: e.target.value }))}
               required
             />
             <TextField
-              label="描述"
+              label={t('adminPositions.description')}
               multiline
               rows={3}
               value={formData.description}
@@ -179,8 +181,8 @@ const AdminPositions = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpen(false)}>取消</Button>
-          <Button onClick={handleSubmit} variant="contained">儲存</Button>
+          <Button onClick={() => setOpen(false)}>{t('adminPositions.cancel')}</Button>
+          <Button onClick={handleSubmit} variant="contained">{t('adminPositions.save')}</Button>
         </DialogActions>
       </Dialog>
     </Box>

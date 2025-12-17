@@ -4,34 +4,34 @@ const User = require('./database/models/User');
 
 async function checkDatabase() {
   try {
-    console.log('=== 檢查資料庫連接和數據 ===\n');
+    // console.log('=== 檢查資料庫連接和數據 ===\n');
     
-    console.log('1. 測試查找 ADMIN001 (大寫)...');
+    // console.log('1. 測試查找 ADMIN001 (大寫)...');
     const user1 = await User.findByEmployeeNumber('ADMIN001');
     if (user1) {
-      console.log('✅ 找到用戶:', user1.employee_number, '-', user1.name_zh);
-      console.log('   啟用狀態:', user1.is_active);
-      console.log('   系統管理員:', user1.is_system_admin);
+      // console.log('✅ 找到用戶:', user1.employee_number, '-', user1.name_zh);
+      // console.log('   啟用狀態:', user1.is_active);
+      // console.log('   系統管理員:', user1.is_system_admin);
     } else {
-      console.log('❌ 找不到用戶');
+      // console.log('❌ 找不到用戶');
     }
     
-    console.log('\n2. 測試查找 admin001 (小寫)...');
+    // console.log('\n2. 測試查找 admin001 (小寫)...');
     const user2 = await User.findByEmployeeNumber('admin001');
     if (user2) {
-      console.log('✅ 找到用戶:', user2.employee_number, '-', user2.name_zh);
-      console.log('   啟用狀態:', user2.is_active);
-      console.log('   系統管理員:', user2.is_system_admin);
+      // console.log('✅ 找到用戶:', user2.employee_number, '-', user2.name_zh);
+      // console.log('   啟用狀態:', user2.is_active);
+      // console.log('   系統管理員:', user2.is_system_admin);
     } else {
-      console.log('❌ 找不到用戶');
+      // console.log('❌ 找不到用戶');
     }
     
-    console.log('\n3. 測試查找 Admin001 (混合)...');
+    // console.log('\n3. 測試查找 Admin001 (混合)...');
     const user3 = await User.findByEmployeeNumber('Admin001');
     if (user3) {
-      console.log('✅ 找到用戶:', user3.employee_number, '-', user3.name_zh);
+      // console.log('✅ 找到用戶:', user3.employee_number, '-', user3.name_zh);
     } else {
-      console.log('❌ 找不到用戶');
+      // console.log('❌ 找不到用戶');
     }
     
     if (!user1 && !user2 && !user3) {

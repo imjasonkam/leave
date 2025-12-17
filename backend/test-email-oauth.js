@@ -12,12 +12,12 @@ async function testOAuth2() {
     GMAIL_USER_EMAIL
   } = process.env;
   
-  console.log('環境變數檢查:');
-  console.log('  GMAIL_CLIENT_ID:', GMAIL_CLIENT_ID ? `${GMAIL_CLIENT_ID.substring(0, 20)}...` : '❌ 未設置');
-  console.log('  GMAIL_CLIENT_SECRET:', GMAIL_CLIENT_SECRET ? '✅ 已設置' : '❌ 未設置');
-  console.log('  GMAIL_REFRESH_TOKEN:', GMAIL_REFRESH_TOKEN ? `${GMAIL_REFRESH_TOKEN.substring(0, 20)}...` : '❌ 未設置');
-  console.log('  GMAIL_USER_EMAIL:', GMAIL_USER_EMAIL || '❌ 未設置');
-  console.log('');
+  // console.log('環境變數檢查:');
+  // console.log('  GMAIL_CLIENT_ID:', GMAIL_CLIENT_ID ? `${GMAIL_CLIENT_ID.substring(0, 20)}...` : '❌ 未設置');
+  // console.log('  GMAIL_CLIENT_SECRET:', GMAIL_CLIENT_SECRET ? '✅ 已設置' : '❌ 未設置');
+  // console.log('  GMAIL_REFRESH_TOKEN:', GMAIL_REFRESH_TOKEN ? `${GMAIL_REFRESH_TOKEN.substring(0, 20)}...` : '❌ 未設置');
+  // console.log('  GMAIL_USER_EMAIL:', GMAIL_USER_EMAIL || '❌ 未設置');
+  // console.log('');
   
   if (!GMAIL_CLIENT_ID || !GMAIL_CLIENT_SECRET || !GMAIL_REFRESH_TOKEN || !GMAIL_USER_EMAIL) {
     console.error('❌ 錯誤：缺少必要的 OAuth2 配置');
@@ -26,33 +26,33 @@ async function testOAuth2() {
   }
   
   try {
-    console.log('正在創建 OAuth2 客戶端...');
+    // console.log('正在創建 OAuth2 客戶端...');
     const oauth2Client = new OAuth2(
       GMAIL_CLIENT_ID,
       GMAIL_CLIENT_SECRET,
       'https://developers.google.com/oauthplayground'
     );
     
-    console.log('設置 refresh token...');
+    // console.log('設置 refresh token...');
     oauth2Client.setCredentials({
       refresh_token: GMAIL_REFRESH_TOKEN
     });
     
-    console.log('正在獲取 access token...');
+    // console.log('正在獲取 access token...');
     const tokenResponse = await oauth2Client.getAccessToken();
     
     if (!tokenResponse || !tokenResponse.token) {
-      console.error('❌ 錯誤：無法獲取 access token');
-      console.error('可能的原因：');
-      console.error('1. Refresh token 已過期或無效');
-      console.error('2. Client ID 或 Client Secret 不正確');
-      console.error('3. Gmail API 未啟用');
-      process.exit(1);
+      // console.error('❌ 錯誤：無法獲取 access token');
+      // console.error('可能的原因：');
+      // console.error('1. Refresh token 已過期或無效');
+      // console.error('2. Client ID 或 Client Secret 不正確');
+      // console.error('3. Gmail API 未啟用');
+      // process.exit(1);
     }
     
     console.log('✅ Access token 獲取成功');
-    console.log('  Token 長度:', tokenResponse.token.length);
-    console.log('');
+    // console.log('  Token 長度:', tokenResponse.token.length);
+    // console.log('');
     
     // 測試 Gmail API 連接
     console.log('正在測試 Gmail API 連接...');

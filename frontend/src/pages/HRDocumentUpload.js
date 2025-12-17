@@ -33,9 +33,11 @@ import {
   Download as DownloadIcon
 } from '@mui/icons-material';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 import { formatDate } from '../utils/dateFormat';
 
 const HRDocumentUpload = () => {
+  const { t } = useTranslation();
   const [documents, setDocuments] = useState([]);
   const [users, setUsers] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -79,7 +81,7 @@ const HRDocumentUpload = () => {
     } catch (error) {
       console.error('Fetch documents error:', error);
       if (error.response?.status === 403) {
-        setError('只有HR Group成員可以訪問此頁面');
+        setError(t('hrDocumentUpload.onlyHRGroup'));
       }
     } finally {
       setLoading(false);
@@ -143,7 +145,7 @@ const HRDocumentUpload = () => {
     if (file) {
       // 檢查文件大小（8MB）
       if (file.size > 8 * 1024 * 1024) {
-        setError('文件大小不能超過8MB');
+        setError(t('hrDocumentUpload.fileSizeExceeded'));
         e.target.value = '';
         return;
       }
@@ -152,7 +154,7 @@ const HRDocumentUpload = () => {
       const allowedTypes = ['pdf', 'jpeg', 'jpg', 'png', 'gif', 'bmp', 'webp', 'tiff', 'tif'];
       const fileExt = file.name.split('.').pop().toLowerCase();
       if (!allowedTypes.includes(fileExt)) {
-        setError(`不支援的檔案類型。只允許：${allowedTypes.join(', ')}`);
+        setError(t('hrDocumentUpload.unsupportedFileType', { types: allowedTypes.join(', ') }));
         e.target.value = '';
         return;
       }
@@ -167,17 +169,17 @@ const HRDocumentUpload = () => {
 
   const handleUpload = async () => {
     if (!selectedFile) {
-      setError('請選擇要上傳的文件');
+      setError(t('hrDocumentUpload.pleaseSelectFile'));
       return;
     }
 
     if (!formData.user_id) {
-      setError('請選擇接收文件的員工');
+      setError(t('hrDocumentUpload.pleaseSelectEmployee'));
       return;
     }
 
     if (!formData.display_name || formData.display_name.trim() === '') {
-      setError('請輸入文件顯示名稱');
+      setError(t('hrDocumentUpload.pleaseEnterDisplayName'));
       return;
     }
 
@@ -201,7 +203,7 @@ const HRDocumentUpload = () => {
         }
       });
 
-      setSuccess('文件上傳成功');
+      setSuccess(t('hrDocumentUpload.uploadSuccess'));
       setOpen(false);
       setSelectedFile(null);
       setFormData({
@@ -214,7 +216,7 @@ const HRDocumentUpload = () => {
       fetchCategories();
     } catch (error) {
       console.error('Upload error:', error);
-      setError(error.response?.data?.message || '上傳文件時發生錯誤');
+      setError(error.response?.data?.message || t('hrDocumentUpload.uploadError'));
     } finally {
       setLoading(false);
     }
@@ -222,7 +224,7 @@ const HRDocumentUpload = () => {
 
   const handleUpdate = async () => {
     if (!formData.display_name || formData.display_name.trim() === '') {
-      setError('請輸入文件顯示名稱');
+      setError(t('hrDocumentUpload.pleaseEnterDisplayName'));
       return;
     }
 
@@ -237,31 +239,31 @@ const HRDocumentUpload = () => {
         visible_to_recipient: formData.visible_to_recipient
       });
 
-      setSuccess('文件信息更新成功');
+      setSuccess(t('hrDocumentUpload.updateSuccess'));
       setEditOpen(false);
       fetchDocuments();
       fetchCategories();
     } catch (error) {
       console.error('Update error:', error);
-      setError(error.response?.data?.message || '更新文件信息時發生錯誤');
+      setError(error.response?.data?.message || t('hrDocumentUpload.updateError'));
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (docId) => {
-    if (!window.confirm('確定要刪除此文件嗎？')) {
+    if (!window.confirm(t('hrDocumentUpload.confirmDelete'))) {
       return;
     }
 
     try {
       setLoading(true);
       await axios.delete(`/api/documents/${docId}`);
-      setSuccess('文件已刪除');
+      setSuccess(t('hrDocumentUpload.deleteSuccess'));
       fetchDocuments();
     } catch (error) {
       console.error('Delete error:', error);
-      setError(error.response?.data?.message || '刪除文件時發生錯誤');
+      setError(error.response?.data?.message || t('hrDocumentUpload.deleteError'));
     } finally {
       setLoading(false);
     }
@@ -282,7 +284,7 @@ const HRDocumentUpload = () => {
       link.remove();
     } catch (error) {
       console.error('Download error:', error);
-      setError(error.response?.data?.message || '下載文件時發生錯誤');
+      setError(error.response?.data?.message || t('hrDocumentUpload.downloadError'));
     }
   };
 
@@ -311,13 +313,13 @@ const HRDocumentUpload = () => {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">文件發放管理</Typography>
+        <Typography variant="h4">{t('hrDocumentUpload.title')}</Typography>
         <Button
           variant="contained"
           startIcon={<CloudUploadIcon />}
           onClick={handleOpen}
         >
-          上傳文件
+          {t('hrDocumentUpload.uploadFile')}
         </Button>
       </Box>
 
@@ -336,13 +338,13 @@ const HRDocumentUpload = () => {
       <Paper sx={{ p: 2, mb: 2 }}>
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
           <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel>接收員工</InputLabel>
+            <InputLabel>{t('hrDocumentUpload.recipientEmployee')}</InputLabel>
             <Select
               value={filters.user_id}
-              label="接收員工"
+              label={t('hrDocumentUpload.recipientEmployee')}
               onChange={(e) => setFilters(prev => ({ ...prev, user_id: e.target.value }))}
             >
-              <MenuItem value="">全部</MenuItem>
+              <MenuItem value="">{t('hrDocumentUpload.all')}</MenuItem>
               {users.map(user => (
                 <MenuItem key={user.id} value={user.id}>
                   {user.employee_number} ({user.display_name || `${user.surname} ${user.given_name}`})
@@ -352,13 +354,13 @@ const HRDocumentUpload = () => {
           </FormControl>
 
           <FormControl sx={{ minWidth: 150 }}>
-            <InputLabel>文件類別</InputLabel>
+            <InputLabel>{t('hrDocumentUpload.documentCategory')}</InputLabel>
             <Select
               value={filters.category}
-              label="文件類別"
+              label={t('hrDocumentUpload.documentCategory')}
               onChange={(e) => setFilters(prev => ({ ...prev, category: e.target.value }))}
             >
-              <MenuItem value="">全部</MenuItem>
+              <MenuItem value="">{t('hrDocumentUpload.all')}</MenuItem>
               {categories.map(cat => (
                 <MenuItem key={cat} value={cat}>{cat}</MenuItem>
               ))}
@@ -367,10 +369,10 @@ const HRDocumentUpload = () => {
 
 
           <TextField
-            label="搜尋"
+            label={t('hrDocumentUpload.search')}
             value={filters.search}
             onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-            placeholder="文件名稱、員工姓名或工號"
+            placeholder={t('hrDocumentUpload.searchPlaceholder')}
             sx={{ minWidth: 250 }}
           />
         </Box>
@@ -380,14 +382,14 @@ const HRDocumentUpload = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>文件名稱</TableCell>
-              <TableCell>接收員工</TableCell>
-              <TableCell>類別</TableCell>
-              <TableCell>文件大小</TableCell>
-              <TableCell>上傳者</TableCell>
-              <TableCell>上傳時間</TableCell>
-              <TableCell>可見性</TableCell>
-              <TableCell align="right">操作</TableCell>
+              <TableCell>{t('hrDocumentUpload.fileName')}</TableCell>
+              <TableCell>{t('hrDocumentUpload.recipientEmployee')}</TableCell>
+              <TableCell>{t('hrDocumentUpload.category')}</TableCell>
+              <TableCell>{t('hrDocumentUpload.fileSize')}</TableCell>
+              <TableCell>{t('hrDocumentUpload.uploader')}</TableCell>
+              <TableCell>{t('hrDocumentUpload.uploadTime')}</TableCell>
+              <TableCell>{t('hrDocumentUpload.visibility')}</TableCell>
+              <TableCell align="right">{t('hrDocumentUpload.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -400,7 +402,7 @@ const HRDocumentUpload = () => {
             ) : filteredDocuments.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} align="center">
-                  沒有文件
+                  {t('hrDocumentUpload.noDocuments')}
                 </TableCell>
               </TableRow>
             ) : (
@@ -422,23 +424,23 @@ const HRDocumentUpload = () => {
                   <TableCell>{formatDate(doc.created_at)}</TableCell>
                   <TableCell>
                     {doc.visible_to_recipient ? (
-                      <Chip label="對員工可見" size="small" color="success" />
+                      <Chip label={t('hrDocumentUpload.visibleToEmployee')} size="small" color="success" />
                     ) : (
-                      <Chip label="對員工隱藏" size="small" color="default" />
+                      <Chip label={t('hrDocumentUpload.hiddenFromEmployee')} size="small" color="default" />
                     )}
                   </TableCell>
                   <TableCell align="right">
                     <IconButton
                       size="small"
                       onClick={() => handleDownload(doc.id, doc.display_name, doc.file_name)}
-                      title="下載"
+                      title={t('hrDocumentUpload.download')}
                     >
                       <DownloadIcon />
                     </IconButton>
                     <IconButton
                       size="small"
                       onClick={() => handleEdit(doc)}
-                      title="編輯"
+                      title={t('hrDocumentUpload.edit')}
                     >
                       <EditIcon />
                     </IconButton>
@@ -446,7 +448,7 @@ const HRDocumentUpload = () => {
                       size="small"
                       color="error"
                       onClick={() => handleDelete(doc.id)}
-                      title="刪除"
+                      title={t('hrDocumentUpload.delete')}
                     >
                       <DeleteIcon />
                     </IconButton>
@@ -460,14 +462,14 @@ const HRDocumentUpload = () => {
 
       {/* 上傳對話框 */}
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>上傳文件</DialogTitle>
+        <DialogTitle>{t('hrDocumentUpload.uploadDialogTitle')}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
             <FormControl fullWidth>
-              <InputLabel>接收員工 *</InputLabel>
+              <InputLabel>{t('hrDocumentUpload.recipientEmployeeRequired')}</InputLabel>
               <Select
                 value={formData.user_id}
-                label="接收員工 *"
+                label={t('hrDocumentUpload.recipientEmployeeRequired')}
                 onChange={(e) => setFormData(prev => ({ ...prev, user_id: e.target.value }))}
               >
                 {users.map(user => (
@@ -479,21 +481,21 @@ const HRDocumentUpload = () => {
             </FormControl>
 
             <TextField
-              label="文件顯示名稱 *"
+              label={t('hrDocumentUpload.fileDisplayName')}
               value={formData.display_name}
               onChange={(e) => setFormData(prev => ({ ...prev, display_name: e.target.value }))}
               fullWidth
-              helperText="員工下載時顯示的名稱"
+              helperText={t('hrDocumentUpload.fileDisplayNameHelper')}
             />
 
             <FormControl fullWidth>
-              <InputLabel>文件類別</InputLabel>
+              <InputLabel>{t('hrDocumentUpload.documentCategoryLabel')}</InputLabel>
               <Select
                 value={formData.category}
-                label="文件類別"
+                label={t('hrDocumentUpload.documentCategoryLabel')}
                 onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
               >
-                <MenuItem value="">無類別</MenuItem>
+                <MenuItem value="">{t('hrDocumentUpload.noCategory')}</MenuItem>
                 <MenuItem value="Salary Advice">Salary Advice</MenuItem>
                 <MenuItem value="IR56B">IR56B</MenuItem>
                 <MenuItem value="IR56F">IR56F</MenuItem>
@@ -509,7 +511,7 @@ const HRDocumentUpload = () => {
               fullWidth
               sx={{ py: 1.5 }}
             >
-              {selectedFile ? selectedFile.name : '選擇文件 (PDF、JPEG、TIFF等，最大8MB)'}
+              {selectedFile ? selectedFile.name : t('hrDocumentUpload.selectFile')}
               <input
                 type="file"
                 hidden
@@ -520,7 +522,7 @@ const HRDocumentUpload = () => {
 
             {selectedFile && (
               <Typography variant="body2" color="text.secondary">
-                文件大小: {formatFileSize(selectedFile.size)}
+                {t('hrDocumentUpload.fileSizeLabel')}: {formatFileSize(selectedFile.size)}
               </Typography>
             )}
 
@@ -533,42 +535,42 @@ const HRDocumentUpload = () => {
                   }
                 />
               }
-              label="開放給員工"
+              label={t('hrDocumentUpload.openToEmployee')}
             />
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpen(false)}>取消</Button>
+          <Button onClick={() => setOpen(false)}>{t('hrDocumentUpload.cancel')}</Button>
           <Button
             onClick={handleUpload}
             variant="contained"
             disabled={loading || !selectedFile || !formData.user_id || !formData.display_name}
           >
-            {loading ? <CircularProgress size={20} /> : '上傳'}
+            {loading ? <CircularProgress size={20} /> : t('hrDocumentUpload.upload')}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* 編輯對話框 */}
       <Dialog open={editOpen} onClose={() => setEditOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>編輯文件信息</DialogTitle>
+        <DialogTitle>{t('hrDocumentUpload.editDialogTitle')}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
             <TextField
-              label="文件顯示名稱 *"
+              label={t('hrDocumentUpload.fileDisplayName')}
               value={formData.display_name}
               onChange={(e) => setFormData(prev => ({ ...prev, display_name: e.target.value }))}
               fullWidth
             />
 
             <FormControl fullWidth>
-              <InputLabel>文件類別</InputLabel>
+              <InputLabel>{t('hrDocumentUpload.documentCategoryLabel')}</InputLabel>
               <Select
                 value={formData.category}
-                label="文件類別"
+                label={t('hrDocumentUpload.documentCategoryLabel')}
                 onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
               >
-                <MenuItem value="">無類別</MenuItem>
+                <MenuItem value="">{t('hrDocumentUpload.noCategory')}</MenuItem>
                 <MenuItem value="Salary Advice">Salary Advice</MenuItem>
                 <MenuItem value="IR56B">IR56B</MenuItem>
                 <MenuItem value="IR56F">IR56F</MenuItem>
@@ -586,18 +588,18 @@ const HRDocumentUpload = () => {
                   }
                 />
               }
-              label="開放給員工"
+              label={t('hrDocumentUpload.openToEmployee')}
             />
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setEditOpen(false)}>取消</Button>
+          <Button onClick={() => setEditOpen(false)}>{t('hrDocumentUpload.cancel')}</Button>
           <Button
             onClick={handleUpdate}
             variant="contained"
             disabled={loading || !formData.display_name}
           >
-            {loading ? <CircularProgress size={20} /> : '儲存'}
+            {loading ? <CircularProgress size={20} /> : t('hrDocumentUpload.save')}
           </Button>
         </DialogActions>
       </Dialog>

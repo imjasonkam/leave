@@ -30,8 +30,10 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
 const AdminBalances = () => {
+  const { t } = useTranslation();
   const [users, setUsers] = useState([]);
   const [leaveTypes, setLeaveTypes] = useState([]);
   const [balances, setBalances] = useState([]);
@@ -161,7 +163,7 @@ const AdminBalances = () => {
       fetchBalances();
       fetchTransactions();
     } catch (error) {
-      alert(error.response?.data?.message || '操作失敗');
+      alert(error.response?.data?.message || t('adminBalances.operationFailed'));
     }
   };
 
@@ -184,16 +186,16 @@ const AdminBalances = () => {
   return (
     <Box>
       <Typography variant="h5" gutterBottom>
-        假期餘額管理
+        {t('adminBalances.title')}
       </Typography>
 
       <Paper sx={{ p: 2, mb: 2 }}>
         <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
           <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel>用戶</InputLabel>
+            <InputLabel>{t('adminBalances.user')}</InputLabel>
             <Select
               value={selectedUserId}
-              label="用戶"
+              label={t('adminBalances.user')}
               onChange={(e) => setSelectedUserId(e.target.value)}
             >
               {users.map((u) => (
@@ -204,10 +206,10 @@ const AdminBalances = () => {
             </Select>
           </FormControl>
           <FormControl sx={{ minWidth: 150 }}>
-            <InputLabel>年份</InputLabel>
+            <InputLabel>{t('adminBalances.year')}</InputLabel>
             <Select
               value={selectedYear}
-              label="年份"
+              label={t('adminBalances.year')}
               onChange={(e) => setSelectedYear(e.target.value)}
             >
               {years.map((y) => (
@@ -218,13 +220,13 @@ const AdminBalances = () => {
             </Select>
           </FormControl>
           <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel>假期類型（可選）</InputLabel>
+            <InputLabel>{t('adminBalances.leaveTypeOptional')}</InputLabel>
             <Select
               value={selectedLeaveTypeId}
-              label="假期類型（可選）"
+              label={t('adminBalances.leaveTypeOptional')}
               onChange={(e) => setSelectedLeaveTypeId(e.target.value)}
             >
-              <MenuItem value="">全部</MenuItem>
+              <MenuItem value="">{t('adminBalances.all')}</MenuItem>
               {leaveTypes.filter(lt => lt.requires_balance).map((lt) => (
                 <MenuItem key={lt.id} value={lt.id}>
                   {lt.name_zh} ({lt.code})
@@ -235,7 +237,7 @@ const AdminBalances = () => {
         </Box>
         <Box>
           <Button variant="contained" onClick={handleOpen} disabled={!selectedUserId}>
-            添加餘額
+            {t('adminBalances.addBalance')}
           </Button>
         </Box>
       </Paper>
@@ -244,8 +246,8 @@ const AdminBalances = () => {
         <>
           <Paper sx={{ mb: 2 }}>
             <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
-              <Tab label="餘額總覽" />
-              <Tab label="交易記錄" />
+              <Tab label={t('adminBalances.balanceOverview')} />
+              <Tab label={t('adminBalances.transactionHistory')} />
             </Tabs>
           </Paper>
 
@@ -255,16 +257,16 @@ const AdminBalances = () => {
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell>假期類型</TableCell>
-                      <TableCell align="right">總額</TableCell>
-                      <TableCell align="right">已使用</TableCell>
-                      <TableCell align="right">餘額</TableCell>
+                      <TableCell>{t('adminBalances.leaveType')}</TableCell>
+                      <TableCell align="right">{t('adminBalances.total')}</TableCell>
+                      <TableCell align="right">{t('adminBalances.taken')}</TableCell>
+                      <TableCell align="right">{t('adminBalances.balance')}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {balances.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} align="center">沒有餘額記錄</TableCell>
+                        <TableCell colSpan={4} align="center">{t('adminBalances.noBalanceRecords')}</TableCell>
                       </TableRow>
                     ) : (
                       balances.map((balance) => (
@@ -294,25 +296,25 @@ const AdminBalances = () => {
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell>日期</TableCell>
-                      <TableCell>假期類型</TableCell>
-                      <TableCell align="right">數量</TableCell>
-                      <TableCell>有效期</TableCell>
-                      <TableCell>備註</TableCell>
-                      <TableCell>操作人</TableCell>
-                      <TableCell align="center">操作</TableCell>
+                      <TableCell>{t('adminBalances.date')}</TableCell>
+                      <TableCell>{t('adminBalances.leaveType')}</TableCell>
+                      <TableCell align="right">{t('adminBalances.amount')}</TableCell>
+                      <TableCell>{t('adminBalances.validPeriod')}</TableCell>
+                      <TableCell>{t('adminBalances.remarks')}</TableCell>
+                      <TableCell>{t('adminBalances.operator')}</TableCell>
+                      <TableCell align="center">{t('adminBalances.actions')}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {transactions.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} align="center">沒有交易記錄</TableCell>
+                        <TableCell colSpan={7} align="center">{t('adminBalances.noTransactionRecords')}</TableCell>
                       </TableRow>
                     ) : (
                       <>
                         {Object.keys(totalsByType).length > 0 && (
                           <TableRow sx={{ backgroundColor: 'action.hover' }}>
-                            <TableCell colSpan={2}><strong>假期類型總計</strong></TableCell>
+                            <TableCell colSpan={2}><strong>{t('adminBalances.leaveTypeTotal')}</strong></TableCell>
                             <TableCell colSpan={5}></TableCell>
                           </TableRow>
                         )}
@@ -324,7 +326,7 @@ const AdminBalances = () => {
                             <TableCell></TableCell>
                             <TableCell align="right">
                               <Chip
-                                label={`總計: ${typeData.total.toFixed(1)}`}
+                                label={`${t('adminBalances.totalLabel')} ${typeData.total.toFixed(1)}`}
                                 color="primary"
                                 size="small"
                               />
@@ -333,7 +335,7 @@ const AdminBalances = () => {
                           </TableRow>
                         ))}
                         <TableRow sx={{ backgroundColor: 'action.hover' }}>
-                          <TableCell colSpan={7}><strong>交易明細</strong></TableCell>
+                          <TableCell colSpan={7}><strong>{t('adminBalances.transactionDetails')}</strong></TableCell>
                         </TableRow>
                         {transactions.map((transaction) => (
                           <TableRow key={transaction.id}>
@@ -352,11 +354,11 @@ const AdminBalances = () => {
                             </TableCell>
                             <TableCell>
                               {transaction.start_date && transaction.end_date ? (
-                                `${dayjs(transaction.start_date).format('YYYY-MM-DD')} 至 ${dayjs(transaction.end_date).format('YYYY-MM-DD')}`
+                                `${dayjs(transaction.start_date).format('YYYY-MM-DD')} ${t('adminBalances.to')} ${dayjs(transaction.end_date).format('YYYY-MM-DD')}`
                               ) : transaction.start_date ? (
-                                `自 ${dayjs(transaction.start_date).format('YYYY-MM-DD')} 起`
+                                `${t('adminBalances.since')} ${dayjs(transaction.start_date).format('YYYY-MM-DD')}`
                               ) : transaction.end_date ? (
-                                `至 ${dayjs(transaction.end_date).format('YYYY-MM-DD')} 止`
+                                `${t('adminBalances.until')} ${dayjs(transaction.end_date).format('YYYY-MM-DD')}`
                               ) : (
                                 '-'
                               )}
@@ -391,14 +393,14 @@ const AdminBalances = () => {
         setOpen(false);
         setEditingTransaction(null);
       }} maxWidth="sm" fullWidth>
-        <DialogTitle>{editingTransaction ? '編輯假期餘額交易' : '添加假期餘額'}</DialogTitle>
+        <DialogTitle>{editingTransaction ? t('adminBalances.editDialogTitle') : t('adminBalances.addDialogTitle')}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
             <FormControl>
-              <InputLabel>假期類型</InputLabel>
+              <InputLabel>{t('adminBalances.leaveType')}</InputLabel>
               <Select
                 value={formData.leave_type_id}
-                label="假期類型"
+                label={t('adminBalances.leaveType')}
                 onChange={(e) => setFormData(prev => ({ ...prev, leave_type_id: e.target.value }))}
                 required
                 disabled={!!editingTransaction}
@@ -411,16 +413,16 @@ const AdminBalances = () => {
               </Select>
             </FormControl>
             <TextField
-              label="數量"
+              label={t('adminBalances.amount')}
               type="number"
               value={formData.amount}
               onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
               required
               inputProps={{ step: 0.5 }}
-              helperText="正數為增加，負數為減少"
+              helperText={t('adminBalances.amountHelper')}
             />
             <TextField
-              label="年份"
+              label={t('adminBalances.year')}
               type="number"
               value={formData.year}
               onChange={(e) => setFormData(prev => ({ ...prev, year: parseInt(e.target.value) }))}
@@ -429,14 +431,14 @@ const AdminBalances = () => {
             />
             <LocalizationProvider dateAdapter={AdapterDayjs}>
               <DatePicker
-                label="有效開始日期"
+                label={t('adminBalances.validStartDate')}
                 value={formData.start_date}
                 onChange={(date) => setFormData(prev => ({ ...prev, start_date: date }))}
                 format="DD/MM/YYYY"
                 slotProps={{ textField: { fullWidth: true } }}
               />
               <DatePicker
-                label="有效結束日期"
+                label={t('adminBalances.validEndDate')}
                 value={formData.end_date}
                 onChange={(date) => setFormData(prev => ({ ...prev, end_date: date }))}
                 format="DD/MM/YYYY"
@@ -445,7 +447,7 @@ const AdminBalances = () => {
               />
             </LocalizationProvider>
             <TextField
-              label="備註"
+              label={t('adminBalances.remarks')}
               multiline
               rows={3}
               value={formData.remarks}
@@ -457,9 +459,9 @@ const AdminBalances = () => {
           <Button onClick={() => {
             setOpen(false);
             setEditingTransaction(null);
-          }}>取消</Button>
+          }}>{t('adminBalances.cancel')}</Button>
           <Button onClick={handleSubmit} variant="contained">
-            {editingTransaction ? '更新' : '添加'}
+            {editingTransaction ? t('adminBalances.update') : t('adminBalances.add')}
           </Button>
         </DialogActions>
       </Dialog>

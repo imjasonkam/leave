@@ -15,10 +15,12 @@ import {
 } from '@mui/material';
 import { Add as AddIcon, Edit as EditIcon } from '@mui/icons-material';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 import { formatDate } from '../utils/dateFormat';
 import UserFormDialog from '../components/UserFormDialog';
 
 const AdminUsers = () => {
+  const { t } = useTranslation();
   const [users, setUsers] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -107,17 +109,17 @@ const AdminUsers = () => {
         }}
       >
         <Typography variant="h5" sx={{ flexGrow: 1 }}>
-          用戶管理
+          {t('adminUsers.title')}
         </Typography>
         <TextField
           size="small"
-          placeholder="搜尋員工編號 / 英文姓名 / 中文姓名 / 別名"
+          placeholder={t('adminUsers.searchPlaceholder')}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           sx={{ minWidth: 260 }}
         />
         <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpen}>
-          新增用戶
+          {t('adminUsers.addUser')}
         </Button>
       </Box>
 
@@ -126,14 +128,14 @@ const AdminUsers = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>員工編號</TableCell>
-                <TableCell>姓名</TableCell>
-                <TableCell>電子郵件</TableCell>
-                <TableCell>部門</TableCell>
-                <TableCell>職位</TableCell>
-                <TableCell>入職日期</TableCell>
-                <TableCell>帳戶狀態</TableCell>
-                <TableCell>操作</TableCell>
+                <TableCell>{t('adminUsers.employeeNumber')}</TableCell>
+                <TableCell>{t('adminUsers.name')}</TableCell>
+                <TableCell>{t('adminUsers.email')}</TableCell>
+                <TableCell>{t('adminUsers.department')}</TableCell>
+                <TableCell>{t('adminUsers.position')}</TableCell>
+                <TableCell>{t('adminUsers.hireDate')}</TableCell>
+                <TableCell>{t('adminUsers.accountStatus')}</TableCell>
+                <TableCell>{t('adminUsers.actions')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -146,7 +148,7 @@ const AdminUsers = () => {
                   <TableCell>{u.position_name_zh || '-'}</TableCell>
                   <TableCell>{formatDate(u.hire_date)}</TableCell>
                   <TableCell>
-                    {u.deactivated ? '已停用' : '啟用中'}
+                    {u.deactivated ? t('adminUsers.deactivated') : t('adminUsers.active')}
                   </TableCell>
                   <TableCell>
                     <IconButton size="small" onClick={() => handleEdit(u)}>

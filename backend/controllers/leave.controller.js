@@ -261,19 +261,19 @@ class LeaveController {
   async getApplicationById(req, res) {
     try {
       const { id } = req.params;
-      console.log(`[getApplicationById] 請求 ID: ${id}, 用戶 ID: ${req.user.id}`);
+      // console.log(`[getApplicationById] 請求 ID: ${id}, 用戶 ID: ${req.user.id}`);
       
       const application = await LeaveApplication.findById(id);
-      console.log(`[getApplicationById] 查詢結果:`, application ? `找到申請 ID: ${application.id}` : '申請不存在');
+      // console.log(`[getApplicationById] 查詢結果:`, application ? `找到申請 ID: ${application.id}` : '申請不存在');
 
       if (!application) {
-        console.log(`[getApplicationById] 返回 404: 申請不存在`);
+        // console.log(`[getApplicationById] 返回 404: 申請不存在`);
         return res.status(404).json({ message: '申請不存在' });
       }
 
       // 檢查權限：使用統一的權限檢查方法
       const canView = await User.canViewApplication(req.user.id, id);
-      console.log(`[getApplicationById] 權限檢查結果: canView=${canView}, userId=${req.user.id}, applicationId=${id}`);
+      // console.log(`[getApplicationById] 權限檢查結果: canView=${canView}, userId=${req.user.id}, applicationId=${id}`);
 
       if (!canView) {
         console.log(`[getApplicationById] 返回 403: 無權限查看此申請`);

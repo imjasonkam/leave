@@ -223,7 +223,7 @@ class AdminController {
       const { user_id, leave_type_id, amount, year, remarks, start_date, end_date } = req.body;
       const currentYear = year || new Date().getFullYear();
 
-      console.log('addBalanceTransaction request:', { user_id, leave_type_id, amount, year: currentYear, start_date, end_date });
+      // console.log('addBalanceTransaction request:', { user_id, leave_type_id, amount, year: currentYear, start_date, end_date });
 
       if (!user_id || !leave_type_id || amount === undefined || parseFloat(amount) === 0) {
         return res.status(400).json({ message: '請填寫所有必填欄位，且數量不能為0' });

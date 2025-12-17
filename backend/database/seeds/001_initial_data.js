@@ -705,5 +705,36 @@ exports.seed = async function (knex) {
   //   }
   // ]);
 
+ 
+
+  // 建立個人待辦事項示例數據
+  // 為前幾個用戶創建一些示例個人待辦事項
+  const sampleUsers = await knex('users').select('id').limit(5);
+  
+  if (sampleUsers.length > 0) {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    
+    const personalTodos = [];
+    
+    sampleUsers.forEach((user, index) => {
+      personalTodos.push({
+        user_id: user.id,
+        title: `個人待辦事項 ${index + 1}`,
+        description: '這是一個示例個人待辦事項',
+        status: index % 3 === 0 ? 'completed' : (index % 3 === 1 ? 'in_progress' : 'pending'),
+        due_date: index % 2 === 0 ? tomorrow.toISOString().split('T')[0] : nextWeek.toISOString().split('T')[0],
+        priority: (index % 3) + 1
+      });
+    });
+    
+    if (personalTodos.length > 0) {
+      await knex('user_todos').insert(personalTodos);
+    }
+  }
+
   await syncLeaveApplicationStages(knex);
 };

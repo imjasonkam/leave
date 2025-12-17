@@ -140,7 +140,7 @@ class User {
       const userIdNum = Number(userId);
       const isMember = userIdsNum.includes(userIdNum);
       
-      console.log('[isHRMember] User ID:', userIdNum, 'HR Group user_ids:', userIdsNum, 'isMember:', isMember);
+      // console.log('[isHRMember] User ID:', userIdNum, 'HR Group user_ids:', userIdsNum, 'isMember:', isMember);
       
       return isMember;
     } catch (error) {

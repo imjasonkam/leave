@@ -36,8 +36,10 @@ import {
   Group as GroupIcon 
 } from '@mui/icons-material';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
 const AdminGroups = () => {
+  const { t } = useTranslation();
   const [tabValue, setTabValue] = useState(0);
   const [departmentGroups, setDepartmentGroups] = useState([]);
   const [delegationGroups, setDelegationGroups] = useState([]);
@@ -141,7 +143,7 @@ const AdminGroups = () => {
   const handleSubmit = async () => {
     // 前端驗證必填欄位
     if (!formData.name || !formData.name_zh) {
-      alert('請填寫所有必填欄位（名稱、中文名稱）');
+      alert(t('adminGroups.fillRequiredFields'));
       return;
     }
 
@@ -155,14 +157,14 @@ const AdminGroups = () => {
       setOpen(false);
       fetchGroups();
     } catch (error) {
-      const errorMessage = error.response?.data?.message || error.message || '操作失敗';
+      const errorMessage = error.response?.data?.message || error.message || t('adminGroups.operationFailed');
       alert(errorMessage);
       console.error('Submit error:', error);
     }
   };
 
   const handleDeleteGroup = async (groupId, type) => {
-    const confirmed = window.confirm('確定要刪除此群組？');
+    const confirmed = window.confirm(t('adminGroups.confirmDelete'));
     if (!confirmed) {
       return;
     }
@@ -172,7 +174,7 @@ const AdminGroups = () => {
       await axios.delete(`${endpoint}/${groupId}`);
       fetchGroups();
     } catch (error) {
-      alert(error.response?.data?.message || '刪除群組失敗');
+      alert(error.response?.data?.message || t('adminGroups.deleteFailed'));
     }
   };
 
@@ -193,7 +195,7 @@ const AdminGroups = () => {
       setMembersDialogOpen(true);
     } catch (error) {
       console.error('Fetch members error:', error);
-      const message = error.response?.data?.message || error.message || '無法載入成員列表';
+      const message = error.response?.data?.message || error.message || t('adminGroups.cannotLoadMembers');
       alert(message);
     }
   };
@@ -205,7 +207,7 @@ const AdminGroups = () => {
       handleOpenMembers(selectedGroup, selectedGroupType);
       fetchGroups();
     } catch (error) {
-      alert(error.response?.data?.message || '新增成員失敗');
+      alert(error.response?.data?.message || t('adminGroups.addMemberFailed'));
     }
   };
 
@@ -216,19 +218,19 @@ const AdminGroups = () => {
       handleOpenMembers(selectedGroup, selectedGroupType);
       fetchGroups();
     } catch (error) {
-      alert(error.response?.data?.message || '移除成員失敗');
+      alert(error.response?.data?.message || t('adminGroups.removeMemberFailed'));
     }
   };
 
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5">群組管理</Typography>
+        <Typography variant="h5">{t('adminGroups.title')}</Typography>
       </Box>
 
       <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)} sx={{ mb: 2 }}>
-        <Tab label="部門群組" />
-        <Tab label="授權群組" />
+        <Tab label={t('adminGroups.departmentGroups')} />
+        <Tab label={t('adminGroups.delegationGroups')} />
       </Tabs>
 
       {tabValue === 0 && (
@@ -239,21 +241,21 @@ const AdminGroups = () => {
             onClick={() => handleOpen('department')}
             sx={{ mb: 2 }}
           >
-            新增部門群組
+            {t('adminGroups.addDepartmentGroup')}
           </Button>
           <Paper>
             <TableContainer>
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>名稱</TableCell>
-                    <TableCell>中文名稱</TableCell>
-                    <TableCell>檢查群組</TableCell>
-                    <TableCell>第一批核群組</TableCell>
-                    <TableCell>第二批核群組</TableCell>
-                    <TableCell>第三批核群組</TableCell>
-                    <TableCell>成員數</TableCell>
-                    <TableCell>操作</TableCell>
+                    <TableCell>{t('adminGroups.name')}</TableCell>
+                    <TableCell>{t('adminGroups.chineseName')}</TableCell>
+                    <TableCell>{t('adminGroups.checkerGroup')}</TableCell>
+                    <TableCell>{t('adminGroups.approver1Group')}</TableCell>
+                    <TableCell>{t('adminGroups.approver2Group')}</TableCell>
+                    <TableCell>{t('adminGroups.approver3Group')}</TableCell>
+                    <TableCell>{t('adminGroups.memberCount')}</TableCell>
+                    <TableCell>{t('adminGroups.actions')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -294,18 +296,18 @@ const AdminGroups = () => {
             onClick={() => handleOpen('delegation')}
             sx={{ mb: 2 }}
           >
-            新增授權群組
+            {t('adminGroups.addDelegationGroup')}
           </Button>
           <Paper>
             <TableContainer>
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>名稱</TableCell>
-                    <TableCell>中文名稱</TableCell>
-                    <TableCell>描述</TableCell>
-                    <TableCell>成員數</TableCell>
-                    <TableCell>操作</TableCell>
+                    <TableCell>{t('adminGroups.name')}</TableCell>
+                    <TableCell>{t('adminGroups.chineseName')}</TableCell>
+                    <TableCell>{t('adminGroups.description')}</TableCell>
+                    <TableCell>{t('adminGroups.memberCount')}</TableCell>
+                    <TableCell>{t('adminGroups.actions')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -337,25 +339,25 @@ const AdminGroups = () => {
 
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>
-          {editing ? '編輯' : '新增'}
-          {selectedGroupType === 'department' ? '部門群組' : '授權群組'}
+          {editing ? t('adminGroups.editDialogTitle') : t('adminGroups.addDialogTitle')}
+          {selectedGroupType === 'department' ? t('adminGroups.departmentGroup') : t('adminGroups.delegationGroup')}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
             <TextField
-              label="名稱"
+              label={t('adminGroups.name')}
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               required
             />
             <TextField
-              label="中文名稱"
+              label={t('adminGroups.chineseName')}
               value={formData.name_zh}
               onChange={(e) => setFormData(prev => ({ ...prev, name_zh: e.target.value }))}
               required
             />
             <TextField
-              label="描述"
+              label={t('adminGroups.description')}
               multiline
               rows={3}
               value={formData.description}
@@ -364,13 +366,13 @@ const AdminGroups = () => {
             {selectedGroupType === 'department' && (
               <>
                 <FormControl>
-                  <InputLabel>檢查群組</InputLabel>
+                  <InputLabel>{t('adminGroups.checkerGroup')}</InputLabel>
                   <Select
                     value={formData.checker_id}
-                    label="檢查群組"
+                    label={t('adminGroups.checkerGroup')}
                     onChange={(e) => setFormData(prev => ({ ...prev, checker_id: e.target.value }))}
                   >
-                    <MenuItem value="">無</MenuItem>
+                    <MenuItem value="">{t('adminGroups.none')}</MenuItem>
                     {delegationGroups.map((group) => (
                       <MenuItem key={group.id} value={group.id}>
                         {group.name_zh}
@@ -379,13 +381,13 @@ const AdminGroups = () => {
                   </Select>
                 </FormControl>
                 <FormControl>
-                  <InputLabel>第一批核群組</InputLabel>
+                  <InputLabel>{t('adminGroups.approver1Group')}</InputLabel>
                   <Select
                     value={formData.approver_1_id}
-                    label="第一批核群組"
+                    label={t('adminGroups.approver1Group')}
                     onChange={(e) => setFormData(prev => ({ ...prev, approver_1_id: e.target.value }))}
                   >
-                    <MenuItem value="">無</MenuItem>
+                    <MenuItem value="">{t('adminGroups.none')}</MenuItem>
                     {delegationGroups.map((group) => (
                       <MenuItem key={group.id} value={group.id}>
                         {group.name_zh}
@@ -394,13 +396,13 @@ const AdminGroups = () => {
                   </Select>
                 </FormControl>
                 <FormControl>
-                  <InputLabel>第二批核群組</InputLabel>
+                  <InputLabel>{t('adminGroups.approver2Group')}</InputLabel>
                   <Select
                     value={formData.approver_2_id}
-                    label="第二批核群組"
+                    label={t('adminGroups.approver2Group')}
                     onChange={(e) => setFormData(prev => ({ ...prev, approver_2_id: e.target.value }))}
                   >
-                    <MenuItem value="">無</MenuItem>
+                    <MenuItem value="">{t('adminGroups.none')}</MenuItem>
                     {delegationGroups.map((group) => (
                       <MenuItem key={group.id} value={group.id}>
                         {group.name_zh}
@@ -409,13 +411,13 @@ const AdminGroups = () => {
                   </Select>
                 </FormControl>
                 <FormControl>
-                  <InputLabel>第三批核群組</InputLabel>
+                  <InputLabel>{t('adminGroups.approver3Group')}</InputLabel>
                   <Select
                     value={formData.approver_3_id}
-                    label="第三批核群組"
+                    label={t('adminGroups.approver3Group')}
                     onChange={(e) => setFormData(prev => ({ ...prev, approver_3_id: e.target.value }))}
                   >
-                    <MenuItem value="">無</MenuItem>
+                    <MenuItem value="">{t('adminGroups.none')}</MenuItem>
                     {delegationGroups.map((group) => (
                       <MenuItem key={group.id} value={group.id}>
                         {group.name_zh}
@@ -428,22 +430,22 @@ const AdminGroups = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpen(false)}>取消</Button>
-          <Button onClick={handleSubmit} variant="contained">儲存</Button>
+          <Button onClick={() => setOpen(false)}>{t('adminGroups.cancel')}</Button>
+          <Button onClick={handleSubmit} variant="contained">{t('adminGroups.save')}</Button>
         </DialogActions>
       </Dialog>
 
       <Dialog open={membersDialogOpen} onClose={() => setMembersDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>
-          群組成員 - {selectedGroup?.name_zh}
+          {t('adminGroups.membersDialogTitle', { name: selectedGroup?.name_zh })}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 3 }}>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>新增成員</Typography>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('adminGroups.addMember')}</Typography>
             <FormControl fullWidth>
-              <InputLabel>選擇使用者</InputLabel>
+              <InputLabel>{t('adminGroups.selectUser')}</InputLabel>
               <Select
-                label="選擇使用者"
+                label={t('adminGroups.selectUser')}
                 onChange={(e) => handleAddMember(e.target.value)}
                 value=""
               >
@@ -455,7 +457,7 @@ const AdminGroups = () => {
               </Select>
             </FormControl>
           </Box>
-          <Typography variant="subtitle2" sx={{ mb: 1 }}>當前成員</Typography>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('adminGroups.currentMembers')}</Typography>
           <List>
             {groupMembers.map((member) => (
               <ListItem key={member.id}>
@@ -473,7 +475,7 @@ const AdminGroups = () => {
           </List>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setMembersDialogOpen(false)}>關閉</Button>
+          <Button onClick={() => setMembersDialogOpen(false)}>{t('adminGroups.close')}</Button>
         </DialogActions>
       </Dialog>
     </Box>

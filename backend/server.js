@@ -3,10 +3,10 @@ require('dotenv').config();
 // 驗證環境變數
 console.log('=== Environment Variables Check ===');
 console.log('PORT:', process.env.PORT || '8080 (default)');
-console.log('JWT_SECRET:', process.env.JWT_SECRET ? '✅ SET (' + process.env.JWT_SECRET.length + ' chars)' : '❌ NOT SET');
-console.log('DB_HOST:', process.env.DB_HOST || 'localhost (default)');
-console.log('NODE_ENV:', process.env.NODE_ENV || 'development (default)');
-console.log('====================================\n');
+// console.log('JWT_SECRET:', process.env.JWT_SECRET ? '✅ SET (' + process.env.JWT_SECRET.length + ' chars)' : '❌ NOT SET');
+// console.log('DB_HOST:', process.env.DB_HOST || 'localhost (default)');
+// console.log('NODE_ENV:', process.env.NODE_ENV || 'development (default)');
+// console.log('====================================\n');
 
 if (!process.env.JWT_SECRET) {
   console.error('❌ ERROR: JWT_SECRET is not set!');
@@ -39,6 +39,7 @@ const leaveTypeRoutes = require('./routes/leaveType.routes');
 const approvalRoutes = require('./routes/approval.routes');
 const adminRoutes = require('./routes/admin.routes');
 const documentRoutes = require('./routes/document.routes');
+const todoRoutes = require('./routes/todo.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -50,6 +51,7 @@ app.use('/api/leave-types', leaveTypeRoutes);
 app.use('/api/approvals', approvalRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/documents', documentRoutes);
+app.use('/api/todos', todoRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

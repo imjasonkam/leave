@@ -19,8 +19,10 @@ import {
 } from '@mui/material';
 import { Add as AddIcon, Edit as EditIcon } from '@mui/icons-material';
 import axios from 'axios';
+import { useTranslation } from 'react-i18next';
 
 const AdminDepartments = () => {
+  const { t } = useTranslation();
   const [departments, setDepartments] = useState([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -69,16 +71,16 @@ const AdminDepartments = () => {
       setOpen(false);
       fetchDepartments();
     } catch (error) {
-      alert(error.response?.data?.message || '操作失敗');
+      alert(error.response?.data?.message || t('adminDepartments.operationFailed'));
     }
   };
 
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5">部門管理</Typography>
+        <Typography variant="h5">{t('adminDepartments.title')}</Typography>
         <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpen}>
-          新增部門
+          {t('adminDepartments.addDepartment')}
         </Button>
       </Box>
 
@@ -87,10 +89,10 @@ const AdminDepartments = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>名稱</TableCell>
-                <TableCell>中文名稱</TableCell>
-                <TableCell>描述</TableCell>
-                <TableCell>操作</TableCell>
+                <TableCell>{t('adminDepartments.name')}</TableCell>
+                <TableCell>{t('adminDepartments.chineseName')}</TableCell>
+                <TableCell>{t('adminDepartments.description')}</TableCell>
+                <TableCell>{t('adminDepartments.actions')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -112,23 +114,23 @@ const AdminDepartments = () => {
       </Paper>
 
       <Dialog open={open} onClose={() => setOpen(false)}>
-        <DialogTitle>{editing ? '編輯部門' : '新增部門'}</DialogTitle>
+        <DialogTitle>{editing ? t('adminDepartments.editDialogTitle') : t('adminDepartments.addDialogTitle')}</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1, minWidth: 400 }}>
             <TextField
-              label="名稱"
+              label={t('adminDepartments.name')}
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               required
             />
             <TextField
-              label="中文名稱"
+              label={t('adminDepartments.chineseName')}
               value={formData.name_zh}
               onChange={(e) => setFormData(prev => ({ ...prev, name_zh: e.target.value }))}
               required
             />
             <TextField
-              label="描述"
+              label={t('adminDepartments.description')}
               multiline
               rows={3}
               value={formData.description}
@@ -137,8 +139,8 @@ const AdminDepartments = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpen(false)}>取消</Button>
-          <Button onClick={handleSubmit} variant="contained">儲存</Button>
+          <Button onClick={() => setOpen(false)}>{t('adminDepartments.cancel')}</Button>
+          <Button onClick={handleSubmit} variant="contained">{t('adminDepartments.save')}</Button>
         </DialogActions>
       </Dialog>
     </Box>

@@ -19,10 +19,12 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 import Swal from 'sweetalert2';
 
 const AdminPaperFlow = () => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     user_id: '',
     leave_type_id: '',
@@ -174,9 +176,9 @@ const AdminPaperFlow = () => {
       setLoading(false);
       await Swal.fire({
         icon: 'error',
-        title: '驗證失敗',
-        text: '請填寫所有必填欄位',
-        confirmButtonText: '確定',
+        title: t('adminPaperFlow.validationFailed'),
+        text: t('adminPaperFlow.fillAllFields'),
+        confirmButtonText: t('common.confirm'),
         confirmButtonColor: '#d33'
       });
       return;
@@ -213,9 +215,9 @@ const AdminPaperFlow = () => {
       // 使用 Sweet Alert 顯示成功訊息
       await Swal.fire({
         icon: 'success',
-        title: '申請成功',
-        text: `Paper Flow 申請已提交並批准，交易編號：${response.data.application.transaction_id}`,
-        confirmButtonText: '確定',
+        title: t('adminPaperFlow.applicationSuccess'),
+        text: t('adminPaperFlow.applicationSubmitted', { transactionId: response.data.application.transaction_id }),
+        confirmButtonText: t('common.confirm'),
         confirmButtonColor: '#3085d6'
       });
       
@@ -237,9 +239,9 @@ const AdminPaperFlow = () => {
       // 使用 Sweet Alert 顯示錯誤訊息
       await Swal.fire({
         icon: 'error',
-        title: '提交失敗',
-        text: error.response?.data?.message || '提交申請時發生錯誤',
-        confirmButtonText: '確定',
+        title: t('adminPaperFlow.submitFailed'),
+        text: error.response?.data?.message || t('adminPaperFlow.submitError'),
+        confirmButtonText: t('common.confirm'),
         confirmButtonColor: '#d33'
       });
     } finally {
@@ -254,18 +256,18 @@ const AdminPaperFlow = () => {
     <Container maxWidth="md">
       <Paper sx={{ p: 4 }}>
         <Typography variant="h5" gutterBottom>
-          Paper Flow 假期申請（系統管理員專用）
+          {t('adminPaperFlow.title')}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          此頁面用於代員工輸入紙本假期申請，申請將直接批准並扣除餘額，不經過電子批核流程。
+          {t('adminPaperFlow.description')}
         </Typography>
 
         <Box component="form" onSubmit={handleSubmit}>
           <FormControl fullWidth sx={{ mb: 2 }} required>
-            <InputLabel>申請人</InputLabel>
+            <InputLabel>{t('adminPaperFlow.applicant')}</InputLabel>
             <Select
               value={formData.user_id}
-              label="申請人"
+              label={t('adminPaperFlow.applicant')}
               onChange={(e) => setFormData(prev => ({ ...prev, user_id: e.target.value }))}
             >
               {users.map((u) => (
@@ -277,10 +279,10 @@ const AdminPaperFlow = () => {
           </FormControl>
 
           <FormControl fullWidth sx={{ mb: 2 }} required>
-            <InputLabel>假期類型</InputLabel>
+            <InputLabel>{t('adminPaperFlow.leaveType')}</InputLabel>
             <Select
               value={formData.leave_type_id}
-              label="假期類型"
+              label={t('adminPaperFlow.leaveType')}
               onChange={(e) => setFormData(prev => ({ ...prev, leave_type_id: e.target.value }))}
             >
               {leaveTypes.map((lt) => (
@@ -292,10 +294,10 @@ const AdminPaperFlow = () => {
           </FormControl>
 
           <FormControl fullWidth sx={{ mb: 2 }} required>
-            <InputLabel>假期所屬年份</InputLabel>
+            <InputLabel>{t('adminPaperFlow.year')}</InputLabel>
             <Select
               value={formData.year}
-              label="假期所屬年份"
+              label={t('adminPaperFlow.year')}
               onChange={(e) => {
                 setFormData(prev => ({ ...prev, year: e.target.value }));
                 setYearManuallySet(true); // 標記為手動設置
@@ -305,7 +307,7 @@ const AdminPaperFlow = () => {
                 const year = new Date().getFullYear() - 1 + i; // 從去年到後年（共5年）
                 return (
                   <MenuItem key={year} value={year}>
-                    {year}年
+                    {year}{t('adminPaperFlow.yearSuffix')}
                   </MenuItem>
                 );
               })}
@@ -315,7 +317,10 @@ const AdminPaperFlow = () => {
           {selectedLeaveType?.requires_balance && balance && (
             <Box sx={{ mb: 2 }}>
               <Chip
-                label={`${selectedUser?.display_name || '申請人'} 可用餘額：${parseFloat(balance.balance).toFixed(1)} 天`}
+                label={t('adminPaperFlow.availableBalance', { 
+                  name: selectedUser?.display_name || t('adminPaperFlow.applicant'), 
+                  days: parseFloat(balance.balance).toFixed(1) 
+                })}
                 color={parseFloat(balance.balance) >= parseFloat(formData.days || 0) ? 'success' : 'error'}
                 sx={{ mb: 1 }}
               />
@@ -326,7 +331,7 @@ const AdminPaperFlow = () => {
             <Grid container spacing={2} sx={{ mb: 2 }}>
               <Grid item xs={12} sm={6}>
                 <DatePicker
-                  label="開始日期"
+                  label={t('adminPaperFlow.startDate')}
                   value={formData.start_date}
                   onChange={(date) => setFormData(prev => ({ ...prev, start_date: date }))}
                   format="DD/MM/YYYY"
@@ -335,7 +340,7 @@ const AdminPaperFlow = () => {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <DatePicker
-                  label="結束日期"
+                  label={t('adminPaperFlow.endDate')}
                   value={formData.end_date}
                   onChange={(date) => setFormData(prev => ({ ...prev, end_date: date }))}
                   format="DD/MM/YYYY"
@@ -349,27 +354,27 @@ const AdminPaperFlow = () => {
           <Grid container spacing={2} sx={{ mb: 2 }}>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth required>
-                <InputLabel>開始時段</InputLabel>
+                <InputLabel>{t('adminPaperFlow.startSession')}</InputLabel>
                 <Select
                   value={formData.start_session}
-                  label="開始時段"
+                  label={t('adminPaperFlow.startSession')}
                   onChange={(e) => setFormData(prev => ({ ...prev, start_session: e.target.value }))}
                 >
-                  <MenuItem value="AM">上午 (AM)</MenuItem>
-                  <MenuItem value="PM">下午 (PM)</MenuItem>
+                  <MenuItem value="AM">{t('adminPaperFlow.sessionAM')}</MenuItem>
+                  <MenuItem value="PM">{t('adminPaperFlow.sessionPM')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth required>
-                <InputLabel>結束時段</InputLabel>
+                <InputLabel>{t('adminPaperFlow.endSession')}</InputLabel>
                 <Select
                   value={formData.end_session}
-                  label="結束時段"
+                  label={t('adminPaperFlow.endSession')}
                   onChange={(e) => setFormData(prev => ({ ...prev, end_session: e.target.value }))}
                 >
-                  <MenuItem value="AM">上午 (AM)</MenuItem>
-                  <MenuItem value="PM">下午 (PM)</MenuItem>
+                  <MenuItem value="AM">{t('adminPaperFlow.sessionAM')}</MenuItem>
+                  <MenuItem value="PM">{t('adminPaperFlow.sessionPM')}</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -377,7 +382,7 @@ const AdminPaperFlow = () => {
 
           <TextField
             fullWidth
-            label="天數"
+            label={t('adminPaperFlow.days')}
             type="number"
             value={formData.days}
             onChange={(e) => setFormData(prev => ({ ...prev, days: e.target.value }))}
@@ -389,14 +394,14 @@ const AdminPaperFlow = () => {
           {/* 檔案 / 拍照上載區塊 */}
           <Box sx={{ mb: 2 }}>
             <Typography variant="subtitle1" sx={{ mb: 1 }}>
-              上載紙本申請或拍照檔案（選填）
+              {t('adminPaperFlow.uploadPaperOrPhoto')}
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
               <Button
                 variant="outlined"
                 component="label"
               >
-                上載檔案
+                {t('adminPaperFlow.uploadFile')}
                 <input
                   hidden
                   type="file"
@@ -411,7 +416,7 @@ const AdminPaperFlow = () => {
                 variant="outlined"
                 component="label"
               >
-                拍照上載
+                {t('adminPaperFlow.uploadPhoto')}
                 <input
                   hidden
                   type="file"
@@ -429,7 +434,7 @@ const AdminPaperFlow = () => {
             {files.length > 0 && (
               <Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                  已選擇檔案：
+                  {t('adminPaperFlow.selectedFiles')}
                 </Typography>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                   {files.map((file, index) => (
@@ -447,7 +452,7 @@ const AdminPaperFlow = () => {
                           setFiles(prev => prev.filter((_, i) => i !== index));
                         }}
                       >
-                        移除
+                        {t('adminPaperFlow.remove')}
                       </Button>
                     </Box>
                   ))}
@@ -458,7 +463,7 @@ const AdminPaperFlow = () => {
 
           <TextField
             fullWidth
-            label="原因"
+            label={t('adminPaperFlow.reason')}
             multiline
             rows={4}
             value={formData.reason}
@@ -472,7 +477,7 @@ const AdminPaperFlow = () => {
             fullWidth
             disabled={loading}
           >
-            {loading ? '提交中...' : '提交 Paper Flow 申請（直接批准）'}
+            {loading ? t('adminPaperFlow.submitting') : t('adminPaperFlow.submit')}
           </Button>
         </Box>
       </Paper>

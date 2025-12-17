@@ -24,10 +24,12 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 
 const DepartmentGroupBalances = () => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [departmentGroups, setDepartmentGroups] = useState([]);
   const [year, setYear] = useState(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
@@ -53,7 +55,7 @@ const DepartmentGroupBalances = () => {
       }
     } catch (error) {
       console.error('Fetch department group balances error:', error);
-      setError(error.response?.data?.message || '獲取部門群組假期餘額時發生錯誤');
+      setError(error.response?.data?.message || t('departmentGroupBalances.error'));
     } finally {
       setLoading(false);
     }
@@ -74,7 +76,7 @@ const DepartmentGroupBalances = () => {
       chips.push(
         <Chip 
           key="checker" 
-          label={`檢查者: ${deptGroup.checker_name_zh || deptGroup.checker_name}`} 
+          label={`${t('departmentGroupBalances.checker')}: ${deptGroup.checker_name_zh || deptGroup.checker_name}`} 
           size="small" 
           color="primary" 
           sx={{ mr: 1, mb: 1 }}
@@ -85,7 +87,7 @@ const DepartmentGroupBalances = () => {
       chips.push(
         <Chip 
           key="approver1" 
-          label={`第一批核: ${deptGroup.approver_1_name_zh || deptGroup.approver_1_name}`} 
+          label={`${t('departmentGroupBalances.approver1')}: ${deptGroup.approver_1_name_zh || deptGroup.approver_1_name}`} 
           size="small" 
           color="secondary" 
           sx={{ mr: 1, mb: 1 }}
@@ -96,7 +98,7 @@ const DepartmentGroupBalances = () => {
       chips.push(
         <Chip 
           key="approver2" 
-          label={`第二批核: ${deptGroup.approver_2_name_zh || deptGroup.approver_2_name}`} 
+          label={`${t('departmentGroupBalances.approver2')}: ${deptGroup.approver_2_name_zh || deptGroup.approver_2_name}`} 
           size="small" 
           color="success" 
           sx={{ mr: 1, mb: 1 }}
@@ -107,7 +109,7 @@ const DepartmentGroupBalances = () => {
       chips.push(
         <Chip 
           key="approver3" 
-          label={`第三批核: ${deptGroup.approver_3_name_zh || deptGroup.approver_3_name}`} 
+          label={`${t('departmentGroupBalances.approver3')}: ${deptGroup.approver_3_name_zh || deptGroup.approver_3_name}`} 
           size="small" 
           color="warning" 
           sx={{ mr: 1, mb: 1 }}
@@ -128,15 +130,15 @@ const DepartmentGroupBalances = () => {
   return (
     <Box>
       <Typography variant="h5" gutterBottom>
-        部門群組假期餘額
+        {t('departmentGroupBalances.title')}
       </Typography>
 
       <Paper sx={{ mt: 2, p: 2 }}>
         <FormControl sx={{ mb: 2, minWidth: 200 }}>
-          <InputLabel>年份</InputLabel>
+          <InputLabel>{t('departmentGroupBalances.year')}</InputLabel>
           <Select
             value={year}
-            label="年份"
+            label={t('departmentGroupBalances.year')}
             onChange={(e) => setYear(e.target.value)}
           >
             {years.map((y) => (
@@ -155,7 +157,7 @@ const DepartmentGroupBalances = () => {
 
         {departmentGroups.length === 0 ? (
           <Alert severity="info" sx={{ mt: 2 }}>
-            您目前沒有權限查看任何部門群組的假期餘額
+            {t('departmentGroupBalances.noPermission')}
           </Alert>
         ) : (
           <Box>
@@ -182,15 +184,15 @@ const DepartmentGroupBalances = () => {
                       <Table size="small">
                         <TableHead>
                           <TableRow>
-                            <TableCell>員工編號</TableCell>
-                            <TableCell>姓名</TableCell>
-                            <TableCell>部門</TableCell>
-                            <TableCell>職位</TableCell>
-                            <TableCell>假期類型</TableCell>
-                            <TableCell align="right">餘額</TableCell>
-                            <TableCell align="right">已使用</TableCell>
-                            <TableCell align="right">總額</TableCell>
-                            <TableCell>有效期</TableCell>
+                            <TableCell>{t('departmentGroupBalances.employeeNumber')}</TableCell>
+                            <TableCell>{t('departmentGroupBalances.name')}</TableCell>
+                            <TableCell>{t('departmentGroupBalances.department')}</TableCell>
+                            <TableCell>{t('departmentGroupBalances.position')}</TableCell>
+                            <TableCell>{t('departmentGroupBalances.leaveType')}</TableCell>
+                            <TableCell align="right">{t('departmentGroupBalances.balance')}</TableCell>
+                            <TableCell align="right">{t('departmentGroupBalances.taken')}</TableCell>
+                            <TableCell align="right">{t('departmentGroupBalances.total')}</TableCell>
+                            <TableCell>{t('departmentGroupBalances.validPeriod')}</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -229,11 +231,11 @@ const DepartmentGroupBalances = () => {
                                     </TableCell>
                                     <TableCell>
                                       {balance.start_date && balance.end_date ? (
-                                        `${dayjs(balance.start_date).format('YYYY-MM-DD')} 至 ${dayjs(balance.end_date).format('YYYY-MM-DD')}`
+                                        `${dayjs(balance.start_date).format('YYYY-MM-DD')} ${t('departmentGroupBalances.to')} ${dayjs(balance.end_date).format('YYYY-MM-DD')}`
                                       ) : balance.start_date ? (
-                                        `自 ${dayjs(balance.start_date).format('YYYY-MM-DD')} 起`
+                                        `${t('departmentGroupBalances.since')} ${dayjs(balance.start_date).format('YYYY-MM-DD')}`
                                       ) : balance.end_date ? (
-                                        `至 ${dayjs(balance.end_date).format('YYYY-MM-DD')} 止`
+                                        `${t('departmentGroupBalances.until')} ${dayjs(balance.end_date).format('YYYY-MM-DD')}`
                                       ) : (
                                         '-'
                                       )}
@@ -249,7 +251,7 @@ const DepartmentGroupBalances = () => {
                                   <TableCell>{member.department_name_zh || member.department_name}</TableCell>
                                   <TableCell>{member.position_name_zh || member.position_name}</TableCell>
                                   <TableCell colSpan={5} align="center">
-                                    無假期餘額記錄
+                                    {t('departmentGroupBalances.noBalanceRecords')}
                                   </TableCell>
                                 </TableRow>
                               )}
@@ -260,7 +262,7 @@ const DepartmentGroupBalances = () => {
                     </TableContainer>
                   ) : (
                     <Alert severity="info">
-                      此部門群組目前沒有成員
+                      {t('departmentGroupBalances.noMembers')}
                     </Alert>
                   )}
                 </AccordionDetails>
