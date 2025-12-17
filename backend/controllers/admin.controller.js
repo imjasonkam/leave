@@ -46,6 +46,7 @@ class AdminController {
         given_name,
         alias,
         name_zh,
+        display_name: name_zh, // 同時設置 display_name 以便前端顯示
         email,
         password_hash: passwordHash,
         department_id: department_id || null,
@@ -75,6 +76,11 @@ class AdminController {
       if (updateData.password) {
         updateData.password_hash = await hashPassword(updateData.password);
         delete updateData.password;
+      }
+
+      // 如果更新了 name_zh，同時更新 display_name
+      if (updateData.name_zh) {
+        updateData.display_name = updateData.name_zh;
       }
 
       const user = await User.update(id, updateData);

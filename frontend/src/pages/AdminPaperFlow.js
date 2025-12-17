@@ -7,7 +7,6 @@ import {
   Typography,
   Box,
   MenuItem,
-  Alert,
   Grid,
   InputLabel,
   Select,
@@ -20,6 +19,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import Swal from 'sweetalert2';
 
 const AdminPaperFlow = () => {
   const { user } = useAuth();
@@ -37,8 +37,6 @@ const AdminPaperFlow = () => {
   const [leaveTypes, setLeaveTypes] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [balance, setBalance] = useState(null);
   const [files, setFiles] = useState([]);
   const [yearManuallySet, setYearManuallySet] = useState(false); // 標記年份是否被手動設置
@@ -169,14 +167,18 @@ const AdminPaperFlow = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
     setLoading(true);
 
     if (!formData.user_id || !formData.leave_type_id || !formData.start_date || !formData.start_session || 
         !formData.end_date || !formData.end_session || !formData.days) {
-      setError('請填寫所有必填欄位');
       setLoading(false);
+      await Swal.fire({
+        icon: 'error',
+        title: '驗證失敗',
+        text: '請填寫所有必填欄位',
+        confirmButtonText: '確定',
+        confirmButtonColor: '#d33'
+      });
       return;
     }
 
@@ -207,7 +209,16 @@ const AdminPaperFlow = () => {
           'Content-Type': 'multipart/form-data'
         }
       });
-      setSuccess(`Paper Flow 申請已提交並批准，交易編號：${response.data.application.transaction_id}`);
+      
+      // 使用 Sweet Alert 顯示成功訊息
+      await Swal.fire({
+        icon: 'success',
+        title: '申請成功',
+        text: `Paper Flow 申請已提交並批准，交易編號：${response.data.application.transaction_id}`,
+        confirmButtonText: '確定',
+        confirmButtonColor: '#3085d6'
+      });
+      
       setFormData({
         user_id: '',
         leave_type_id: '',
@@ -223,7 +234,14 @@ const AdminPaperFlow = () => {
       setFiles([]);
       setYearManuallySet(false); // 重置年份手動設置標記
     } catch (error) {
-      setError(error.response?.data?.message || '提交申請時發生錯誤');
+      // 使用 Sweet Alert 顯示錯誤訊息
+      await Swal.fire({
+        icon: 'error',
+        title: '提交失敗',
+        text: error.response?.data?.message || '提交申請時發生錯誤',
+        confirmButtonText: '確定',
+        confirmButtonColor: '#d33'
+      });
     } finally {
       setLoading(false);
     }
@@ -241,18 +259,6 @@ const AdminPaperFlow = () => {
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           此頁面用於代員工輸入紙本假期申請，申請將直接批准並扣除餘額，不經過電子批核流程。
         </Typography>
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
-        {success && (
-          <Alert severity="success" sx={{ mb: 2 }}>
-            {success}
-          </Alert>
-        )}
 
         <Box component="form" onSubmit={handleSubmit}>
           <FormControl fullWidth sx={{ mb: 2 }} required>
