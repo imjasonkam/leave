@@ -68,7 +68,7 @@
     "groupManagement": "Group Management",
     "changePassword": "Change Password",
     "logout": "Logout",
-    "systemTitle": "Leave Management System"
+    "systemTitle": "Staff Portal"
   },
   "dashboard": {
     "welcome": "Welcome, {{name}}",

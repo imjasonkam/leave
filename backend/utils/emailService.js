@@ -207,7 +207,7 @@ class EmailService {
       }
       
       const mailOptions = {
-        from: `"Leave Management System" <${fromEmail}>`,
+        from: `"Staff Portal" <${fromEmail}>`,
         to: to,
         subject: subject,
         html: html,
@@ -288,7 +288,7 @@ class EmailService {
     const leaveTypeName = leaveType?.name || leaveType?.name_zh || 'Leave';
     const transactionId = application.transaction_id || `LA-${String(application.id).padStart(6, '0')}`;
 
-    const subject = `[Leave Management System] New Leave Application Requires Approval - ${stageName}`;
+    const subject = `[Staff Portal] New Leave Application Requires Approval - ${stageName}`;
     
     const html = `
       <!DOCTYPE html>
@@ -344,13 +344,13 @@ class EmailService {
             <p style="margin-top: 20px;">
               <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/approvals/${application.id}" 
                  style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                Review Application
+                View Application
               </a>
             </p>
           </div>
           <div class="footer">
             <p>This is an automated email. Please do not reply directly.</p>
-            <p>Leave Management System</p>
+            <p>Staff Portal</p>
           </div>
         </div>
       </body>
@@ -389,7 +389,7 @@ class EmailService {
     const leaveTypeName = leaveType?.name || leaveType?.name_zh || 'Leave';
     const transactionId = application.transaction_id || `LA-${String(application.id).padStart(6, '0')}`;
 
-    const subject = `[Leave Management System] Your Leave Application Has Been Approved`;
+    const subject = `[Staff Portal] Your Leave Application Has Been Approved`;
     
     const html = `
       <!DOCTYPE html>
@@ -448,7 +448,7 @@ class EmailService {
           </div>
           <div class="footer">
             <p>This is an automated email. Please do not reply directly.</p>
-            <p>Leave Management System</p>
+            <p>Staff Portal</p>
           </div>
         </div>
       </body>
@@ -480,7 +480,7 @@ class EmailService {
     const leaveTypeName = leaveType?.name || leaveType?.name_zh || 'Leave';
     const transactionId = application.transaction_id || `LA-${String(application.id).padStart(6, '0')}`;
 
-    const subject = `[Leave Management System] Your Leave Application Has Been Rejected`;
+    const subject = `[Staff Portal] Your Leave Application Has Been Rejected`;
     
     const html = `
       <!DOCTYPE html>
@@ -541,7 +541,7 @@ class EmailService {
           </div>
           <div class="footer">
             <p>This is an automated email. Please do not reply directly.</p>
-            <p>Leave Management System</p>
+            <p>Staff Portal</p>
           </div>
         </div>
       </body>
@@ -599,7 +599,7 @@ class EmailService {
     const leaveTypeName = leaveType?.name || leaveType?.name_zh || 'Leave';
     const transactionId = application.transaction_id || `LA-${String(application.id).padStart(6, '0')}`;
 
-    const subject = `[Leave Management System] HR Group Member Has Rejected Leave Application`;
+    const subject = `[Staff Portal] HR Group Member Has Rejected Leave Application`;
     
     const html = `
       <!DOCTYPE html>
@@ -666,7 +666,7 @@ class EmailService {
           </div>
           <div class="footer">
             <p>This is an automated email. Please do not reply directly.</p>
-            <p>Leave Management System</p>
+            <p>Staff Portal</p>
           </div>
         </div>
       </body>

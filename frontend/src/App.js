@@ -28,7 +28,7 @@ import EmployeeDocuments from './pages/EmployeeDocuments';
 import DepartmentGroupBalances from './pages/DepartmentGroupBalances';
 
 // 設定後端 API 地址
-axios.defaults.baseURL = 'http://172.31.132.67:8080';
+axios.defaults.baseURL = 'http://localhost:8080';
 
 const theme = createTheme({
   palette: {

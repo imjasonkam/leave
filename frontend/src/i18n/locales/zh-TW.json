@@ -68,7 +68,7 @@
     "groupManagement": "群組管理",
     "changePassword": "更改密碼",
     "logout": "登出",
-    "systemTitle": "假期管理系統"
+    "systemTitle": "內部職員系統"
   },
   "dashboard": {
     "welcome": "歡迎，{{name}}",
