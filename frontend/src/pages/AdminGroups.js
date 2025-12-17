@@ -139,6 +139,12 @@ const AdminGroups = () => {
   };
 
   const handleSubmit = async () => {
+    // 前端驗證必填欄位
+    if (!formData.name || !formData.name_zh) {
+      alert('請填寫所有必填欄位（名稱、中文名稱）');
+      return;
+    }
+
     try {
       const endpoint = selectedGroupType === 'department' ? '/api/groups/department' : '/api/groups/delegation';
       if (editing) {
@@ -149,7 +155,9 @@ const AdminGroups = () => {
       setOpen(false);
       fetchGroups();
     } catch (error) {
-      alert(error.response?.data?.message || '操作失敗');
+      const errorMessage = error.response?.data?.message || error.message || '操作失敗';
+      alert(errorMessage);
+      console.error('Submit error:', error);
     }
   };
 
