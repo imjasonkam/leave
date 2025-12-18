@@ -317,7 +317,7 @@
   },
   "approvalHistory": {
     "title": "Approval History",
-    "searchPlaceholder": "Search transaction ID, applicant, leave type...",
+    "searchPlaceholder": "Search transaction ID, applicant, username, leave type...",
     "statusFilter": "Status Filter",
     "all": "All",
     "approved": "Approved",

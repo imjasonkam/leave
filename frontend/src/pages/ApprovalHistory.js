@@ -53,6 +53,7 @@ const ApprovalHistory = () => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const navigate = useNavigate();
   const [fileDialogOpen, setFileDialogOpen] = useState(false);
@@ -220,15 +221,29 @@ const ApprovalHistory = () => {
     return leaveTypeName;
   };
 
+  const handleSearch = () => {
+    setSearchKeyword(search);
+  };
+
+  const handleSearchKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
   const filteredApplications = applications.filter(app => {
-    const keyword = search.toLowerCase();
+    if (!searchKeyword) return true;
+    
+    const keyword = searchKeyword.toLowerCase();
     const transactionId = app.transaction_id?.toString().toLowerCase() || '';
     const leaveTypeNameZh = app.leave_type_name_zh?.toLowerCase() || '';
     const applicantNameZh = app.applicant_display_name?.toLowerCase() || '';
+    const applicantUsername = (app.applicant_employee_number || app.user_employee_number || '').toLowerCase();
     
     return transactionId.includes(keyword) ||
            leaveTypeNameZh.includes(keyword) ||
-           applicantNameZh.includes(keyword);
+           applicantNameZh.includes(keyword) ||
+           applicantUsername.includes(keyword);
   });
 
   const isHRMember = user?.is_hr_member || user?.is_system_admin;
@@ -429,6 +444,7 @@ const ApprovalHistory = () => {
           placeholder={t('approvalHistory.searchPlaceholder')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          onKeyPress={handleSearchKeyPress}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -438,6 +454,13 @@ const ApprovalHistory = () => {
           }}
           sx={{ flexGrow: 1 }}
         />
+        <Button
+          variant="contained"
+          onClick={handleSearch}
+          startIcon={<SearchIcon />}
+        >
+          {t('common.search')}
+        </Button>
         <FormControl sx={{ minWidth: 150 }}>
           <InputLabel>{t('approvalHistory.statusFilter')}</InputLabel>
           <Select
@@ -485,7 +508,14 @@ const ApprovalHistory = () => {
                   <React.Fragment key={app.id}>
                     <TableRow hover>
                       <TableCell>{app.transaction_id}</TableCell>
-                      <TableCell>{app.applicant_display_name}</TableCell>
+                      <TableCell>
+                        {app.applicant_display_name}
+                        {(app.applicant_employee_number || app.user_employee_number) && (
+                          <Typography variant="body2" color="text.secondary" component="span" sx={{ ml: 1 }}>
+                            ({app.applicant_employee_number || app.user_employee_number})
+                          </Typography>
+                        )}
+                      </TableCell>
                       <TableCell>{getLeaveTypeDisplay(app)}</TableCell>
                       <TableCell>
                         {app.year || (app.start_date ? new Date(app.start_date).getFullYear() : '-')}{t('approvalHistory.yearSuffix')}
@@ -554,7 +584,14 @@ const ApprovalHistory = () => {
                               {reversal.transaction_id}
                             </Box>
                           </TableCell>
-                          <TableCell>{reversal.applicant_display_name}</TableCell>
+                          <TableCell>
+                            {reversal.applicant_display_name}
+                            {(reversal.applicant_employee_number || reversal.user_employee_number) && (
+                              <Typography variant="body2" color="text.secondary" component="span" sx={{ ml: 1 }}>
+                                ({reversal.applicant_employee_number || reversal.user_employee_number})
+                              </Typography>
+                            )}
+                          </TableCell>
                           <TableCell>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Chip

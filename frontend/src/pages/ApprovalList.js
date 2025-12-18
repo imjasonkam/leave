@@ -114,7 +114,14 @@ const ApprovalList = () => {
                   return (
                     <TableRow key={app.id} hover>
                       <TableCell>{app.transaction_id}</TableCell>
-                      <TableCell>{app.applicant_display_name}</TableCell>
+                      <TableCell>
+                        {app.applicant_display_name}
+                        {(app.applicant_employee_number || app.user_employee_number) && (
+                          <Typography variant="body2" color="text.secondary" component="span" sx={{ ml: 1 }}>
+                            ({app.applicant_employee_number || app.user_employee_number})
+                          </Typography>
+                        )}
+                      </TableCell>
                       <TableCell>
                         {i18n.language === 'en' 
                           ? (app.leave_type_name || app.leave_type_name_zh || '')

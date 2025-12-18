@@ -313,7 +313,7 @@
   },
   "approvalHistory": {
     "title": "批核记录",
-    "searchPlaceholder": "搜索交易编号、申请人、假期类型...",
+    "searchPlaceholder": "搜索交易编号、申请人、用户名、假期类型...",
     "statusFilter": "状态筛选",
     "all": "全部",
     "approved": "已批准",

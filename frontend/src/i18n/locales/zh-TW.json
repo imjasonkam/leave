@@ -318,7 +318,7 @@
   },
   "approvalHistory": {
     "title": "批核記錄",
-    "searchPlaceholder": "搜尋交易編號、申請人、假期類型...",
+    "searchPlaceholder": "搜尋交易編號、申請人、用戶名、假期類型...",
     "statusFilter": "狀態篩選",
     "all": "全部",
     "approved": "已批准",
