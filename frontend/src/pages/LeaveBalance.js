@@ -64,9 +64,9 @@ const LeaveBalance = () => {
             <TableHead>
               <TableRow>
                 <TableCell>{t('leaveBalance.leaveType')}</TableCell>
-                <TableCell align="right">{t('leaveBalance.balance')}</TableCell>
+                <TableCell align="right">{t('leaveBalance.entitlement')}</TableCell>
                 <TableCell align="right">{t('leaveBalance.taken')}</TableCell>
-                <TableCell align="right">{t('leaveBalance.total')}</TableCell>
+                <TableCell align="right">{t('leaveBalance.balance')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -85,13 +85,19 @@ const LeaveBalance = () => {
                       {balance.leave_type_name_zh} ({balance.leave_type_code})
                     </TableCell>
                     <TableCell align="right">
-                      <strong>{parseFloat(balance.balance).toFixed(1)}</strong>
+                      {parseFloat(balance.total).toFixed(1)}
                     </TableCell>
                     <TableCell align="right">
                       {parseFloat(balance.taken).toFixed(1)}
                     </TableCell>
-                    <TableCell align="right">
-                      {(parseFloat(balance.balance) + parseFloat(balance.taken)).toFixed(1)}
+                    <TableCell 
+                      align="right"
+                      sx={{
+                        color: parseFloat(balance.balance) < 0 ? 'error.main' : 'inherit',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      {parseFloat(balance.balance).toFixed(1)}
                     </TableCell>
                   </TableRow>
                 ))

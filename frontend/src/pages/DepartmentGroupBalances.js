@@ -181,9 +181,9 @@ const DepartmentGroupBalances = () => {
                             <TableCell>{t('departmentGroupBalances.department')}</TableCell>
                             <TableCell>{t('departmentGroupBalances.position')}</TableCell>
                             <TableCell>{t('departmentGroupBalances.leaveType')}</TableCell>
-                            <TableCell align="right">{t('departmentGroupBalances.balance')}</TableCell>
+                            <TableCell align="right">{t('departmentGroupBalances.entitlement')}</TableCell>
                             <TableCell align="right">{t('departmentGroupBalances.taken')}</TableCell>
-                            <TableCell align="right">{t('departmentGroupBalances.total')}</TableCell>
+                            <TableCell align="right">{t('departmentGroupBalances.balance')}</TableCell>
                             <TableCell>{t('departmentGroupBalances.validPeriod')}</TableCell>
                           </TableRow>
                         </TableHead>
@@ -213,13 +213,19 @@ const DepartmentGroupBalances = () => {
                                       {balance.leave_type_name_zh} ({balance.leave_type_code})
                                     </TableCell>
                                     <TableCell align="right">
-                                      <strong>{parseFloat(balance.balance).toFixed(1)}</strong>
+                                      {parseFloat(balance.total).toFixed(1)}
                                     </TableCell>
                                     <TableCell align="right">
                                       {parseFloat(balance.taken).toFixed(1)}
                                     </TableCell>
-                                    <TableCell align="right">
-                                      {(parseFloat(balance.balance) + parseFloat(balance.taken)).toFixed(1)}
+                                    <TableCell 
+                                      align="right"
+                                      sx={{
+                                        color: parseFloat(balance.balance) < 0 ? 'error.main' : 'inherit',
+                                        fontWeight: 'bold'
+                                      }}
+                                    >
+                                      {parseFloat(balance.balance).toFixed(1)}
                                     </TableCell>
                                     <TableCell>
                                       {balance.start_date && balance.end_date ? (
@@ -242,7 +248,7 @@ const DepartmentGroupBalances = () => {
                                   </TableCell>
                                   <TableCell>{member.department_name_zh || member.department_name}</TableCell>
                                   <TableCell>{member.position_name_zh || member.position_name}</TableCell>
-                                  <TableCell colSpan={5} align="center">
+                                  <TableCell colSpan={4} align="center">
                                     {t('departmentGroupBalances.noBalanceRecords')}
                                   </TableCell>
                                 </TableRow>

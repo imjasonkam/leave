@@ -28,7 +28,11 @@ import {
   IconButton,
   Alert,
   Link,
-  Snackbar
+  Snackbar,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Grid
 } from '@mui/material';
 import { 
   Visibility as VisibilityIcon, 
@@ -39,7 +43,8 @@ import {
   Description as DescriptionIcon,
   Image as ImageIcon,
   Close as CloseIcon,
-  Undo as UndoIcon
+  Undo as UndoIcon,
+  ExpandMore as ExpandMoreIcon
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
@@ -56,6 +61,22 @@ const ApprovalHistory = () => {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const navigate = useNavigate();
+  
+  // 獲取當前年份和月份作為預設值
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1; // getMonth() 返回 0-11，所以需要 +1
+  
+  // 進階搜尋狀態
+  const [advancedSearchExpanded, setAdvancedSearchExpanded] = useState(false);
+  const [filterLeaveType, setFilterLeaveType] = useState('');
+  const [filterFlowType, setFilterFlowType] = useState('');
+  const [filterYear, setFilterYear] = useState(currentYear.toString());
+  const [filterMonth, setFilterMonth] = useState(currentMonth.toString());
+  const [filterDepartmentGroup, setFilterDepartmentGroup] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [leaveTypes, setLeaveTypes] = useState([]);
+  const [departmentGroups, setDepartmentGroups] = useState([]);
   const [fileDialogOpen, setFileDialogOpen] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [documents, setDocuments] = useState([]);
@@ -69,16 +90,64 @@ const ApprovalHistory = () => {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   useEffect(() => {
+    fetchLeaveTypes();
+    fetchDepartmentGroups();
     fetchApprovalHistory();
-  }, [statusFilter]);
+  }, []);
+
+  const fetchLeaveTypes = async () => {
+    try {
+      const response = await axios.get('/api/leave-types');
+      setLeaveTypes(response.data.leaveTypes || []);
+    } catch (error) {
+      console.error('Fetch leave types error:', error);
+    }
+  };
+
+  const fetchDepartmentGroups = async () => {
+    try {
+      const response = await axios.get('/api/groups/department');
+      setDepartmentGroups(response.data.groups || []);
+    } catch (error) {
+      console.error('Fetch department groups error:', error);
+    }
+  };
 
   const fetchApprovalHistory = async () => {
     try {
       setLoading(true);
       const params = {};
+      
+      // 狀態篩選
       if (statusFilter !== 'all') {
         params.status = statusFilter;
       }
+      
+      // 進階搜尋參數
+      if (filterLeaveType) params.leave_type_id = filterLeaveType;
+      if (filterFlowType) params.flow_type = filterFlowType;
+      if (filterDepartmentGroup) params.department_group_id = filterDepartmentGroup;
+      if (filterYear) {
+        const yearStr = String(filterYear).trim();
+        if (yearStr) {
+          const yearNum = parseInt(yearStr);
+          if (!isNaN(yearNum) && yearNum > 0) {
+            params.year = yearNum;
+          }
+        }
+      }
+      if (filterMonth) {
+        const monthStr = String(filterMonth).trim();
+        if (monthStr) {
+          const monthNum = parseInt(monthStr);
+          if (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) {
+            params.month = monthNum;
+          }
+        }
+      }
+      if (dateFrom) params.start_date_from = dateFrom;
+      if (dateTo) params.end_date_to = dateTo;
+      
       const response = await axios.get('/api/approvals/history', { params });
       setApplications(response.data.applications || []);
     } catch (error) {
@@ -86,6 +155,22 @@ const ApprovalHistory = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleApplyFilter = () => {
+    fetchApprovalHistory();
+  };
+
+  const handleClearFilter = () => {
+    setStatusFilter('all');
+    setFilterLeaveType('');
+    setFilterFlowType('');
+    setFilterYear(currentYear.toString());
+    setFilterMonth(currentMonth.toString());
+    setFilterDepartmentGroup('');
+    setDateFrom('');
+    setDateTo('');
+    fetchApprovalHistory();
   };
 
   const getStatusColor = (application) => {
@@ -439,8 +524,9 @@ const ApprovalHistory = () => {
         {t('approvalHistory.title')}
       </Typography>
 
-      <Box sx={{ display: 'flex', gap: 2, mb: 2, mt: 2 }}>
+      <Paper sx={{ mt: 2, p: 2 }}>
         <TextField
+          fullWidth
           placeholder={t('approvalHistory.searchPlaceholder')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -452,8 +538,166 @@ const ApprovalHistory = () => {
               </InputAdornment>
             ),
           }}
-          sx={{ flexGrow: 1 }}
+          sx={{ mb: 2 }}
+          label={t('approvalHistory.searchKeyword') || t('common.search')}
         />
+
+        {/* 進階搜尋 */}
+        <Accordion expanded={advancedSearchExpanded} onChange={(e, expanded) => setAdvancedSearchExpanded(expanded)} sx={{ mb: 2 }}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="subtitle1">{t('approvalHistory.advancedSearch') || t('leaveHistory.advancedSearch')}</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6} md={3}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>{t('approvalHistory.statusFilter')}</InputLabel>
+                  <Select
+                    value={statusFilter}
+                    onChange={(e) => {
+                      setStatusFilter(e.target.value);
+                      // 狀態改變時立即觸發搜尋
+                      setTimeout(() => fetchApprovalHistory(), 0);
+                    }}
+                    label={t('approvalHistory.statusFilter')}
+                  >
+                    <MenuItem value="all">{t('approvalHistory.all')}</MenuItem>
+                    <MenuItem value="approved">{t('approvalHistory.approved')}</MenuItem>
+                    <MenuItem value="rejected">{t('approvalHistory.rejected')}</MenuItem>
+                    <MenuItem value="cancelled">{t('approvalHistory.cancelled')}</MenuItem>
+                    <MenuItem value="reversed">{t('approvalHistory.reversed')}</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={12} sm={6} md={3}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>{t('approvalHistory.leaveTypeFilter') || t('leaveHistory.leaveTypeFilter')}</InputLabel>
+                  <Select
+                    value={filterLeaveType}
+                    onChange={(e) => setFilterLeaveType(e.target.value)}
+                    label={t('approvalHistory.leaveTypeFilter') || t('leaveHistory.leaveTypeFilter')}
+                  >
+                    <MenuItem value="">{t('approvalHistory.allLeaveTypes') || t('leaveHistory.allLeaveTypes')}</MenuItem>
+                    {leaveTypes.map((type) => (
+                      <MenuItem key={type.id} value={type.id}>
+                        {i18n.language === 'en' ? (type.name || type.name_zh) : (type.name_zh || type.name)}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>{t('approvalHistory.flowTypeFilter') || t('leaveHistory.flowTypeFilter')}</InputLabel>
+                  <Select
+                    value={filterFlowType}
+                    onChange={(e) => setFilterFlowType(e.target.value)}
+                    label={t('approvalHistory.flowTypeFilter') || t('leaveHistory.flowTypeFilter')}
+                  >
+                    <MenuItem value="">{t('approvalHistory.allFlowTypes') || t('leaveHistory.allFlowTypes')}</MenuItem>
+                    <MenuItem value="e-flow">{t('approvalHistory.eFlow') || t('leaveHistory.eFlow')}</MenuItem>
+                    <MenuItem value="paper-flow">{t('approvalHistory.paperFlow') || t('leaveHistory.paperFlow')}</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>{t('approvalHistory.departmentGroupFilter') || t('leaveHistory.departmentGroupFilter')}</InputLabel>
+                  <Select
+                    value={filterDepartmentGroup}
+                    onChange={(e) => setFilterDepartmentGroup(e.target.value)}
+                    label={t('approvalHistory.departmentGroupFilter') || t('leaveHistory.departmentGroupFilter')}
+                  >
+                    <MenuItem value="">{t('approvalHistory.allDepartmentGroups') || t('leaveHistory.allDepartmentGroups')}</MenuItem>
+                    {departmentGroups.map((group) => (
+                      <MenuItem key={group.id} value={group.id}>
+                        {i18n.language === 'en' ? (group.name || group.name_zh) : (group.name_zh || group.name)}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  type="number"
+                  label={t('approvalHistory.yearFilter') || t('leaveHistory.yearFilter')}
+                  value={filterYear}
+                  onChange={(e) => setFilterYear(e.target.value)}
+                  placeholder={t('approvalHistory.allYears') || t('leaveHistory.allYears')}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>{t('approvalHistory.monthFilter') || t('leaveHistory.monthFilter')}</InputLabel>
+                  <Select
+                    value={filterMonth}
+                    onChange={(e) => setFilterMonth(e.target.value)}
+                    label={t('approvalHistory.monthFilter') || t('leaveHistory.monthFilter')}
+                  >
+                    <MenuItem value="">{t('approvalHistory.allMonths') || t('leaveHistory.allMonths')}</MenuItem>
+                    <MenuItem value="1">{t('approvalHistory.month1') || '1月'}</MenuItem>
+                    <MenuItem value="2">{t('approvalHistory.month2') || '2月'}</MenuItem>
+                    <MenuItem value="3">{t('approvalHistory.month3') || '3月'}</MenuItem>
+                    <MenuItem value="4">{t('approvalHistory.month4') || '4月'}</MenuItem>
+                    <MenuItem value="5">{t('approvalHistory.month5') || '5月'}</MenuItem>
+                    <MenuItem value="6">{t('approvalHistory.month6') || '6月'}</MenuItem>
+                    <MenuItem value="7">{t('approvalHistory.month7') || '7月'}</MenuItem>
+                    <MenuItem value="8">{t('approvalHistory.month8') || '8月'}</MenuItem>
+                    <MenuItem value="9">{t('approvalHistory.month9') || '9月'}</MenuItem>
+                    <MenuItem value="10">{t('approvalHistory.month10') || '10月'}</MenuItem>
+                    <MenuItem value="11">{t('approvalHistory.month11') || '11月'}</MenuItem>
+                    <MenuItem value="12">{t('approvalHistory.month12') || '12月'}</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  type="date"
+                  label={t('approvalHistory.dateFrom') || t('leaveHistory.dateFrom')}
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  type="date"
+                  label={t('approvalHistory.dateTo') || t('leaveHistory.dateTo')}
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                  <Button variant="outlined" onClick={handleClearFilter}>
+                    {t('approvalHistory.clearFilter') || t('leaveHistory.clearFilter')}
+                  </Button>
+                  <Button variant="contained" onClick={handleApplyFilter}>
+                    {t('approvalHistory.applyFilter') || t('leaveHistory.applyFilter')}
+                  </Button>
+                </Box>
+              </Grid>
+            </Grid>
+          </AccordionDetails>
+        </Accordion>
+      </Paper>
+
+      <Box sx={{ display: 'flex', gap: 2, mb: 2, mt: 2 }}>
         <Button
           variant="contained"
           onClick={handleSearch}
@@ -461,22 +705,9 @@ const ApprovalHistory = () => {
         >
           {t('common.search')}
         </Button>
-        <FormControl sx={{ minWidth: 150 }}>
-          <InputLabel>{t('approvalHistory.statusFilter')}</InputLabel>
-          <Select
-            value={statusFilter}
-            label={t('approvalHistory.statusFilter')}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <MenuItem value="all">{t('approvalHistory.all')}</MenuItem>
-            <MenuItem value="approved">{t('approvalHistory.approved')}</MenuItem>
-            <MenuItem value="rejected">{t('approvalHistory.rejected')}</MenuItem>
-            <MenuItem value="cancelled">{t('approvalHistory.cancelled')}</MenuItem>
-          </Select>
-        </FormControl>
       </Box>
 
-      <Paper sx={{ mt: 2 }}>
+      <Paper>
         <TableContainer>
           <Table>
             <TableHead>

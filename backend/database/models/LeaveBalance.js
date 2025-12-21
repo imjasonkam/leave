@@ -57,8 +57,8 @@ class LeaveBalance {
       // 如果出錯，taken 保持為 0
     }
     
-    // 可用餘額 = 總餘額（HR 輸入的額度）- 已使用的天數
-    const balance = Math.max(0, totalBalance - taken);
+    // 可用餘額 = 總餘額（HR 輸入的額度）- 已使用的天數（允許負數）
+    const balance = totalBalance - taken;
     
     return {
       user_id: userId,
@@ -136,8 +136,8 @@ class LeaveBalance {
           // 如果出錯，taken 保持為 0
         }
         
-        // 可用餘額 = 總餘額（HR 輸入的額度）- 已使用的天數
-        const balance = Math.max(0, totalBalance - taken);
+        // 可用餘額 = 總餘額（HR 輸入的額度）- 已使用的天數（允許負數）
+        const balance = totalBalance - taken;
         
         // 獲取有效期信息（從所有正數交易中獲取最早開始日期和最晚結束日期，只考慮 HR 成員創建的記錄）
         let start_date = null;

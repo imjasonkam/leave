@@ -20,9 +20,17 @@ import {
   DialogContentText,
   DialogActions,
   Alert,
-  Snackbar
+  Snackbar,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Grid,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel
 } from '@mui/material';
-import { Search as SearchIcon, Undo as UndoIcon } from '@mui/icons-material';
+import { Search as SearchIcon, Undo as UndoIcon, ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
@@ -33,6 +41,7 @@ const LeaveHistory = () => {
   const { t, i18n } = useTranslation();
   const { user, isSystemAdmin, isDeptHead } = useAuth();
   const [applications, setApplications] = useState([]);
+  const [allApplications, setAllApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [reversalDialogOpen, setReversalDialogOpen] = useState(false);
@@ -40,26 +49,63 @@ const LeaveHistory = () => {
   const [reversing, setReversing] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const navigate = useNavigate();
+  
+  // 獲取當前年份作為預設值
+  const currentYear = new Date().getFullYear();
+  
+  // 進階搜尋狀態
+  const [advancedSearchExpanded, setAdvancedSearchExpanded] = useState(false);
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterLeaveType, setFilterLeaveType] = useState('');
+  const [filterFlowType, setFilterFlowType] = useState('');
+  const [filterYear, setFilterYear] = useState(currentYear.toString());
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [leaveTypes, setLeaveTypes] = useState([]);
 
   useEffect(() => {
     if (user) {
       fetchApplications();
+      fetchLeaveTypes();
     }
   }, [user]);
+
+  const fetchLeaveTypes = async () => {
+    try {
+      const response = await axios.get('/api/leave-types');
+      setLeaveTypes(response.data.leaveTypes || []);
+    } catch (error) {
+      console.error('Fetch leave types error:', error);
+    }
+  };
 
   const fetchApplications = async () => {
     if (!user) return;
     
     try {
       setLoading(true);
-      // 只獲取使用者本人的申請記錄，不包含批核清單
+      
+      // 構建查詢參數
       const params = {};
+      
+      // 進階搜尋參數
+      if (filterStatus) params.status = filterStatus;
+      if (filterLeaveType) params.leave_type_id = filterLeaveType;
+      if (filterFlowType) params.flow_type = filterFlowType;
+      if (filterYear && filterYear.trim()) {
+        const yearNum = parseInt(filterYear);
+        if (!isNaN(yearNum) && yearNum > 0) {
+          params.year = yearNum;
+        }
+      }
+      if (dateFrom) params.start_date_from = dateFrom;
+      if (dateTo) params.end_date_to = dateTo;
 
       const response = await axios.get('/api/leaves', { params });
-      const allApplications = response.data.applications || [];
+      const fetchedApplications = response.data.applications || [];
       
       // 過濾只顯示使用者本人的申請，且必須是 e-flow 或 paper-flow
-      const myApplications = allApplications.filter(app => {
+      const myApplications = fetchedApplications.filter(app => {
         // 確保是使用者本人的申請
         const isMyApplication = app.user_id === user.id;
         
@@ -70,12 +116,27 @@ const LeaveHistory = () => {
         return isMyApplication && (isEFlow || isPaperFlow);
       });
       
+      setAllApplications(myApplications);
       setApplications(myApplications);
     } catch (error) {
       console.error('Fetch applications error:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleApplyFilter = () => {
+    fetchApplications();
+  };
+
+  const handleClearFilter = () => {
+    setFilterStatus('');
+    setFilterLeaveType('');
+    setFilterFlowType('');
+    setFilterYear(currentYear.toString()); // 清除時重置為當前年份
+    setDateFrom('');
+    setDateTo('');
+    fetchApplications();
   };
 
   const getStatusColor = (application) => {
@@ -191,7 +252,12 @@ const LeaveHistory = () => {
   };
 
   const filteredApplications = applications.filter(app => {
-    const keyword = search.toLowerCase();
+    // 如果沒有搜尋關鍵字，顯示所有通過進階搜尋的結果
+    if (!search.trim()) {
+      return true;
+    }
+
+    const keyword = search.toLowerCase().trim();
     const transactionId = app.transaction_id?.toString().toLowerCase() || '';
     // 根據語言選擇假期類型名稱用於搜索
     const leaveTypeName = i18n.language === 'en'
@@ -228,7 +294,115 @@ const LeaveHistory = () => {
             )
           }}
           sx={{ mb: 2 }}
+          label={t('leaveHistory.searchKeyword')}
         />
+
+        {/* 進階搜尋 */}
+        <Accordion expanded={advancedSearchExpanded} onChange={(e, expanded) => setAdvancedSearchExpanded(expanded)} sx={{ mb: 2 }}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography variant="subtitle1">{t('leaveHistory.advancedSearch')}</Typography>
+          </AccordionSummary>
+          <AccordionDetails>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6} md={3}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>{t('leaveHistory.statusFilter')}</InputLabel>
+                  <Select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    label={t('leaveHistory.statusFilter')}
+                  >
+                    <MenuItem value="">{t('leaveHistory.allStatus')}</MenuItem>
+                    <MenuItem value="pending">{t('leaveHistory.pending')}</MenuItem>
+                    <MenuItem value="approved">{t('leaveHistory.approved')}</MenuItem>
+                    <MenuItem value="rejected">{t('leaveHistory.rejected')}</MenuItem>
+                    <MenuItem value="reversed">{t('leaveHistory.reversed')}</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={12} sm={6} md={3}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>{t('leaveHistory.leaveTypeFilter')}</InputLabel>
+                  <Select
+                    value={filterLeaveType}
+                    onChange={(e) => setFilterLeaveType(e.target.value)}
+                    label={t('leaveHistory.leaveTypeFilter')}
+                  >
+                    <MenuItem value="">{t('leaveHistory.allLeaveTypes')}</MenuItem>
+                    {leaveTypes.map((type) => (
+                      <MenuItem key={type.id} value={type.id}>
+                        {i18n.language === 'en' ? (type.name || type.name_zh) : (type.name_zh || type.name)}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>{t('leaveHistory.flowTypeFilter')}</InputLabel>
+                  <Select
+                    value={filterFlowType}
+                    onChange={(e) => setFilterFlowType(e.target.value)}
+                    label={t('leaveHistory.flowTypeFilter')}
+                  >
+                    <MenuItem value="">{t('leaveHistory.allFlowTypes')}</MenuItem>
+                    <MenuItem value="e-flow">{t('leaveHistory.eFlow')}</MenuItem>
+                    <MenuItem value="paper-flow">{t('leaveHistory.paperFlow')}</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  type="number"
+                  label={t('leaveHistory.yearFilter')}
+                  value={filterYear}
+                  onChange={(e) => setFilterYear(e.target.value)}
+                  placeholder={t('leaveHistory.allYears')}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  type="date"
+                  label={t('leaveHistory.dateFrom')}
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={6} md={3}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  type="date"
+                  label={t('leaveHistory.dateTo')}
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                  <Button variant="outlined" onClick={handleClearFilter}>
+                    {t('leaveHistory.clearFilter')}
+                  </Button>
+                  <Button variant="contained" onClick={handleApplyFilter}>
+                    {t('leaveHistory.applyFilter')}
+                  </Button>
+                </Box>
+              </Grid>
+            </Grid>
+          </AccordionDetails>
+        </Accordion>
 
         <TableContainer>
           <Table>
@@ -261,10 +435,18 @@ const LeaveHistory = () => {
                     <TableCell>{app.transaction_id}</TableCell>
                     <TableCell>{app.applicant_display_name}</TableCell>
                     <TableCell>
-                      {i18n.language === 'en' 
-                        ? (app.leave_type_name || app.leave_type_name_zh || '')
-                        : (app.leave_type_name_zh || app.leave_type_name || '')
-                      }
+                      {(() => {
+                        const leaveTypeName = i18n.language === 'en' 
+                          ? (app.leave_type_name || app.leave_type_name_zh || '')
+                          : (app.leave_type_name_zh || app.leave_type_name || '');
+                        
+                        // 如果是銷假交易，在假期類型後面加上「銷假」
+                        if (app.is_reversal_transaction === true) {
+                          return `${leaveTypeName} (${t('leaveHistory.reversal')})`;
+                        }
+                        
+                        return leaveTypeName;
+                      })()}
                     </TableCell>
                     <TableCell>
                       <Chip

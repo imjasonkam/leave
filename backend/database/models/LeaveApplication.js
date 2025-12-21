@@ -176,7 +176,16 @@ class LeaveApplication {
     }
 
     if (options.status) {
-      query = query.where('leave_applications.status', options.status);
+      // 如果狀態是 "reversed"，查詢已銷假的記錄（被銷假的原始申請，排除銷假交易本身）
+      if (options.status === 'reversed') {
+        query = query.where('leave_applications.is_reversed', true)
+                     .where(function() {
+                       this.where('leave_applications.is_reversal_transaction', false)
+                           .orWhereNull('leave_applications.is_reversal_transaction');
+                     });
+      } else {
+        query = query.where('leave_applications.status', options.status);
+      }
     }
 
     if (options.leave_type_id) {
@@ -198,6 +207,28 @@ class LeaveApplication {
 
     if (options.is_cancellation_request !== undefined) {
       query = query.where('leave_applications.is_cancellation_request', options.is_cancellation_request);
+    }
+
+    if (options.year) {
+      query = query.where('leave_applications.year', options.year);
+    }
+
+    // 日期範圍篩選：找到所有與設定日期範圍有重疊的申請
+    // 兩個日期範圍有重疊的條件：申請的開始日期 <= 設定的結束日期 且 申請的結束日期 >= 設定的開始日期
+    if (options.start_date_from || options.end_date_to) {
+      if (options.start_date_from && options.end_date_to) {
+        // 兩個日期都設定了，找有重疊的
+        query = query.where(function() {
+          this.where('leave_applications.start_date', '<=', options.end_date_to)
+              .andWhere('leave_applications.end_date', '>=', options.start_date_from);
+        });
+      } else if (options.start_date_from) {
+        // 只設定了開始日期，找到結束日期 >= 開始日期的申請（即開始日期之後的申請）
+        query = query.where('leave_applications.end_date', '>=', options.start_date_from);
+      } else if (options.end_date_to) {
+        // 只設定了結束日期，找到開始日期 <= 結束日期的申請（即結束日期之前的申請）
+        query = query.where('leave_applications.start_date', '<=', options.end_date_to);
+      }
     }
 
     const applications = await query.orderBy('leave_applications.created_at', 'desc');

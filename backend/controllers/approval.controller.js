@@ -183,56 +183,65 @@ class ApprovalController {
         }
 
         // 當申請完全批准（status === 'approved'）時，處理餘額扣除或發還
+        // 注意：餘額處理失敗不應該影響批核成功的響應，因為申請已經成功核准
         if (updatedApplication.status === 'approved') {
-          const LeaveType = require('../database/models/LeaveType');
-          const leaveType = await LeaveType.findById(updatedApplication.leave_type_id);
-          
-          // 使用申請的year字段來處理對應年份的quota
-          const applicationYear = updatedApplication.year || new Date(updatedApplication.start_date).getFullYear();
-          const daysToProcess = parseFloat(updatedApplication.total_days || 0);
-          
-          if (leaveType && leaveType.requires_balance && daysToProcess > 0) {
-            // 處理取消申請：退回餘額
-            if (updatedApplication.is_cancellation_request) {
-              // 取消原始申請
-              await LeaveApplication.cancel(
-                updatedApplication.original_application_id,
-                req.user.id,
-                updatedApplication.reason
-              );
-              
-              // 退回餘額（因為取消申請意味著退回已扣除的假期）
-              // 注意：餘額會從 leave_applications 表自動計算，這裡只做驗證
-              await LeaveBalance.incrementBalance(
-                updatedApplication.user_id,
-                updatedApplication.leave_type_id,
-                applicationYear,
-                daysToProcess,
-                '取消假期申請，退回餘額',
-                updatedApplication.start_date,
-                updatedApplication.end_date
-              );
-            } 
-            // 處理銷假申請：發還餘額
-            else if (updatedApplication.is_reversal_transaction) {
-              await LeaveApplication.finalizeReversal(updatedApplication);
-              // finalizeReversal 內部會處理餘額發還
-            } 
-            // 處理正常假期申請：扣除餘額
-            else {
-              // 驗證餘額是否足夠並扣除
-              // 注意：餘額是動態計算的（從 leave_applications 表計算已批准的申請）
-              // 這裡主要驗證餘額是否足夠，實際扣除會通過查詢 leave_applications 表反映
-              await LeaveBalance.decrementBalance(
-                updatedApplication.user_id,
-                updatedApplication.leave_type_id,
-                applicationYear,
-                daysToProcess,
-                '假期申請已批准，扣除餘額',
-                updatedApplication.start_date,
-                updatedApplication.end_date
-              );
+          try {
+            const LeaveType = require('../database/models/LeaveType');
+            const leaveType = await LeaveType.findById(updatedApplication.leave_type_id);
+            
+            // 使用申請的year字段來處理對應年份的quota
+            const applicationYear = updatedApplication.year || new Date(updatedApplication.start_date).getFullYear();
+            const daysToProcess = parseFloat(updatedApplication.total_days || 0);
+            
+            if (leaveType && leaveType.requires_balance && daysToProcess > 0) {
+              // 處理取消申請：退回餘額
+              if (updatedApplication.is_cancellation_request) {
+                // 取消原始申請
+                await LeaveApplication.cancel(
+                  updatedApplication.original_application_id,
+                  req.user.id,
+                  updatedApplication.reason
+                );
+                
+                // 退回餘額（因為取消申請意味著退回已扣除的假期）
+                // 注意：餘額會從 leave_applications 表自動計算，這裡只做驗證
+                await LeaveBalance.incrementBalance(
+                  updatedApplication.user_id,
+                  updatedApplication.leave_type_id,
+                  applicationYear,
+                  daysToProcess,
+                  '取消假期申請，退回餘額',
+                  updatedApplication.start_date,
+                  updatedApplication.end_date
+                );
+              } 
+              // 處理銷假申請：發還餘額
+              else if (updatedApplication.is_reversal_transaction) {
+                await LeaveApplication.finalizeReversal(updatedApplication);
+                // finalizeReversal 內部會處理餘額發還
+              } 
+              // 處理正常假期申請：扣除餘額
+              else {
+                // 驗證餘額是否足夠並扣除
+                // 注意：餘額是動態計算的（從 leave_applications 表計算已批准的申請）
+                // 這裡主要驗證餘額是否足夠，實際扣除會通過查詢 leave_applications 表反映
+                await LeaveBalance.decrementBalance(
+                  updatedApplication.user_id,
+                  updatedApplication.leave_type_id,
+                  applicationYear,
+                  daysToProcess,
+                  '假期申請已批准，扣除餘額',
+                  updatedApplication.start_date,
+                  updatedApplication.end_date
+                );
+              }
             }
+          } catch (balanceError) {
+            // 餘額處理失敗不應該影響批核成功的響應，因為申請已經成功核准
+            // 記錄錯誤但不中斷流程
+            console.error('[ApprovalController] 餘額處理失敗（申請已成功核准）:', balanceError);
+            console.error('[ApprovalController] 申請ID:', id, '錯誤詳情:', balanceError.message);
+            // 不拋出錯誤，繼續返回批核成功的響應
           }
         }
 
@@ -281,7 +290,16 @@ class ApprovalController {
 
   async getApprovalHistory(req, res) {
     try {
-      const { status } = req.query;
+      const { 
+        status, 
+        leave_type_id, 
+        flow_type, 
+        year, 
+        month,
+        department_group_id,
+        start_date_from, 
+        end_date_to 
+      } = req.query;
       const userId = req.user.id;
       
       // 獲取所有已處理的申請（不包括待批核的）
@@ -305,8 +323,87 @@ class ApprovalController {
         )
         .where('leave_applications.status', '!=', 'pending');
 
+      // 狀態篩選
       if (status && status !== 'all') {
-        query = query.where('leave_applications.status', status);
+        // 如果狀態是 "reversed"，查詢已銷假的記錄
+        if (status === 'reversed') {
+          query = query.where('leave_applications.is_reversed', true)
+                       .where(function() {
+                         this.where('leave_applications.is_reversal_transaction', false)
+                             .orWhereNull('leave_applications.is_reversal_transaction');
+                       });
+        } else {
+          query = query.where('leave_applications.status', status);
+        }
+      }
+
+      // 假期類型篩選
+      if (leave_type_id) {
+        query = query.where('leave_applications.leave_type_id', leave_type_id);
+      }
+
+      // 流程類型篩選
+      if (flow_type) {
+        query = query.where('leave_applications.flow_type', flow_type);
+      }
+
+      // 部門群組篩選：找到所有屬於該部門群組的用戶的申請
+      if (department_group_id) {
+        const deptGroupId = parseInt(department_group_id);
+        if (!isNaN(deptGroupId) && deptGroupId > 0) {
+          const DepartmentGroup = require('../database/models/DepartmentGroup');
+          const group = await DepartmentGroup.findById(deptGroupId);
+          if (group && group.user_ids && group.user_ids.length > 0) {
+            query = query.whereIn('leave_applications.user_id', group.user_ids);
+          } else {
+            // 如果部門群組沒有成員，返回空結果
+            query = query.where('1', '=', '0'); // 永遠為 false 的條件
+          }
+        }
+      }
+
+      // 年份篩選
+      if (year) {
+        const yearNum = parseInt(year);
+        if (!isNaN(yearNum) && yearNum > 0) {
+          // 確保年份比較使用整數類型，使用 where 直接比較整數
+          query = query.where('leave_applications.year', yearNum);
+        }
+      }
+
+      // 月份篩選：如果提供了月份，計算該月份的第一天和最後一天
+      if (month) {
+        const monthNum = parseInt(month);
+        if (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) {
+          const yearForMonth = year ? parseInt(year) : new Date().getFullYear();
+          if (!isNaN(yearForMonth) && yearForMonth > 0) {
+            // 計算該月份的第一天和最後一天
+            const monthStart = `${yearForMonth}-${String(monthNum).padStart(2, '0')}-01`;
+            // 計算該月份的最後一天
+            const lastDay = new Date(yearForMonth, monthNum, 0).getDate();
+            const monthEnd = `${yearForMonth}-${String(monthNum).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+            
+            // 找到所有與該月份有重疊的申請
+            query = query.where(function() {
+              this.where('leave_applications.start_date', '<=', monthEnd)
+                  .andWhere('leave_applications.end_date', '>=', monthStart);
+            });
+          }
+        }
+      }
+
+      // 日期範圍篩選：找到所有與設定日期範圍有重疊的申請
+      if (start_date_from || end_date_to) {
+        if (start_date_from && end_date_to) {
+          query = query.where(function() {
+            this.where('leave_applications.start_date', '<=', end_date_to)
+                .andWhere('leave_applications.end_date', '>=', start_date_from);
+          });
+        } else if (start_date_from) {
+          query = query.where('leave_applications.end_date', '>=', start_date_from);
+        } else if (end_date_to) {
+          query = query.where('leave_applications.start_date', '<=', end_date_to);
+        }
       }
 
       const allApplications = await query.orderBy('leave_applications.created_at', 'desc');

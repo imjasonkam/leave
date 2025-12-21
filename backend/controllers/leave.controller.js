@@ -225,13 +225,28 @@ class LeaveController {
         flow_type,
         user_id,
         applicant_id,
-        include_approver
+        include_approver,
+        year,
+        start_date_from,
+        start_date_to,
+        end_date_from,
+        end_date_to
       } = req.query;
       
       const options = {};
       if (status) options.status = status;
       if (leave_type_id) options.leave_type_id = leave_type_id;
       if (flow_type) options.flow_type = flow_type;
+      if (year) {
+        const yearNum = parseInt(year);
+        if (!isNaN(yearNum) && yearNum > 0) {
+          options.year = yearNum;
+        }
+      }
+      if (start_date_from) options.start_date_from = start_date_from;
+      if (start_date_to) options.start_date_to = start_date_to;
+      if (end_date_from) options.end_date_from = end_date_from;
+      if (end_date_to) options.end_date_to = end_date_to;
       
       // 檢查是否為 HR 成員
       const isHRMember = await User.isHRMember(req.user.id);
