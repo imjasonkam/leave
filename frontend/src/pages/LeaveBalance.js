@@ -46,65 +46,117 @@ const LeaveBalance = () => {
   };
 
   return (
-    <Box>
-      <Typography variant="h5" gutterBottom>
+    <Box sx={{ px: { xs: 1, sm: 3 }, py: { xs: 2, sm: 3 }, maxWidth: '1400px', mx: 'auto' }}>
+      <Typography 
+        variant="h4" 
+        gutterBottom
+        sx={{ 
+          fontSize: { xs: '1.5rem', sm: '2rem' }, 
+          mb: 3,
+          fontWeight: 600,
+          color: 'primary.main'
+        }}
+      >
         {t('leaveBalance.title')}
       </Typography>
 
-      <Paper sx={{ mt: 2, p: 2 }}>
+      <Paper 
+        elevation={2}
+        sx={{ 
+          p: { xs: 2, sm: 3 },
+          mb: 3,
+          borderRadius: 2,
+          background: 'linear-gradient(to bottom, #ffffff, #f8f9fa)'
+        }}
+      >
         <YearSelector
           value={year}
           onChange={(year) => setYear(year)}
           labelKey="leaveBalance.year"
-          sx={{ mb: 2, minWidth: 200 }}
+          sx={{ mb: 3, minWidth: 200 }}
         />
 
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>{t('leaveBalance.leaveType')}</TableCell>
-                <TableCell align="right">{t('leaveBalance.entitlement')}</TableCell>
-                <TableCell align="right">{t('leaveBalance.taken')}</TableCell>
-                <TableCell align="right">{t('leaveBalance.balance')}</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={4} align="center">{t('common.loading')}</TableCell>
+        <Paper 
+          elevation={1}
+          sx={{ 
+            borderRadius: 2,
+            overflow: 'hidden'
+          }}
+        >
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow sx={{ 
+                  backgroundColor: 'primary.main',
+                  '& .MuiTableCell-head': {
+                    color: 'white',
+                    fontWeight: 600,
+                    fontSize: '0.95rem'
+                  }
+                }}>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('leaveBalance.leaveType')}</TableCell>
+                  <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>{t('leaveBalance.entitlement')}</TableCell>
+                  <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>{t('leaveBalance.taken')}</TableCell>
+                  <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>{t('leaveBalance.balance')}</TableCell>
                 </TableRow>
-              ) : balances.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} align="center">{t('leaveBalance.noBalanceRecords')}</TableCell>
-                </TableRow>
-              ) : (
-                balances.map((balance) => (
-                  <TableRow key={balance.id}>
-                    <TableCell>
-                      {balance.leave_type_name_zh} ({balance.leave_type_code})
-                    </TableCell>
-                    <TableCell align="right">
-                      {parseFloat(balance.total).toFixed(1)}
-                    </TableCell>
-                    <TableCell align="right">
-                      {parseFloat(balance.taken).toFixed(1)}
-                    </TableCell>
-                    <TableCell 
-                      align="right"
-                      sx={{
-                        color: parseFloat(balance.balance) < 0 ? 'error.main' : 'inherit',
-                        fontWeight: 'bold'
-                      }}
-                    >
-                      {parseFloat(balance.balance).toFixed(1)}
+              </TableHead>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {t('common.loading')}
+                      </Typography>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                ) : balances.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {t('leaveBalance.noBalanceRecords')}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  balances.map((balance, index) => (
+                    <TableRow 
+                      key={balance.id}
+                      sx={{
+                        '&:nth-of-type(even)': {
+                          backgroundColor: 'action.hover'
+                        },
+                        '&:hover': {
+                          backgroundColor: 'action.selected'
+                        },
+                        transition: 'background-color 0.2s'
+                      }}
+                    >
+                      <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 500 }}>
+                        {balance.leave_type_name_zh} ({balance.leave_type_code})
+                      </TableCell>
+                      <TableCell align="right" sx={{ whiteSpace: 'nowrap', fontWeight: 600, color: 'primary.dark' }}>
+                        {parseFloat(balance.total).toFixed(1)}
+                      </TableCell>
+                      <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                        {parseFloat(balance.taken).toFixed(1)}
+                      </TableCell>
+                      <TableCell 
+                        align="right"
+                        sx={{
+                          whiteSpace: 'nowrap',
+                          fontWeight: 700,
+                          color: parseFloat(balance.balance) < 0 ? 'error.main' : 'success.main'
+                        }}
+                      >
+                        {parseFloat(balance.balance).toFixed(1)}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
       </Paper>
     </Box>
   );

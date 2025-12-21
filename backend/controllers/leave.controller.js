@@ -11,7 +11,7 @@ const path = require('path');
 class LeaveController {
   async createApplication(req, res) {
     try {
-      const { start_date, start_session, end_date, end_session, total_days, leave_type_id, reason, user_id, flow_type, year } = req.body;
+      const { start_date, start_session, end_date, end_session, total_days, leave_type_id, reason, user_id, flow_type, year, application_date } = req.body;
       const applied_by_id = req.user.id;
 
       if (!start_date || !start_session || !end_date || !end_session || !total_days || !leave_type_id) {
@@ -85,6 +85,7 @@ class LeaveController {
       const applicationData = {
         user_id: applicantId,
         leave_type_id,
+        application_date: application_date || null, // 申請日期，paper-flow 可留空
         start_date,
         start_session,
         end_date,

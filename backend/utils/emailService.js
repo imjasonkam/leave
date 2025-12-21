@@ -268,13 +268,15 @@ class EmailService {
     }
 
     const stageNames = {
-      checker: 'Checker',
-      approver_1: 'First Approval',
-      approver_2: 'Second Approval',
-      approver_3: 'Third Approval'
+      checker: { en: 'Checker', zh: '檢查' },
+      approver_1: { en: 'First Approval', zh: '第一批核' },
+      approver_2: { en: 'Second Approval', zh: '第二批核' },
+      approver_3: { en: 'Third Approval', zh: '第三批核' }
     };
 
-    const stageName = stageNames[stage] || stage;
+    const stageName = stageNames[stage] || { en: stage, zh: stage };
+    const stageNameEn = stageName.en || stage;
+    const stageNameZh = stageName.zh || stage;
 
     // 獲取申請人信息
     const User = require('../database/models/User');
@@ -286,9 +288,10 @@ class EmailService {
     const applicantName = applicant?.display_name || applicant?.name_zh || 'Applicant';
     const staffId = applicant?.employee_number || '';
     const leaveTypeName = leaveType?.name || leaveType?.name_zh || 'Leave';
+    const leaveTypeNameZh = leaveType?.name_zh || leaveType?.name || '假期';
     const transactionId = application.transaction_id || `LA-${String(application.id).padStart(6, '0')}`;
 
-    const subject = `[Staff Portal] New Leave Application Requires Approval - ${stageName}`;
+    const subject = `[Staff Portal] New Leave Application Requires Approval - ${stageNameEn} / [員工系統] 新的假期申請需要批核 - ${stageNameZh}`;
     
     const html = `
       <!DOCTYPE html>
@@ -308,49 +311,50 @@ class EmailService {
       <body>
         <div class="container">
           <div class="header">
-            <h2>Leave Application Approval Notification</h2>
+            <h2>Leave Application Approval Notification / 假期申請批核通知</h2>
           </div>
           <div class="content">
-            <p>Hello,</p>
-            <p>You have a new leave application that requires <strong>${stageName}</strong> approval.</p>
+            <p>Hello 您好，</p>
+            <p>You have a new leave application that requires <strong>${stageNameEn}</strong> .<br>
+            您有一個新的假期申請需要 <strong>${stageNameZh}</strong> 。</p>
             <div class="info-row">
-              <span class="label">Application ID:</span> ${transactionId}
+              <span class="label">Application ID / 申請編號:</span> ${transactionId}
             </div>
             <div class="info-row">
-              <span class="label">Applicant:</span> ${applicantName}
+              <span class="label">Applicant / 申請人:</span> ${applicantName}
             </div>
             ${staffId ? `
             <div class="info-row">
-              <span class="label">Staff ID:</span> ${staffId}
+              <span class="label">Staff ID / 員工編號:</span> ${staffId}
             </div>
             ` : ''}
             <div class="info-row">
-              <span class="label">Leave Type:</span> ${leaveTypeName}
+              <span class="label">Leave Type / 假期類型:</span> ${leaveTypeName} / ${leaveTypeNameZh}
             </div>
             <div class="info-row">
-              <span class="label">Start Date:</span> ${new Date(application.start_date).toLocaleDateString('en-US')}
+              <span class="label">Start Date / 開始日期:</span> ${new Date(application.start_date).toLocaleDateString('en-US')}
             </div>
             <div class="info-row">
-              <span class="label">End Date:</span> ${new Date(application.end_date).toLocaleDateString('en-US')}
+              <span class="label">End Date / 結束日期:</span> ${new Date(application.end_date).toLocaleDateString('en-US')}
             </div>
             <div class="info-row">
-              <span class="label">Days:</span> ${application.total_days} day(s)
+              <span class="label">Days / 天數:</span> ${application.total_days} day(s) / ${application.total_days} 天
             </div>
             ${application.reason ? `
             <div class="info-row">
-              <span class="label">Reason:</span> ${application.reason}
+              <span class="label">Reason / 原因:</span> ${application.reason}
             </div>
             ` : ''}
             <p style="margin-top: 20px;">
               <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/approvals/${application.id}" 
                  style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                View Application
+                View Application / 查看申請
               </a>
             </p>
           </div>
           <div class="footer">
-            <p>This is an automated email. Please do not reply directly.</p>
-            <p>Staff Portal</p>
+            <p>This is an automated email. Please do not reply directly. / 這是一封自動發送的郵件，請勿直接回覆。</p>
+            <p>Staff Portal / 員工系統</p>
           </div>
         </div>
       </body>
@@ -387,9 +391,10 @@ class EmailService {
     const applicantName = applicant.display_name || applicant.name_zh || 'Applicant';
     const staffId = applicant?.employee_number || '';
     const leaveTypeName = leaveType?.name || leaveType?.name_zh || 'Leave';
+    const leaveTypeNameZh = leaveType?.name_zh || leaveType?.name || '假期';
     const transactionId = application.transaction_id || `LA-${String(application.id).padStart(6, '0')}`;
 
-    const subject = `[Staff Portal] Your Leave Application Has Been Approved`;
+    const subject = `[Staff Portal] Your Leave Application Has Been Approved / [員工系統] 您的假期申請已獲批准`;
     
     const html = `
       <!DOCTYPE html>
@@ -409,46 +414,47 @@ class EmailService {
       <body>
         <div class="container">
           <div class="header">
-            <h2>Leave Application Approved</h2>
+            <h2>Leave Application Approved / 假期申請已獲批准</h2>
           </div>
           <div class="content">
-            <p>Hello ${applicantName},</p>
-            <p>Your leave application has been approved after passing all approval stages.</p>
+            <p>Hello 您好 ${applicantName}，</p>
+            <p>Your leave application has been approved after passing all approval stages.<br>
+            您的假期申請已通過所有批核階段並獲批准。</p>
             <div class="info-row">
-              <span class="label">Application ID:</span> ${transactionId}
+              <span class="label">Application ID / 申請編號:</span> ${transactionId}
             </div>
             ${staffId ? `
             <div class="info-row">
-              <span class="label">Staff ID:</span> ${staffId}
+              <span class="label">Staff ID / 員工編號:</span> ${staffId}
             </div>
             ` : ''}
             <div class="info-row">
-              <span class="label">Leave Type:</span> ${leaveTypeName}
+              <span class="label">Leave Type / 假期類型:</span> ${leaveTypeName} / ${leaveTypeNameZh}
             </div>
             <div class="info-row">
-              <span class="label">Start Date:</span> ${new Date(application.start_date).toLocaleDateString('en-US')}
+              <span class="label">Start Date / 開始日期:</span> ${new Date(application.start_date).toLocaleDateString('en-US')}
             </div>
             <div class="info-row">
-              <span class="label">End Date:</span> ${new Date(application.end_date).toLocaleDateString('en-US')}
+              <span class="label">End Date / 結束日期:</span> ${new Date(application.end_date).toLocaleDateString('en-US')}
             </div>
             <div class="info-row">
-              <span class="label">Days:</span> ${application.total_days} day(s)
+              <span class="label">Days / 天數:</span> ${application.total_days} day(s) / ${application.total_days} 天
             </div>
             ${application.reason ? `
             <div class="info-row">
-              <span class="label">Reason:</span> ${application.reason}
+              <span class="label">Reason / 原因:</span> ${application.reason}
             </div>
             ` : ''}
             <p style="margin-top: 20px;">
               <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/leaves/${application.id}" 
                  style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                View Details
+                View Details / 查看詳情
               </a>
             </p>
           </div>
           <div class="footer">
-            <p>This is an automated email. Please do not reply directly.</p>
-            <p>Staff Portal</p>
+            <p>This is an automated email. Please do not reply directly. / 這是一封自動發送的郵件，請勿直接回覆。</p>
+            <p>Staff Portal / 員工系統</p>
           </div>
         </div>
       </body>
@@ -478,9 +484,10 @@ class EmailService {
     const applicantName = applicant.display_name || applicant.name_zh || 'Applicant';
     const staffId = applicant?.employee_number || '';
     const leaveTypeName = leaveType?.name || leaveType?.name_zh || 'Leave';
+    const leaveTypeNameZh = leaveType?.name_zh || leaveType?.name || '假期';
     const transactionId = application.transaction_id || `LA-${String(application.id).padStart(6, '0')}`;
 
-    const subject = `[Staff Portal] Your Leave Application Has Been Rejected`;
+    const subject = `[Staff Portal] Your Leave Application Has Been Rejected / [員工系統] 您的假期申請已被拒絕`;
     
     const html = `
       <!DOCTYPE html>
@@ -501,47 +508,48 @@ class EmailService {
       <body>
         <div class="container">
           <div class="header">
-            <h2>Leave Application Rejected</h2>
+            <h2>Leave Application Rejected / 假期申請已被拒絕</h2>
           </div>
           <div class="content">
-            <p>Hello ${applicantName},</p>
-            <p>We regret to inform you that your leave application has been rejected.</p>
+            <p>Hello 您好 ${applicantName}，</p>
+            <p>We regret to inform you that your leave application has been rejected.<br>
+            很遺憾地通知您，您的假期申請已被拒絕。</p>
             <div class="info-row">
-              <span class="label">Application ID:</span> ${transactionId}
+              <span class="label">Application ID / 申請編號:</span> ${transactionId}
             </div>
             ${staffId ? `
             <div class="info-row">
-              <span class="label">Staff ID:</span> ${staffId}
+              <span class="label">Staff ID / 員工編號:</span> ${staffId}
             </div>
             ` : ''}
             <div class="info-row">
-              <span class="label">Leave Type:</span> ${leaveTypeName}
+              <span class="label">Leave Type / 假期類型:</span> ${leaveTypeName} / ${leaveTypeNameZh}
             </div>
             <div class="info-row">
-              <span class="label">Start Date:</span> ${new Date(application.start_date).toLocaleDateString('en-US')}
+              <span class="label">Start Date / 開始日期:</span> ${new Date(application.start_date).toLocaleDateString('en-US')}
             </div>
             <div class="info-row">
-              <span class="label">End Date:</span> ${new Date(application.end_date).toLocaleDateString('en-US')}
+              <span class="label">End Date / 結束日期:</span> ${new Date(application.end_date).toLocaleDateString('en-US')}
             </div>
             <div class="info-row">
-              <span class="label">Days:</span> ${application.total_days} day(s)
+              <span class="label">Days / 天數:</span> ${application.total_days} day(s) / ${application.total_days} 天
             </div>
             ${rejectionReason ? `
             <div class="rejection-reason">
-              <strong>Rejection Reason:</strong><br>
+              <strong>Rejection Reason / 拒絕原因:</strong><br>
               ${rejectionReason}
             </div>
             ` : ''}
             <p style="margin-top: 20px;">
               <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/leaves/${application.id}" 
                  style="background-color: #2196F3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                View Details
+                View Details / 查看詳情
               </a>
             </p>
           </div>
           <div class="footer">
-            <p>This is an automated email. Please do not reply directly.</p>
-            <p>Staff Portal</p>
+            <p>This is an automated email. Please do not reply directly. / 這是一封自動發送的郵件，請勿直接回覆。</p>
+            <p>Staff Portal / 員工系統</p>
           </div>
         </div>
       </body>
@@ -597,9 +605,10 @@ class EmailService {
     const staffId = applicant?.employee_number || '';
     const rejectorName = rejector?.display_name || rejector?.name_zh || 'Rejector';
     const leaveTypeName = leaveType?.name || leaveType?.name_zh || 'Leave';
+    const leaveTypeNameZh = leaveType?.name_zh || leaveType?.name || '假期';
     const transactionId = application.transaction_id || `LA-${String(application.id).padStart(6, '0')}`;
 
-    const subject = `[Staff Portal] HR Group Member Has Rejected Leave Application`;
+    const subject = `[Staff Portal] HR Group Member Has Rejected Leave Application / [員工系統] HR 群組成員已拒絕假期申請`;
     
     const html = `
       <!DOCTYPE html>
@@ -620,53 +629,54 @@ class EmailService {
       <body>
         <div class="container">
           <div class="header">
-            <h2>Leave Application Rejected by HR Group Member</h2>
+            <h2>Leave Application Rejected by HR Group Member / HR 群組成員已拒絕假期申請</h2>
           </div>
           <div class="content">
-            <p>Hello,</p>
-            <p>HR Group member <strong>${rejectorName}</strong> has rejected a leave application.</p>
+            <p>Hello 您好，</p>
+            <p>HR Group member <strong>${rejectorName}</strong> has rejected a leave application.<br>
+            HR 群組成員 <strong>${rejectorName}</strong> 已拒絕一個假期申請。</p>
             <div class="info-row">
-              <span class="label">Application ID:</span> ${transactionId}
+              <span class="label">Application ID / 申請編號:</span> ${transactionId}
             </div>
             <div class="info-row">
-              <span class="label">Applicant:</span> ${applicantName}
+              <span class="label">Applicant / 申請人:</span> ${applicantName}
             </div>
             ${staffId ? `
             <div class="info-row">
-              <span class="label">Staff ID:</span> ${staffId}
+              <span class="label">Staff ID / 員工編號:</span> ${staffId}
             </div>
             ` : ''}
             <div class="info-row">
-              <span class="label">Leave Type:</span> ${leaveTypeName}
+              <span class="label">Leave Type / 假期類型:</span> ${leaveTypeName} / ${leaveTypeNameZh}
             </div>
             <div class="info-row">
-              <span class="label">Start Date:</span> ${new Date(application.start_date).toLocaleDateString('en-US')}
+              <span class="label">Start Date / 開始日期:</span> ${new Date(application.start_date).toLocaleDateString('en-US')}
             </div>
             <div class="info-row">
-              <span class="label">End Date:</span> ${new Date(application.end_date).toLocaleDateString('en-US')}
+              <span class="label">End Date / 結束日期:</span> ${new Date(application.end_date).toLocaleDateString('en-US')}
             </div>
             <div class="info-row">
-              <span class="label">Days:</span> ${application.total_days} day(s)
+              <span class="label">Days / 天數:</span> ${application.total_days} day(s) / ${application.total_days} 天
             </div>
             <div class="info-row">
-              <span class="label">Rejected By:</span> ${rejectorName}
+              <span class="label">Rejected By / 拒絕者:</span> ${rejectorName}
             </div>
             ${rejectionReason ? `
             <div class="rejection-reason">
-              <strong>Rejection Reason:</strong><br>
+              <strong>Rejection Reason / 拒絕原因:</strong><br>
               ${rejectionReason}
             </div>
             ` : ''}
             <p style="margin-top: 20px;">
               <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/approvals/${application.id}" 
                  style="background-color: #2196F3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                View Details
+                View Details / 查看詳情
               </a>
             </p>
           </div>
           <div class="footer">
-            <p>This is an automated email. Please do not reply directly.</p>
-            <p>Staff Portal</p>
+            <p>This is an automated email. Please do not reply directly. / 這是一封自動發送的郵件，請勿直接回覆。</p>
+            <p>Staff Portal / 員工系統</p>
           </div>
         </div>
       </body>

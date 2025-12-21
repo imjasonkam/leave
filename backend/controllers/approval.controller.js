@@ -490,6 +490,45 @@ class ApprovalController {
           });
         }
         
+        // 方法2.5：檢查是否為 paper-flow 且用戶屬於申請人的 eflow 的 checker、approver1、approver2 群組
+        if (!isApprover && isPaperFlow && app.status === 'approved') {
+          try {
+            // 獲取申請人所屬的部門群組
+            const applicantDepartmentGroups = await DepartmentGroup.findByUserId(app.user_id);
+            
+            if (applicantDepartmentGroups && applicantDepartmentGroups.length > 0) {
+              const applicantDeptGroup = applicantDepartmentGroups[0];
+              // 獲取該部門群組的 eflow（批核流程）
+              const approvalFlow = await DepartmentGroup.getApprovalFlow(applicantDeptGroup.id);
+              
+              // 檢查用戶是否屬於 checker、approver1、approver2 群組
+              const relevantLevels = ['checker', 'approver_1', 'approver_2'];
+              for (const step of approvalFlow) {
+                if (relevantLevels.includes(step.level) && step.delegation_group_id) {
+                  const isMember = await DelegationGroup.hasUser(step.delegation_group_id, userId);
+                  if (isMember) {
+                    isApprover = true;
+                    userApprovalStage = `paper_flow_${step.level}`;
+                    console.log(`[getApprovalHistory] Paper-flow 申請匹配（eflow 群組成員）:`, {
+                      applicationId: app.id,
+                      transaction_id: app.transaction_id,
+                      applicantUserId: app.user_id,
+                      applicantDeptGroupId: applicantDeptGroup.id,
+                      stepLevel: step.level,
+                      delegationGroupId: step.delegation_group_id,
+                      userId
+                    });
+                    break;
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            // 如果檢查過程中出錯，記錄但不影響其他邏輯
+            console.error(`[getApprovalHistory] 檢查 paper-flow eflow 群組成員時出錯:`, error);
+          }
+        }
+        
         // 方法3：檢查是否通過授權群組批核過
         if (!isApprover && userDelegationGroupIds.length > 0) {
           const departmentGroups = await DepartmentGroup.findByUserId(app.user_id);

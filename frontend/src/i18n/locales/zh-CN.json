@@ -316,6 +316,7 @@
     "leaveType": "假期类型",
     "year": "年份",
     "yearSuffix": "年",
+    "applicationDate": "申请日期",
     "startDate": "开始日期",
     "endDate": "结束日期",
     "days": "天数",

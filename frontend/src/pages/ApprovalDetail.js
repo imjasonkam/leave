@@ -78,6 +78,8 @@ const ApprovalDetail = () => {
     try {
       setLoading(true);
       const response = await axios.get(`/api/leaves/${id}`);
+      console.log('Application data:', response.data.application);
+      console.log('Application date:', response.data.application?.application_date);
       setApplication(response.data.application);
     } catch (error) {
       console.error('Fetch application error:', error);
@@ -417,6 +419,14 @@ const ApprovalDetail = () => {
                 <ListItemText 
                   primary={t('approvalDetail.year')}
                   secondary={application.year || (application.start_date ? new Date(application.start_date).getFullYear() : '-') + t('approvalDetail.yearSuffix')}
+                  primaryTypographyProps={{ variant: 'caption' }}
+                  secondaryTypographyProps={{ variant: 'body1' }}
+                />
+              </ListItem>
+              <ListItem>
+                <ListItemText 
+                  primary={t('approvalDetail.applicationDate')}
+                  secondary={application.application_date ? formatDate(application.application_date) : '-'}
                   primaryTypographyProps={{ variant: 'caption' }}
                   secondaryTypographyProps={{ variant: 'body1' }}
                 />

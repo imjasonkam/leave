@@ -16,12 +16,14 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { Search as SearchIcon } from '@mui/icons-material';
 import dayjs from 'dayjs';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import Swal from 'sweetalert2';
 import YearSelector from '../components/YearSelector';
+import UserSearchDialog from '../components/UserSearchDialog';
 
 const AdminPaperFlow = () => {
   const { user } = useAuth();
@@ -43,11 +45,20 @@ const AdminPaperFlow = () => {
   const [balance, setBalance] = useState(null);
   const [files, setFiles] = useState([]);
   const [yearManuallySet, setYearManuallySet] = useState(false); // 標記年份是否被手動設置
+  const [userDialogOpen, setUserDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
 
   useEffect(() => {
     fetchLeaveTypes();
     fetchUsers();
   }, []);
+
+  // 當選擇的用戶改變時，更新表單數據
+  useEffect(() => {
+    if (selectedUser) {
+      setFormData(prev => ({ ...prev, user_id: selectedUser.id }));
+    }
+  }, [selectedUser]);
 
   useEffect(() => {
     if (formData.leave_type_id && formData.user_id) {
@@ -236,6 +247,7 @@ const AdminPaperFlow = () => {
       setBalance(null);
       setFiles([]);
       setYearManuallySet(false); // 重置年份手動設置標記
+      setSelectedUser(null);
     } catch (error) {
       // 使用 Sweet Alert 顯示錯誤訊息
       await Swal.fire({
@@ -250,8 +262,8 @@ const AdminPaperFlow = () => {
     }
   };
 
-  const selectedLeaveType = leaveTypes.find(lt => lt.id === parseInt(formData.leave_type_id));
-  const selectedUser = users.find(u => u.id === parseInt(formData.user_id));
+  // 如果 selectedUser 已經設置，使用它；否則從表單數據中查找
+  const displayUser = selectedUser || users.find(u => u.id === parseInt(formData.user_id));
 
   return (
     <Container maxWidth="md">
@@ -264,20 +276,26 @@ const AdminPaperFlow = () => {
         </Typography>
 
         <Box component="form" onSubmit={handleSubmit}>
-          <FormControl fullWidth sx={{ mb: 2 }} required>
-            <InputLabel>{t('adminPaperFlow.applicant')}</InputLabel>
-            <Select
-              value={formData.user_id}
-              label={t('adminPaperFlow.applicant')}
-              onChange={(e) => setFormData(prev => ({ ...prev, user_id: e.target.value }))}
+          <Box sx={{ mb: 2 }}>
+            <InputLabel required sx={{ mb: 1 }}>{t('adminPaperFlow.applicant')}</InputLabel>
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<SearchIcon />}
+              onClick={() => setUserDialogOpen(true)}
+              sx={{
+                justifyContent: 'flex-start',
+                textTransform: 'none',
+                height: '56px',
+                color: displayUser ? 'text.primary' : 'text.secondary'
+              }}
             >
-              {users.map((u) => (
-                <MenuItem key={u.id} value={u.id}>
-                  {u.employee_number} ({u.display_name})
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+              {displayUser 
+                ? `${displayUser.employee_number} - ${displayUser.display_name || displayUser.name_zh || '-'}`
+                : t('adminPaperFlow.selectApplicant')
+              }
+            </Button>
+          </Box>
 
           <FormControl fullWidth sx={{ mb: 2 }} required>
             <InputLabel>{t('adminPaperFlow.leaveType')}</InputLabel>
@@ -307,11 +325,11 @@ const AdminPaperFlow = () => {
             sx={{ mb: 2 }}
           />
 
-          {selectedLeaveType?.requires_balance && balance && (
+          {leaveTypes.find(lt => lt.id === parseInt(formData.leave_type_id))?.requires_balance && balance && (
             <Box sx={{ mb: 2 }}>
               <Chip
                 label={t('adminPaperFlow.availableBalance', { 
-                  name: selectedUser?.display_name || t('adminPaperFlow.applicant'), 
+                  name: displayUser?.display_name || t('adminPaperFlow.applicant'), 
                   days: parseFloat(balance.balance).toFixed(1) 
                 })}
                 color={parseFloat(balance.balance) >= parseFloat(formData.days || 0) ? 'success' : 'error'}
@@ -474,6 +492,13 @@ const AdminPaperFlow = () => {
           </Button>
         </Box>
       </Paper>
+
+      <UserSearchDialog
+        open={userDialogOpen}
+        onClose={() => setUserDialogOpen(false)}
+        onSelect={(user) => setSelectedUser(user)}
+        selectedUserId={formData.user_id}
+      />
     </Container>
   );
 };

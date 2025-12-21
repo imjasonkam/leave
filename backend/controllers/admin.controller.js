@@ -164,7 +164,9 @@ class AdminController {
 
   async getLeaveTypes(req, res) {
     try {
-      const leaveTypes = await LeaveType.findAll();
+      // 管理頁面需要顯示所有假期類型，包括未啟用的
+      const leaveTypes = await knex('leave_types')
+        .orderBy('name');
 
       res.json({ leaveTypes });
     } catch (error) {

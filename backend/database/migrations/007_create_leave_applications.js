@@ -5,6 +5,7 @@ exports.up = function(knex) {
       .references('id').inTable('users').onDelete('CASCADE');
     table.integer('leave_type_id').unsigned().notNullable()
       .references('id').inTable('leave_types').onDelete('RESTRICT');
+    table.date('application_date'); // 申請日期，paper-flow 可留空
     table.date('start_date').notNullable();
     table.string('start_session'); // 'AM' or 'PM' for half-day, null for full day
     table.date('end_date').notNullable();

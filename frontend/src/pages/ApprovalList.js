@@ -11,7 +11,15 @@ import {
   Typography,
   Chip,
   IconButton,
-  Button
+  Button,
+  Card,
+  CardContent,
+  Grid,
+  Divider,
+  useTheme,
+  useMediaQuery,
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import { Visibility as VisibilityIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
@@ -23,6 +31,9 @@ import { formatDate } from '../utils/dateFormat';
 const ApprovalList = () => {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -76,89 +87,210 @@ const ApprovalList = () => {
     return stageMap[stage] || stage;
   };
 
+  const renderMobileCard = (app) => {
+    const stage = getCurrentStage(app);
+    const canApproveThis = canApprove(app);
+
+    return (
+      <Card key={app.id} sx={{ mb: 2 }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+            <Box>
+              <Typography variant="caption" color="text.secondary" display="block">
+                {t('approvalList.transactionId')}
+              </Typography>
+              <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                {app.transaction_id}
+              </Typography>
+            </Box>
+            <Chip
+              label={getStageText(stage)}
+              color={canApproveThis ? 'warning' : 'default'}
+              size="small"
+            />
+          </Box>
+
+          <Divider sx={{ my: 1.5 }} />
+
+          <Grid container spacing={1.5}>
+            <Grid item xs={12}>
+              <Typography variant="caption" color="text.secondary" display="block">
+                {t('approvalList.applicant')}
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                {app.applicant_display_name}
+                {(app.applicant_employee_number || app.user_employee_number) && (
+                  <Typography variant="body2" color="text.secondary" component="span" sx={{ ml: 1 }}>
+                    ({app.applicant_employee_number || app.user_employee_number})
+                  </Typography>
+                )}
+              </Typography>
+            </Grid>
+            <Grid item xs={6}>
+              <Typography variant="caption" color="text.secondary" display="block">
+                {t('approvalList.leaveType')}
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                {i18n.language === 'en' 
+                  ? (app.leave_type_name || app.leave_type_name_zh || '')
+                  : (app.leave_type_name_zh || app.leave_type_name || '')}
+              </Typography>
+            </Grid>
+            <Grid item xs={6}>
+              <Typography variant="caption" color="text.secondary" display="block">
+                {t('approvalList.year')}
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                {app.year || (app.start_date ? new Date(app.start_date).getFullYear() : '-')}{t('approvalList.yearSuffix')}
+              </Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="caption" color="text.secondary" display="block">
+                {t('approvalList.date')}
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                {formatDate(app.start_date)} ~ {formatDate(app.end_date)}
+              </Typography>
+            </Grid>
+            <Grid item xs={6}>
+              <Typography variant="caption" color="text.secondary" display="block">
+                {t('approvalList.days')}
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1, fontWeight: 'medium' }}>
+                {app.days}
+              </Typography>
+            </Grid>
+          </Grid>
+
+          <Divider sx={{ my: 1.5 }} />
+
+          <Button
+            fullWidth
+            variant="contained"
+            size="small"
+            onClick={() => navigate(`/approval/${app.id}`)}
+            startIcon={<VisibilityIcon />}
+          >
+            {t('approvalList.viewDetails')}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
-    <Box>
-      <Typography variant="h5" gutterBottom>
+    <Box sx={{ px: { xs: 1, sm: 2 }, py: { xs: 1, sm: 2 } }}>
+      <Typography 
+        variant="h5" 
+        gutterBottom
+        sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}
+      >
         {t('approvalList.title')}
       </Typography>
 
-      <Paper sx={{ mt: 2 }}>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>{t('approvalList.transactionId')}</TableCell>
-                <TableCell>{t('approvalList.applicant')}</TableCell>
-                <TableCell>{t('approvalList.leaveType')}</TableCell>
-                <TableCell>{t('approvalList.year')}</TableCell>
-                <TableCell>{t('approvalList.date')}</TableCell>
-                <TableCell>{t('approvalList.days')}</TableCell>
-                <TableCell>{t('approvalList.currentStage')}</TableCell>
-                <TableCell>{t('common.actions')}</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
+      <Paper sx={{ mt: 2, p: { xs: 1.5, sm: 2 } }}>
+        {isMobile ? (
+          // 手機版：卡片式布局
+          <Box>
+            {applications.length === 0 ? (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                {t('approvalList.noPendingApplications')}
+              </Alert>
+            ) : (
+              applications.map((app) => renderMobileCard(app))
+            )}
+          </Box>
+        ) : (
+          // 桌面版：表格布局（帶橫向滾動）
+          <TableContainer sx={{ 
+            maxWidth: '100%',
+            overflowX: 'auto',
+            '& .MuiTableCell-root': {
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              padding: { xs: '8px', sm: '16px' },
+              whiteSpace: 'nowrap'
+            }
+          }}>
+            <Table size={isTablet ? "small" : "medium"}>
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={8} align="center">{t('common.loading')}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('approvalList.transactionId')}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('approvalList.applicant')}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('approvalList.leaveType')}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('approvalList.year')}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('approvalList.date')}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('approvalList.days')}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('approvalList.currentStage')}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('common.actions')}</TableCell>
                 </TableRow>
-              ) : applications.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} align="center">{t('approvalList.noPendingApplications')}</TableCell>
-                </TableRow>
-              ) : (
-                applications.map((app) => {
-                  const stage = getCurrentStage(app);
-                  const canApproveThis = canApprove(app);
-                  
-                  return (
-                    <TableRow key={app.id} hover>
-                      <TableCell>{app.transaction_id}</TableCell>
-                      <TableCell>
-                        {app.applicant_display_name}
-                        {(app.applicant_employee_number || app.user_employee_number) && (
-                          <Typography variant="body2" color="text.secondary" component="span" sx={{ ml: 1 }}>
-                            ({app.applicant_employee_number || app.user_employee_number})
-                          </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {i18n.language === 'en' 
-                          ? (app.leave_type_name || app.leave_type_name_zh || '')
-                          : (app.leave_type_name_zh || app.leave_type_name || '')
-                        }
-                      </TableCell>
-                      <TableCell>
-                        {app.year || (app.start_date ? new Date(app.start_date).getFullYear() : '-')}{t('approvalList.yearSuffix')}
-                      </TableCell>
-                      <TableCell>
-                        {formatDate(app.start_date)} ~ {formatDate(app.end_date)}
-                      </TableCell>
-                      <TableCell>{app.days}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={getStageText(stage)}
-                          color={canApproveThis ? 'warning' : 'default'}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="contained"
-                          size="small"
-                          onClick={() => navigate(`/approval/${app.id}`)}
-                          startIcon={<VisibilityIcon />}
-                        >
-                          {t('approvalList.viewDetails')}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+              </TableHead>
+              <TableBody>
+                {applications.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} align="center">{t('approvalList.noPendingApplications')}</TableCell>
+                  </TableRow>
+                ) : (
+                  applications.map((app) => {
+                    const stage = getCurrentStage(app);
+                    const canApproveThis = canApprove(app);
+                    
+                    return (
+                      <TableRow key={app.id} hover>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>{app.transaction_id}</TableCell>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                          {app.applicant_display_name}
+                          {(app.applicant_employee_number || app.user_employee_number) && (
+                            <Typography variant="body2" color="text.secondary" component="span" sx={{ ml: 1 }}>
+                              ({app.applicant_employee_number || app.user_employee_number})
+                            </Typography>
+                          )}
+                        </TableCell>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                          {i18n.language === 'en' 
+                            ? (app.leave_type_name || app.leave_type_name_zh || '')
+                            : (app.leave_type_name_zh || app.leave_type_name || '')
+                          }
+                        </TableCell>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                          {app.year || (app.start_date ? new Date(app.start_date).getFullYear() : '-')}{t('approvalList.yearSuffix')}
+                        </TableCell>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                          {formatDate(app.start_date)} ~ {formatDate(app.end_date)}
+                        </TableCell>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>{app.days}</TableCell>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                          <Chip
+                            label={getStageText(stage)}
+                            color={canApproveThis ? 'warning' : 'default'}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                          <Button
+                            variant="contained"
+                            size="small"
+                            onClick={() => navigate(`/approval/${app.id}`)}
+                            startIcon={<VisibilityIcon />}
+                          >
+                            {t('approvalList.viewDetails')}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
       </Paper>
     </Box>
   );

@@ -495,6 +495,7 @@ class LeaveApplication {
     const cancellationData = {
       user_id: userId,
       leave_type_id: originalApp.leave_type_id,
+      application_date: null, // 取消申請不需要申請日期
       start_date: originalApp.start_date,
       end_date: originalApp.end_date,
       year: cancellationYear, // 使用原始申請的年份
@@ -556,6 +557,7 @@ class LeaveApplication {
       const reversalData = {
         user_id: originalApp.user_id, // 使用原始申請的 user_id
         leave_type_id: originalApp.leave_type_id,
+        application_date: null, // 銷假申請不需要申請日期
         start_date: originalApp.start_date,
         end_date: originalApp.end_date,
         year: reversalYear, // 使用原始申請的年份
@@ -596,6 +598,7 @@ class LeaveApplication {
     const reversalData = {
       user_id: userId,
       leave_type_id: originalApp.leave_type_id,
+      application_date: null, // 銷假申請不需要申請日期
       start_date: originalApp.start_date,
       end_date: originalApp.end_date,
       year: reversalYear, // 使用原始申請的年份

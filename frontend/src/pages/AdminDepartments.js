@@ -76,38 +76,104 @@ const AdminDepartments = () => {
   };
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5">{t('adminDepartments.title')}</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpen}>
+    <Box sx={{ px: { xs: 1, sm: 3 }, py: { xs: 2, sm: 3 }, maxWidth: '1400px', mx: 'auto' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography 
+          variant="h4"
+          sx={{ 
+            fontSize: { xs: '1.5rem', sm: '2rem' },
+            fontWeight: 600,
+            color: 'primary.main'
+          }}
+        >
+          {t('adminDepartments.title')}
+        </Typography>
+        <Button 
+          variant="contained" 
+          startIcon={<AddIcon />} 
+          onClick={handleOpen}
+          sx={{
+            borderRadius: 1,
+            fontWeight: 600,
+            boxShadow: 2,
+            '&:hover': {
+              boxShadow: 4
+            }
+          }}
+        >
           {t('adminDepartments.addDepartment')}
         </Button>
       </Box>
 
-      <Paper>
+      <Paper 
+        elevation={2}
+        sx={{ 
+          borderRadius: 2,
+          overflow: 'hidden'
+        }}
+      >
         <TableContainer>
           <Table>
             <TableHead>
-              <TableRow>
-                <TableCell>{t('adminDepartments.name')}</TableCell>
-                <TableCell>{t('adminDepartments.chineseName')}</TableCell>
-                <TableCell>{t('adminDepartments.description')}</TableCell>
-                <TableCell>{t('adminDepartments.actions')}</TableCell>
+              <TableRow sx={{ 
+                backgroundColor: 'primary.main',
+                '& .MuiTableCell-head': {
+                  color: 'white',
+                  fontWeight: 600,
+                  fontSize: '0.95rem'
+                }
+              }}>
+                <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('adminDepartments.name')}</TableCell>
+                <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('adminDepartments.chineseName')}</TableCell>
+                <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('adminDepartments.description')}</TableCell>
+                <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('adminDepartments.actions')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {departments.map((dept) => (
-                <TableRow key={dept.id}>
-                  <TableCell>{dept.name}</TableCell>
-                  <TableCell>{dept.name_zh}</TableCell>
-                  <TableCell>{dept.description || '-'}</TableCell>
-                  <TableCell>
-                    <IconButton size="small" onClick={() => handleEdit(dept)}>
-                      <EditIcon />
-                    </IconButton>
+              {departments.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      {t('adminDepartments.noDepartments') || '沒有部門'}
+                    </Typography>
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                departments.map((dept, index) => (
+                  <TableRow 
+                    key={dept.id}
+                    sx={{
+                      '&:nth-of-type(even)': {
+                        backgroundColor: 'action.hover'
+                      },
+                      '&:hover': {
+                        backgroundColor: 'action.selected'
+                      },
+                      transition: 'background-color 0.2s'
+                    }}
+                  >
+                    <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 500 }}>{dept.name}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{dept.name_zh}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap', color: 'text.secondary' }}>{dept.description || '-'}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                      <IconButton 
+                        size="small" 
+                        onClick={() => handleEdit(dept)}
+                        color="primary"
+                        sx={{
+                          '&:hover': {
+                            backgroundColor: 'primary.light',
+                            color: 'white'
+                          },
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </TableContainer>

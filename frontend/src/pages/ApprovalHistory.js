@@ -32,7 +32,13 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Grid
+  Grid,
+  Card,
+  CardContent,
+  Divider,
+  useTheme,
+  useMediaQuery,
+  CircularProgress
 } from '@mui/material';
 import { 
   Visibility as VisibilityIcon, 
@@ -55,6 +61,9 @@ import { formatDateTime, formatDate } from '../utils/dateFormat';
 const ApprovalHistory = () => {
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -331,6 +340,151 @@ const ApprovalHistory = () => {
            applicantUsername.includes(keyword);
   });
 
+  const renderMobileCard = (app, isReversal = false) => {
+    return (
+      <Card key={isReversal ? `reversal-${app.id}` : app.id} sx={{ mb: 2, backgroundColor: isReversal ? '#f8f9fa' : 'inherit' }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+            <Box>
+              <Typography variant="caption" color="text.secondary" display="block">
+                {isReversal ? t('approvalHistory.reversalPrefix') : t('approvalHistory.transactionId')}
+              </Typography>
+              <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                {app.transaction_id}
+              </Typography>
+            </Box>
+            <Chip
+              label={getStatusText(app)}
+              color={getStatusColor(app)}
+              size="small"
+            />
+          </Box>
+
+          <Divider sx={{ my: 1.5 }} />
+
+          <Grid container spacing={1.5}>
+            <Grid item xs={12}>
+              <Typography variant="caption" color="text.secondary" display="block">
+                {t('approvalHistory.applicant')}
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                {app.applicant_display_name}
+                {(app.applicant_employee_number || app.user_employee_number) && (
+                  <Typography variant="body2" color="text.secondary" component="span" sx={{ ml: 1 }}>
+                    ({app.applicant_employee_number || app.user_employee_number})
+                  </Typography>
+                )}
+              </Typography>
+            </Grid>
+            <Grid item xs={6}>
+              <Typography variant="caption" color="text.secondary" display="block">
+                {t('approvalHistory.leaveType')}
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                {getLeaveTypeDisplay(app)}
+              </Typography>
+            </Grid>
+            <Grid item xs={6}>
+              <Typography variant="caption" color="text.secondary" display="block">
+                {t('approvalHistory.year')}
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                {app.year || (app.start_date ? new Date(app.start_date).getFullYear() : '-')}{t('approvalHistory.yearSuffix')}
+              </Typography>
+            </Grid>
+            <Grid item xs={6}>
+              <Typography variant="caption" color="text.secondary" display="block">
+                {t('approvalHistory.startDate')}
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                {formatDate(app.start_date)}
+              </Typography>
+            </Grid>
+            <Grid item xs={6}>
+              <Typography variant="caption" color="text.secondary" display="block">
+                {t('approvalHistory.endDate')}
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                {formatDate(app.end_date)}
+              </Typography>
+            </Grid>
+            <Grid item xs={6}>
+              <Typography variant="caption" color="text.secondary" display="block">
+                {t('approvalHistory.days')}
+              </Typography>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  mb: 1, 
+                  fontWeight: 'medium',
+                  color: isReversal ? 'error.main' : 'inherit'
+                }}
+              >
+                {isReversal ? `-${Math.abs(app.days)}` : app.days}
+              </Typography>
+            </Grid>
+            <Grid item xs={6}>
+              <Typography variant="caption" color="text.secondary" display="block">
+                {t('approvalHistory.approvalStage')}
+              </Typography>
+              <Chip
+                label={isReversal ? t('approvalHistory.hrReversal') : getApprovalStage(app)}
+                size="small"
+                color={isReversal ? 'info' : 'primary'}
+                sx={{ mt: 0.5 }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="caption" color="text.secondary" display="block">
+                {t('approvalHistory.approvalTime')}
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                {formatDateTime(isReversal ? app.created_at : getApprovalDate(app))}
+              </Typography>
+            </Grid>
+          </Grid>
+
+          <Divider sx={{ my: 1.5 }} />
+
+          <Box sx={{ display: 'flex', gap: 1, flexDirection: 'column' }}>
+            <Button
+              fullWidth
+              variant="outlined"
+              size="small"
+              onClick={() => navigate(`/approval/${app.id}`)}
+              startIcon={<VisibilityIcon />}
+            >
+              {t('approvalHistory.viewDetails')}
+            </Button>
+            {!isReversal && canManageFiles(app) && (
+              <Button
+                fullWidth
+                variant="outlined"
+                size="small"
+                onClick={() => handleOpenFileDialog(app)}
+                startIcon={<AttachFileIcon />}
+              >
+                {t('approvalHistory.manageFiles')}
+              </Button>
+            )}
+            {!isReversal && canShowReversalButton(app) && (
+              <Button
+                fullWidth
+                variant="contained"
+                size="small"
+                color="warning"
+                startIcon={<UndoIcon />}
+                onClick={() => handleReversalClick(app)}
+              >
+                {t('approvalHistory.reversal')}
+              </Button>
+            )}
+          </Box>
+        </CardContent>
+      </Card>
+    );
+  };
+
   const isHRMember = user?.is_hr_member || user?.is_system_admin;
 
   const handleOpenFileDialog = async (application) => {
@@ -518,13 +672,25 @@ const ApprovalHistory = () => {
     setSnackbar({ ...snackbar, open: false });
   };
 
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
-    <Box>
-      <Typography variant="h5" gutterBottom>
+    <Box sx={{ px: { xs: 1, sm: 2 }, py: { xs: 1, sm: 2 } }}>
+      <Typography 
+        variant="h5" 
+        gutterBottom
+        sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}
+      >
         {t('approvalHistory.title')}
       </Typography>
 
-      <Paper sx={{ mt: 2, p: 2 }}>
+      <Paper sx={{ mt: 2, p: { xs: 1.5, sm: 2 } }}>
         <TextField
           fullWidth
           placeholder={t('approvalHistory.searchPlaceholder')}
@@ -540,6 +706,7 @@ const ApprovalHistory = () => {
           }}
           sx={{ mb: 2 }}
           label={t('approvalHistory.searchKeyword') || t('common.search')}
+          size={isMobile ? "small" : "medium"}
         />
 
         {/* 進階搜尋 */}
@@ -683,11 +850,24 @@ const ApprovalHistory = () => {
               </Grid>
 
               <Grid item xs={12}>
-                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-                  <Button variant="outlined" onClick={handleClearFilter}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: { xs: 1, sm: 2 }, 
+                  justifyContent: 'flex-end',
+                  flexDirection: { xs: 'column', sm: 'row' }
+                }}>
+                  <Button 
+                    variant="outlined" 
+                    onClick={handleClearFilter}
+                    fullWidth={isMobile}
+                  >
                     {t('approvalHistory.clearFilter') || t('leaveHistory.clearFilter')}
                   </Button>
-                  <Button variant="contained" onClick={handleApplyFilter}>
+                  <Button 
+                    variant="contained" 
+                    onClick={handleApplyFilter}
+                    fullWidth={isMobile}
+                  >
                     {t('approvalHistory.applyFilter') || t('leaveHistory.applyFilter')}
                   </Button>
                 </Box>
@@ -702,182 +882,209 @@ const ApprovalHistory = () => {
           variant="contained"
           onClick={handleSearch}
           startIcon={<SearchIcon />}
+          fullWidth={isMobile}
         >
           {t('common.search')}
         </Button>
       </Box>
 
-      <Paper>
-        <TableContainer>
-          <Table>
-            <TableHead>
-            <TableRow>
-              <TableCell>{t('approvalHistory.transactionId')}</TableCell>
-              <TableCell>{t('approvalHistory.applicant')}</TableCell>
-              <TableCell>{t('approvalHistory.leaveType')}</TableCell>
-              <TableCell>{t('approvalHistory.year')}</TableCell>
-              <TableCell>{t('approvalHistory.startDate')}</TableCell>
-              <TableCell>{t('approvalHistory.endDate')}</TableCell>
-              <TableCell>{t('approvalHistory.days')}</TableCell>
-              <TableCell>{t('approvalHistory.approvalStage')}</TableCell>
-              <TableCell>{t('approvalHistory.approvalTime')}</TableCell>
-              <TableCell>{t('approvalHistory.status')}</TableCell>
-              <TableCell>{t('approvalHistory.actions')}</TableCell>
-            </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
+      <Paper sx={{ p: { xs: 1, sm: 0 } }}>
+        {isMobile ? (
+          // 手機版：卡片式布局
+          <Box>
+            {filteredApplications.length === 0 ? (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                {t('approvalHistory.noRecords')}
+              </Alert>
+            ) : (
+              filteredApplications.map((app) => (
+                <React.Fragment key={app.id}>
+                  {renderMobileCard(app)}
+                  {/* 顯示相關的 Reverse Transaction */}
+                  {app.reversal_transactions && app.reversal_transactions.length > 0 && (
+                    app.reversal_transactions.map((reversal) => renderMobileCard(reversal, true))
+                  )}
+                </React.Fragment>
+              ))
+            )}
+          </Box>
+        ) : (
+          // 桌面版：表格布局（帶橫向滾動）
+          <TableContainer sx={{ 
+            maxWidth: '100%',
+            overflowX: 'auto',
+            '& .MuiTableCell-root': {
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              padding: { xs: '8px', sm: '16px' },
+              whiteSpace: 'nowrap'
+            }
+          }}>
+            <Table size={isTablet ? "small" : "medium"}>
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={11} align="center">{t('common.loading')}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('approvalHistory.transactionId')}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('approvalHistory.applicant')}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('approvalHistory.leaveType')}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('approvalHistory.year')}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('approvalHistory.startDate')}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('approvalHistory.endDate')}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('approvalHistory.days')}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('approvalHistory.approvalStage')}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('approvalHistory.approvalTime')}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('approvalHistory.status')}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>{t('approvalHistory.actions')}</TableCell>
                 </TableRow>
-              ) : filteredApplications.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={11} align="center">{t('approvalHistory.noRecords')}</TableCell>
-                </TableRow>
-              ) : (
-                filteredApplications.map((app) => (
-                  <React.Fragment key={app.id}>
-                    <TableRow hover>
-                      <TableCell>{app.transaction_id}</TableCell>
-                      <TableCell>
-                        {app.applicant_display_name}
-                        {(app.applicant_employee_number || app.user_employee_number) && (
-                          <Typography variant="body2" color="text.secondary" component="span" sx={{ ml: 1 }}>
-                            ({app.applicant_employee_number || app.user_employee_number})
-                          </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell>{getLeaveTypeDisplay(app)}</TableCell>
-                      <TableCell>
-                        {app.year || (app.start_date ? new Date(app.start_date).getFullYear() : '-')}{t('approvalHistory.yearSuffix')}
-                      </TableCell>
-                      <TableCell>{formatDate(app.start_date)}</TableCell>
-                      <TableCell>{formatDate(app.end_date)}</TableCell>
-                      <TableCell>{app.days}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={getApprovalStage(app)}
-                          size="small"
-                          color="primary"
-                        />
-                      </TableCell>
-                      <TableCell>{formatDateTime(getApprovalDate(app))}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={getStatusText(app)}
-                          color={getStatusColor(app)}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                          <Button
-                            variant="contained"
-                            size="small"
-                            onClick={() => navigate(`/approval/${app.id}`)}
-                            startIcon={<VisibilityIcon />}
-                          >
-                            {t('approvalHistory.viewDetails')}
-                          </Button>
-                          {canManageFiles(app) && (
-                            <Button
-                              variant="outlined"
-                              size="small"
-                              onClick={() => handleOpenFileDialog(app)}
-                              startIcon={<AttachFileIcon />}
-                            >
-                              {t('approvalHistory.manageFiles')}
-                            </Button>
+              </TableHead>
+              <TableBody>
+                {filteredApplications.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={11} align="center">{t('approvalHistory.noRecords')}</TableCell>
+                  </TableRow>
+                ) : (
+                  filteredApplications.map((app) => (
+                    <React.Fragment key={app.id}>
+                      <TableRow hover>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>{app.transaction_id}</TableCell>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                          {app.applicant_display_name}
+                          {(app.applicant_employee_number || app.user_employee_number) && (
+                            <Typography variant="body2" color="text.secondary" component="span" sx={{ ml: 1 }}>
+                              ({app.applicant_employee_number || app.user_employee_number})
+                            </Typography>
                           )}
-                          {canShowReversalButton(app) && (
+                        </TableCell>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>{getLeaveTypeDisplay(app)}</TableCell>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                          {app.year || (app.start_date ? new Date(app.start_date).getFullYear() : '-')}{t('approvalHistory.yearSuffix')}
+                        </TableCell>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatDate(app.start_date)}</TableCell>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatDate(app.end_date)}</TableCell>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>{app.days}</TableCell>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                          <Chip
+                            label={getApprovalStage(app)}
+                            size="small"
+                            color="primary"
+                          />
+                        </TableCell>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatDateTime(getApprovalDate(app))}</TableCell>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                          <Chip
+                            label={getStatusText(app)}
+                            color={getStatusColor(app)}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                          <Box sx={{ display: 'flex', gap: 1, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
                             <Button
                               variant="contained"
                               size="small"
-                              color="warning"
-                              startIcon={<UndoIcon />}
-                              onClick={() => handleReversalClick(app)}
-                            >
-                              {t('approvalHistory.reversal')}
-                            </Button>
-                          )}
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                    {/* 顯示相關的 Reverse Transaction */}
-                    {app.reversal_transactions && app.reversal_transactions.length > 0 && (
-                      app.reversal_transactions.map((reversal) => (
-                        <TableRow key={`reversal-${reversal.id}`} hover sx={{ backgroundColor: '#f8f9fa' }}>
-                          <TableCell sx={{ pl: 4, position: 'relative' }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
-                                {t('approvalHistory.reversalPrefix')}
-                              </Typography>
-                              {reversal.transaction_id}
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            {reversal.applicant_display_name}
-                            {(reversal.applicant_employee_number || reversal.user_employee_number) && (
-                              <Typography variant="body2" color="text.secondary" component="span" sx={{ ml: 1 }}>
-                                ({reversal.applicant_employee_number || reversal.user_employee_number})
-                              </Typography>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Chip
-                                label={t('approvalHistory.reversalLabel')}
-                                color="info"
-                                size="small"
-                                sx={{ fontSize: '0.65rem', height: '20px' }}
-                              />
-                              <Typography variant="body2">{getLeaveTypeDisplay(reversal)}</Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            {reversal.year || (reversal.start_date ? new Date(reversal.start_date).getFullYear() : '-')}{t('approvalHistory.yearSuffix')}
-                          </TableCell>
-                          <TableCell>{formatDate(reversal.start_date)}</TableCell>
-                          <TableCell>{formatDate(reversal.end_date)}</TableCell>
-                          <TableCell>
-                            <Typography variant="body2" sx={{ color: 'error.main' }}>
-                              -{Math.abs(reversal.days)}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={t('approvalHistory.hrReversal')}
-                              size="small"
-                              color="info"
-                            />
-                          </TableCell>
-                          <TableCell>{formatDateTime(reversal.created_at)}</TableCell>
-                          <TableCell>
-                            <Chip
-                              label={getStatusText(reversal)}
-                              color={getStatusColor(reversal)}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="outlined"
-                              size="small"
-                              onClick={() => navigate(`/approval/${reversal.id}`)}
+                              onClick={() => navigate(`/approval/${app.id}`)}
                               startIcon={<VisibilityIcon />}
                             >
                               {t('approvalHistory.viewDetails')}
                             </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </React.Fragment>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                            {canManageFiles(app) && (
+                              <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={() => handleOpenFileDialog(app)}
+                                startIcon={<AttachFileIcon />}
+                              >
+                                {t('approvalHistory.manageFiles')}
+                              </Button>
+                            )}
+                            {canShowReversalButton(app) && (
+                              <Button
+                                variant="contained"
+                                size="small"
+                                color="warning"
+                                startIcon={<UndoIcon />}
+                                onClick={() => handleReversalClick(app)}
+                              >
+                                {t('approvalHistory.reversal')}
+                              </Button>
+                            )}
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                      {/* 顯示相關的 Reverse Transaction */}
+                      {app.reversal_transactions && app.reversal_transactions.length > 0 && (
+                        app.reversal_transactions.map((reversal) => (
+                          <TableRow key={`reversal-${reversal.id}`} hover sx={{ backgroundColor: '#f8f9fa' }}>
+                            <TableCell sx={{ pl: 4, position: 'relative', whiteSpace: 'nowrap' }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
+                                  {t('approvalHistory.reversalPrefix')}
+                                </Typography>
+                                {reversal.transaction_id}
+                              </Box>
+                            </TableCell>
+                            <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                              {reversal.applicant_display_name}
+                              {(reversal.applicant_employee_number || reversal.user_employee_number) && (
+                                <Typography variant="body2" color="text.secondary" component="span" sx={{ ml: 1 }}>
+                                  ({reversal.applicant_employee_number || reversal.user_employee_number})
+                                </Typography>
+                              )}
+                            </TableCell>
+                            <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Chip
+                                  label={t('approvalHistory.reversalLabel')}
+                                  color="info"
+                                  size="small"
+                                  sx={{ fontSize: '0.65rem', height: '20px' }}
+                                />
+                                <Typography variant="body2">{getLeaveTypeDisplay(reversal)}</Typography>
+                              </Box>
+                            </TableCell>
+                            <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                              {reversal.year || (reversal.start_date ? new Date(reversal.start_date).getFullYear() : '-')}{t('approvalHistory.yearSuffix')}
+                            </TableCell>
+                            <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatDate(reversal.start_date)}</TableCell>
+                            <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatDate(reversal.end_date)}</TableCell>
+                            <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                              <Typography variant="body2" sx={{ color: 'error.main' }}>
+                                -{Math.abs(reversal.days)}
+                              </Typography>
+                            </TableCell>
+                            <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                              <Chip
+                                label={t('approvalHistory.hrReversal')}
+                                size="small"
+                                color="info"
+                              />
+                            </TableCell>
+                            <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatDateTime(reversal.created_at)}</TableCell>
+                            <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                              <Chip
+                                label={getStatusText(reversal)}
+                                color={getStatusColor(reversal)}
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                              <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={() => navigate(`/approval/${reversal.id}`)}
+                                startIcon={<VisibilityIcon />}
+                              >
+                                {t('approvalHistory.viewDetails')}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </React.Fragment>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
       </Paper>
 
       {/* 檔案管理對話框 */}
@@ -886,6 +1093,7 @@ const ApprovalHistory = () => {
         onClose={handleCloseFileDialog}
         maxWidth="md"
         fullWidth
+        fullScreen={isMobile}
       >
         <DialogTitle>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -988,6 +1196,9 @@ const ApprovalHistory = () => {
         open={reversalDialogOpen}
         onClose={handleReversalCancel}
         aria-labelledby="reversal-dialog-title"
+        fullScreen={isMobile}
+        fullWidth
+        maxWidth="sm"
       >
         <DialogTitle id="reversal-dialog-title">{t('approvalHistory.confirmReversal')}</DialogTitle>
         <DialogContent>
