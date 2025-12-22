@@ -46,7 +46,8 @@
     "password": "密碼",
     "loginButton": "登入",
     "loggingIn": "登入中...",
-    "loginFailed": "登入失敗，請檢查員工編號和密碼"
+    "loginFailed": "登入失敗，請檢查員工編號和密碼",
+    "disclaimer": "請勿向其他第三方提供你的登入資料"
   },
   "layout": {
     "appTitle": "Big C HK Staff Portal",
@@ -345,7 +346,8 @@
     "download": "下載",
     "noDocuments": "沒有文件",
     "fetchError": "獲取文件列表時發生錯誤",
-    "downloadError": "下載文件時發生錯誤"
+    "downloadError": "下載文件時發生錯誤",
+    "disclaimer": "員工有責任保護自己的個人資料，不可對其他第三方面透露自己的密碼及加密資料"
   },
   "approvalHistory": {
     "title": "批核記錄",
@@ -513,7 +515,9 @@
     "uploadError": "上傳文件時發生錯誤",
     "updateError": "更新文件信息時發生錯誤",
     "deleteError": "刪除文件時發生錯誤",
-    "downloadError": "下載文件時發生錯誤"
+    "downloadError": "下載文件時發生錯誤",
+    "clear": "清除",
+    "selectRecipient": "選擇接收員工"
   },
   "adminPaperFlow": {
     "title": "紙本假期申請",
@@ -564,7 +568,9 @@
     "accountStatus": "帳戶狀態",
     "actions": "操作",
     "active": "啟用中",
-    "deactivated": "已停用"
+    "deactivated": "已停用",
+    "edit": "編輯",
+    "noUsers": "沒有用戶"
   },
   "adminLeaveTypes": {
     "title": "假期類型管理",
@@ -583,7 +589,13 @@
     "addDialogTitle": "新增假期類型",
     "cancel": "取消",
     "save": "儲存",
-    "operationFailed": "操作失敗"
+    "operationFailed": "操作失敗",
+    "edit": "編輯",
+    "noLeaveTypes": "沒有假期類型",
+    "createSuccess": "假期類型創建成功",
+    "updateSuccess": "假期類型更新成功",
+    "createError": "創建假期類型時發生錯誤",
+    "updateError": "更新假期類型時發生錯誤"
   },
   "adminBalances": {
     "title": "假期餘額管理",

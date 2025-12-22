@@ -54,6 +54,12 @@ class LeaveController {
       // 優先使用前端發送的year參數，如果沒有則從start_date計算
       const applicationYear = year ? parseInt(year) : new Date(start_date).getFullYear();
 
+      // 對於 e-flow 申請，如果沒有提供申請日期，自動設置為當前日期
+      let finalApplicationDate = application_date;
+      if (actualFlowType === 'e-flow' && !finalApplicationDate) {
+        finalApplicationDate = new Date().toISOString().split('T')[0]; // 格式：YYYY-MM-DD
+      }
+
       let balanceRecord = null;
 
       // 檢查假期餘額和有效期
@@ -67,17 +73,19 @@ class LeaveController {
           return res.status(400).json({ message: '假期餘額不足' });
         }
         
-        // 檢查申請日期是否在有效餘額期間內
+        // 檢查申請日期是否在選擇年份的有效餘額期間內
+        // 使用 applicationYear 確保檢查的是選擇年份的餘額有效期，而不是申請日期所在年份
         const validBalance = await LeaveBalanceTransaction.getValidBalanceForPeriod(
           applicantId,
           leave_type_id,
           start_date,
-          end_date
+          end_date,
+          applicationYear  // 傳入選擇的年份，而不是從日期推斷的年份
         );
         
         if (validBalance < parseFloat(total_days)) {
           return res.status(400).json({ 
-            message: '申請日期超出假期餘額有效期範圍，該期間可用餘額不足。請檢查您的假期餘額有效期限。' 
+            message: `申請日期不在${applicationYear}年假期餘額有效期範圍內，或該期間可用餘額不足。請檢查您的假期餘額有效期限。` 
           });
         }
       }
@@ -85,7 +93,7 @@ class LeaveController {
       const applicationData = {
         user_id: applicantId,
         leave_type_id,
-        application_date: application_date || null, // 申請日期，paper-flow 可留空
+        application_date: finalApplicationDate || null, // e-flow 必須有申請日期，paper-flow 可留空
         start_date,
         start_session,
         end_date,

@@ -224,12 +224,14 @@ class LeaveBalance {
     }
 
     // 如果提供了申請日期，檢查是否在有效期內
+    // 使用 year 參數確保檢查的是該年份的餘額有效期
     if (applicationStartDate && applicationEndDate) {
       const validBalance = await LeaveBalanceTransaction.getValidBalanceForPeriod(
         userId, 
         leaveTypeId, 
         applicationStartDate, 
-        applicationEndDate
+        applicationEndDate,
+        year  // 傳入年份參數，確保檢查的是該年份的餘額有效期
       );
       
       // 計算該期間已使用的天數
@@ -237,7 +239,7 @@ class LeaveBalance {
       const availableInPeriod = validBalance - usedInPeriod;
       
       if (availableInPeriod < daysToDeduct) {
-        throw new Error('申請日期超出假期餘額有效期範圍，可用餘額不足');
+        throw new Error(`申請日期不在${year}年假期餘額有效期範圍內，或可用餘額不足`);
       }
     }
 

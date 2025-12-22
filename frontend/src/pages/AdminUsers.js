@@ -392,50 +392,70 @@ const AdminUsers = () => {
             display: 'flex',
             flexDirection: { xs: 'column', sm: 'row' },
             flexWrap: 'wrap',
-            alignItems: { xs: 'stretch', sm: 'center' },
+            alignItems: { xs: 'stretch', sm: 'flex-end' },
             justifyContent: 'space-between',
             gap: 2
           }}
         >
-          <TextField
-            fullWidth={isMobile}
-            size="small"
-            placeholder={t('adminUsers.searchPlaceholder')}
-            value={searchTerm}
-            onChange={handleSearchTermChange}
-            onKeyPress={handleSearchKeyPress}
-            sx={{ minWidth: { xs: '100%', sm: 260 }, flexGrow: { xs: 1, sm: 0 } }}
-          />
-          <Box sx={{ display: 'flex', gap: 1, width: { xs: '100%', sm: 'auto' } }}>
+          <Box sx={{ 
+            display: 'flex',
+            gap: 1,
+            width: { xs: '100%', sm: 'auto' },
+            flex: { xs: '1 1 100%', sm: '1 1 auto' },
+            minWidth: { xs: '100%', sm: 300 },
+            alignItems: 'flex-end'
+          }}>
+            <TextField
+              label={t('common.search')}
+              size="small"
+              placeholder={t('adminUsers.searchPlaceholder')}
+              value={searchTerm}
+              onChange={handleSearchTermChange}
+              onKeyPress={handleSearchKeyPress}
+              sx={{ 
+                flex: 1,
+                '& .MuiInputBase-root': {
+                  height: { xs: '48px', sm: '56px' }
+                }
+              }}
+              fullWidth
+            />
             <Button
-              variant="outlined"
+              variant="contained"
               startIcon={<SearchIcon />}
               onClick={handleSearch}
-              fullWidth={isMobile}
               sx={{
+                height: { xs: '48px', sm: '56px' },
+                minWidth: { xs: '60px', sm: '100px' },
                 borderRadius: 1,
-                fontWeight: 500
-              }}
-            >
-              {t('common.search')}
-            </Button>
-            <Button 
-              variant="contained" 
-              startIcon={<AddIcon />} 
-              onClick={handleOpen}
-              fullWidth={isMobile}
-              sx={{
-                borderRadius: 1,
-                fontWeight: 600,
+                fontWeight: 500,
                 boxShadow: 2,
                 '&:hover': {
                   boxShadow: 4
                 }
               }}
             >
-              {t('adminUsers.addUser')}
+              {isMobile ? '' : t('common.search')}
             </Button>
           </Box>
+          <Button 
+            variant="contained" 
+            startIcon={<AddIcon />} 
+            onClick={handleOpen}
+            fullWidth={isMobile}
+            sx={{
+              borderRadius: 1,
+              fontWeight: 600,
+              boxShadow: 2,
+              height: { xs: '48px', sm: '56px' },
+              width: { xs: '100%', sm: 'auto' },
+              '&:hover': {
+                boxShadow: 4
+              }
+            }}
+          >
+            {t('adminUsers.addUser')}
+          </Button>
         </Box>
       </Paper>
 

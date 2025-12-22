@@ -109,6 +109,17 @@ const EmployeeDocuments = () => {
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           {t('employeeDocuments.description')}
         </Typography>
+        <Typography 
+          variant="body2" 
+          sx={{ 
+            mt: 2,
+            color: 'error.main',
+            fontWeight: 500,
+            fontSize: { xs: '0.875rem', sm: '0.9rem' }
+          }}
+        >
+          {t('employeeDocuments.disclaimer')}
+        </Typography>
       </Box>
 
       {error && (

@@ -137,9 +137,11 @@ class LeaveBalanceTransaction {
   }
 
   // 取得適用於指定申請期間的有效餘額總額
-  static async getValidBalanceForPeriod(userId, leaveTypeId, startDate, endDate) {
+  // year 參數：如果提供，則使用該年份的餘額；否則使用申請日期的年份
+  static async getValidBalanceForPeriod(userId, leaveTypeId, startDate, endDate, year = null) {
     try {
-      const year = new Date(startDate).getFullYear();
+      // 如果提供了年份參數，使用該年份；否則從開始日期取得年份
+      const targetYear = year !== null ? year : new Date(startDate).getFullYear();
       const start = new Date(startDate);
       const end = new Date(endDate);
       
@@ -148,7 +150,7 @@ class LeaveBalanceTransaction {
         .where({
           user_id: userId,
           leave_type_id: leaveTypeId,
-          year
+          year: targetYear
         })
         .where('amount', '>', 0) // 只計算正數交易（分配的餘額）
         .whereNotNull('created_by_id') // 只考慮 HR 成員創建的記錄

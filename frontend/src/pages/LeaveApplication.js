@@ -279,6 +279,8 @@ const LeaveApplication = () => {
       formDataToSend.append('end_session', formData.end_session);
       formDataToSend.append('total_days', parseFloat(formData.days));
       formDataToSend.append('year', formData.year); // 發送年份
+      // e-flow 申請必須將當時的日期錄入申請日期
+      formDataToSend.append('application_date', new Date().toISOString().split('T')[0]); // 格式：YYYY-MM-DD
       if (formData.reason) {
         formDataToSend.append('reason', formData.reason);
       }

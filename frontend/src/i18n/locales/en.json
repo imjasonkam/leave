@@ -46,7 +46,8 @@
     "password": "Password",
     "loginButton": "Login",
     "loggingIn": "Logging in...",
-    "loginFailed": "Login failed, please check employee number and password"
+    "loginFailed": "Login failed, please check employee number and password",
+    "disclaimer": "Do not provide your login credentials to any third parties"
   },
   "layout": {
     "appTitle": "Big C HK Staff Portal",
@@ -344,7 +345,8 @@
     "download": "Download",
     "noDocuments": "No documents",
     "fetchError": "Error fetching document list",
-    "downloadError": "Error downloading file"
+    "downloadError": "Error downloading file",
+    "disclaimer": "Employees are responsible for protecting their personal data and must not disclose their passwords and encrypted data to any third parties"
   },
   "approvalHistory": {
     "title": "Approval History",
@@ -512,7 +514,9 @@
     "uploadError": "Error uploading file",
     "updateError": "Error updating document information",
     "deleteError": "Error deleting file",
-    "downloadError": "Error downloading file"
+    "downloadError": "Error downloading file",
+    "clear": "Clear",
+    "selectRecipient": "Select Recipient Employee"
   },
   "adminPaperFlow": {
     "title": "Paper Flow Leave Application (System Administrator Only)",
@@ -563,7 +567,9 @@
     "accountStatus": "Account Status",
     "actions": "Actions",
     "active": "Active",
-    "deactivated": "Deactivated"
+    "deactivated": "Deactivated",
+    "edit": "Edit",
+    "noUsers": "No users"
   },
   "adminLeaveTypes": {
     "title": "Leave Type Management",
@@ -582,7 +588,13 @@
     "addDialogTitle": "Add Leave Type",
     "cancel": "Cancel",
     "save": "Save",
-    "operationFailed": "Operation failed"
+    "operationFailed": "Operation failed",
+    "edit": "Edit",
+    "noLeaveTypes": "No leave types",
+    "createSuccess": "Leave type created successfully",
+    "updateSuccess": "Leave type updated successfully",
+    "createError": "Error creating leave type",
+    "updateError": "Error updating leave type"
   },
   "adminBalances": {
     "title": "Leave Balance Management",

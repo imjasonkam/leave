@@ -161,6 +161,18 @@ const Login = () => {
             >
               {loading ? t('login.loggingIn') : t('login.loginButton')}
             </Button>
+            <Typography 
+              variant="body2" 
+              align="center"
+              sx={{ 
+                mt: 2,
+                color: 'error.main',
+                fontWeight: 500,
+                fontSize: '0.875rem'
+              }}
+            >
+              {t('login.disclaimer')}
+            </Typography>
           </Box>
         </Paper>
       </Box>

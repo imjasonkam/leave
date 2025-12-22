@@ -29,6 +29,7 @@ import {
 import { Add as AddIcon, Edit as EditIcon } from '@mui/icons-material';
 import axios from 'axios';
 import { useTranslation } from 'react-i18next';
+import Swal from 'sweetalert2';
 
 const AdminLeaveTypes = () => {
   const { t } = useTranslation();
@@ -87,13 +88,31 @@ const AdminLeaveTypes = () => {
     try {
       if (editing) {
         await axios.put(`/api/admin/leave-types/${editing}`, formData);
+        await Swal.fire({
+          icon: 'success',
+          title: t('adminLeaveTypes.updateSuccess'),
+          confirmButtonText: '確定',
+          confirmButtonColor: '#3085d6'
+        });
       } else {
         await axios.post('/api/admin/leave-types', formData);
+        await Swal.fire({
+          icon: 'success',
+          title: t('adminLeaveTypes.createSuccess'),
+          confirmButtonText: '確定',
+          confirmButtonColor: '#3085d6'
+        });
       }
       setOpen(false);
       fetchLeaveTypes();
     } catch (error) {
-      alert(error.response?.data?.message || t('adminLeaveTypes.operationFailed'));
+      await Swal.fire({
+        icon: 'error',
+        title: editing ? t('adminLeaveTypes.updateError') : t('adminLeaveTypes.createError'),
+        text: error.response?.data?.message || t('adminLeaveTypes.operationFailed'),
+        confirmButtonText: '確定',
+        confirmButtonColor: '#d33'
+      });
     }
   };
 
@@ -321,9 +340,19 @@ const AdminLeaveTypes = () => {
         fullScreen={isMobile}
         fullWidth
         maxWidth="sm"
+        PaperProps={{
+          sx: { borderRadius: { xs: 0, sm: 2 } }
+        }}
       >
-        <DialogTitle>{editing ? t('adminLeaveTypes.editDialogTitle') : t('adminLeaveTypes.addDialogTitle')}</DialogTitle>
-        <DialogContent>
+        <DialogTitle sx={{ 
+          pb: 2,
+          borderBottom: 1,
+          borderColor: 'divider',
+          fontWeight: 600
+        }}>
+          {editing ? t('adminLeaveTypes.editDialogTitle') : t('adminLeaveTypes.addDialogTitle')}
+        </DialogTitle>
+        <DialogContent sx={{ px: { xs: 2, sm: 3 } }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1, minWidth: { xs: 'auto', sm: 400 } }}>
             <TextField
               label={t('adminLeaveTypes.code')}
@@ -331,18 +360,24 @@ const AdminLeaveTypes = () => {
               onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value }))}
               required
               disabled={!!editing}
+              size={isMobile ? 'small' : 'medium'}
+              fullWidth
             />
             <TextField
               label={t('adminLeaveTypes.name')}
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               required
+              size={isMobile ? 'small' : 'medium'}
+              fullWidth
             />
             <TextField
               label={t('adminLeaveTypes.chineseName')}
               value={formData.name_zh}
               onChange={(e) => setFormData(prev => ({ ...prev, name_zh: e.target.value }))}
               required
+              size={isMobile ? 'small' : 'medium'}
+              fullWidth
             />
             <FormControlLabel
               control={
@@ -364,9 +399,38 @@ const AdminLeaveTypes = () => {
             />
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpen(false)}>{t('adminLeaveTypes.cancel')}</Button>
-          <Button onClick={handleSubmit} variant="contained">{t('adminLeaveTypes.save')}</Button>
+        <DialogActions sx={{ 
+          px: { xs: 2, sm: 3 }, 
+          py: 2,
+          borderTop: 1,
+          borderColor: 'divider',
+          flexDirection: { xs: 'column-reverse', sm: 'row' },
+          gap: { xs: 1, sm: 0 }
+        }}>
+          <Button 
+            onClick={() => setOpen(false)}
+            sx={{ 
+              textTransform: 'none',
+              width: { xs: '100%', sm: 'auto' }
+            }}
+          >
+            {t('adminLeaveTypes.cancel')}
+          </Button>
+          <Button 
+            onClick={handleSubmit} 
+            variant="contained"
+            sx={{ 
+              textTransform: 'none',
+              fontWeight: 600,
+              width: { xs: '100%', sm: 'auto' },
+              boxShadow: 2,
+              '&:hover': {
+                boxShadow: 4
+              }
+            }}
+          >
+            {t('adminLeaveTypes.save')}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
