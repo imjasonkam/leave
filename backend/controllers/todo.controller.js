@@ -210,6 +210,250 @@ class TodoController {
     }
   }
 
+  // ========== Payroll Alert Items ==========
+  
+  // 獲取所有 Payroll Alert Items（僅限 HR Group 成員）
+  async getPayrollAlertItems(req, res) {
+    try {
+      // 檢查是否為 HR 成員
+      const isHRMember = await User.isHRMember(req.user.id);
+      if (!isHRMember) {
+        return res.status(403).json({ message: '只有HR Group成員可以查看Payroll Alert Items' });
+      }
+
+      const items = await knex('payroll_alert_items')
+        .select(
+          'payroll_alert_items.id',
+          'payroll_alert_items.created_date',
+          'payroll_alert_items.employee_number',
+          'payroll_alert_items.employee_name',
+          'payroll_alert_items.start_date',
+          'payroll_alert_items.end_date',
+          'payroll_alert_items.details',
+          'payroll_alert_items.progress',
+          'payroll_alert_items.created_by_id',
+          'payroll_alert_items.created_at',
+          'payroll_alert_items.updated_at',
+          'creator.employee_number as creator_employee_number',
+          'creator.display_name as creator_name',
+          'creator.name_zh as creator_name_zh'
+        )
+        .leftJoin('users as creator', 'payroll_alert_items.created_by_id', 'creator.id')
+        .orderBy('payroll_alert_items.created_at', 'desc');
+
+      res.json({ items });
+    } catch (error) {
+      console.error('Get payroll alert items error:', error);
+      res.status(500).json({ 
+        message: '獲取Payroll Alert Items時發生錯誤',
+        error: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
+    }
+  }
+
+  // 創建 Payroll Alert Item（僅限 HR Group 成員）
+  async createPayrollAlertItem(req, res) {
+    try {
+      // 檢查是否為 HR 成員
+      const isHRMember = await User.isHRMember(req.user.id);
+      if (!isHRMember) {
+        return res.status(403).json({ message: '只有HR Group成員可以創建Payroll Alert Item' });
+      }
+
+      const {
+        created_date,
+        employee_number,
+        employee_name,
+        start_date,
+        end_date,
+        details,
+        progress
+      } = req.body;
+
+      // 驗證必填欄位
+      if (!created_date) {
+        return res.status(400).json({ message: '請填寫建立日期' });
+      }
+
+      // 驗證進度值
+      const validProgress = ['pending', 'in_progress', 'completed', 'cancelled'];
+      const itemProgress = progress || 'pending';
+      if (!validProgress.includes(itemProgress)) {
+        return res.status(400).json({ message: `無效的進度值。允許的值：${validProgress.join(', ')}` });
+      }
+
+      const itemData = {
+        created_date,
+        employee_number: employee_number || null,
+        employee_name: employee_name || null,
+        start_date: start_date || null,
+        end_date: end_date || null,
+        details: details || null,
+        progress: itemProgress,
+        created_by_id: req.user.id
+      };
+
+      console.log('Creating payroll alert item with data:', itemData);
+      
+      const result = await knex('payroll_alert_items')
+        .insert(itemData)
+        .returning('*');
+      
+      const item = Array.isArray(result) ? result[0] : result;
+      
+      if (!item) {
+        throw new Error('Failed to create payroll alert item - no item returned');
+      }
+
+      console.log('Payroll alert item created:', item);
+
+      // 獲取建立者信息
+      const creator = await User.findById(req.user.id);
+      const itemWithCreator = {
+        ...item,
+        creator_employee_number: creator?.employee_number,
+        creator_name: creator?.display_name,
+        creator_name_zh: creator?.name_zh
+      };
+
+      res.status(201).json({
+        message: 'Payroll Alert Item建立成功',
+        item: itemWithCreator
+      });
+    } catch (error) {
+      console.error('Create payroll alert item error:', error);
+      console.error('Error stack:', error.stack);
+      res.status(500).json({ 
+        message: '建立Payroll Alert Item時發生錯誤',
+        error: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
+    }
+  }
+
+  // 更新 Payroll Alert Item（僅限 HR Group 成員）
+  async updatePayrollAlertItem(req, res) {
+    try {
+      // 檢查是否為 HR 成員
+      const isHRMember = await User.isHRMember(req.user.id);
+      if (!isHRMember) {
+        return res.status(403).json({ message: '只有HR Group成員可以更新Payroll Alert Item' });
+      }
+
+      const { id } = req.params;
+      const {
+        created_date,
+        employee_number,
+        employee_name,
+        start_date,
+        end_date,
+        details,
+        progress
+      } = req.body;
+
+      // 檢查項目是否存在
+      const existingItem = await knex('payroll_alert_items').where('id', id).first();
+      if (!existingItem) {
+        return res.status(404).json({ message: 'Payroll Alert Item不存在' });
+      }
+
+      const updateData = {};
+
+      if (created_date !== undefined) {
+        updateData.created_date = created_date;
+      }
+      if (employee_number !== undefined) {
+        updateData.employee_number = employee_number || null;
+      }
+      if (employee_name !== undefined) {
+        updateData.employee_name = employee_name || null;
+      }
+      if (start_date !== undefined) {
+        updateData.start_date = start_date || null;
+      }
+      if (end_date !== undefined) {
+        updateData.end_date = end_date || null;
+      }
+      if (details !== undefined) {
+        updateData.details = details || null;
+      }
+      if (progress !== undefined) {
+        // 驗證進度值
+        const validProgress = ['pending', 'in_progress', 'completed', 'cancelled'];
+        if (!validProgress.includes(progress)) {
+          return res.status(400).json({ message: `無效的進度值。允許的值：${validProgress.join(', ')}` });
+        }
+        updateData.progress = progress;
+      }
+
+      console.log('Updating payroll alert item:', id, 'with data:', updateData);
+      
+      const result = await knex('payroll_alert_items')
+        .where('id', id)
+        .update(updateData)
+        .returning('*');
+      
+      const updatedItem = Array.isArray(result) ? result[0] : result;
+      
+      if (!updatedItem) {
+        return res.status(404).json({ message: 'Payroll Alert Item不存在或更新失敗' });
+      }
+
+      // 獲取建立者信息
+      const creator = await User.findById(updatedItem.created_by_id);
+      const itemWithCreator = {
+        ...updatedItem,
+        creator_employee_number: creator?.employee_number,
+        creator_name: creator?.display_name,
+        creator_name_zh: creator?.name_zh
+      };
+
+      res.json({
+        message: 'Payroll Alert Item更新成功',
+        item: itemWithCreator
+      });
+    } catch (error) {
+      console.error('Update payroll alert item error:', error);
+      console.error('Error stack:', error.stack);
+      res.status(500).json({ 
+        message: '更新Payroll Alert Item時發生錯誤',
+        error: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
+    }
+  }
+
+  // 刪除 Payroll Alert Item（僅限 HR Group 成員）
+  async deletePayrollAlertItem(req, res) {
+    try {
+      // 檢查是否為 HR 成員
+      const isHRMember = await User.isHRMember(req.user.id);
+      if (!isHRMember) {
+        return res.status(403).json({ message: '只有HR Group成員可以刪除Payroll Alert Item' });
+      }
+
+      const { id } = req.params;
+
+      // 檢查項目是否存在
+      const existingItem = await knex('payroll_alert_items').where('id', id).first();
+      if (!existingItem) {
+        return res.status(404).json({ message: 'Payroll Alert Item不存在' });
+      }
+
+      await knex('payroll_alert_items').where('id', id).del();
+
+      res.json({ message: 'Payroll Alert Item刪除成功' });
+    } catch (error) {
+      console.error('Delete payroll alert item error:', error);
+      res.status(500).json({ 
+        message: '刪除Payroll Alert Item時發生錯誤',
+        error: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
+    }
+  }
+
   // ========== 個人待辦事項 ==========
   
   // 獲取當前用戶的個人待辦事項

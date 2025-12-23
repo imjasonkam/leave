@@ -60,6 +60,7 @@ const Layout = ({ children }) => {
     { key: 'leaveHistory', icon: <HistoryIcon />, path: '/leave/history', show: true },
     { key: 'leaveBalance', icon: <AccountBalanceIcon />, path: '/leave/balance', show: true },
     { key: 'myDocuments', icon: <DescriptionIcon />, path: '/documents/my', show: true },
+    { key: 'formLibrary', icon: <DescriptionIcon />, path: '/form-library', show: true },
     { key: 'pendingApproval', icon: <CheckCircleIcon />, path: '/approval/list', show: true },
     { key: 'approvalHistory', icon: <HistoryIcon />, path: '/approval/history', show: true },
     { key: 'departmentGroupBalances', icon: <AccountBalanceIcon />, path: '/department-group-balances', show: true },

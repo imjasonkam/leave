@@ -69,6 +69,11 @@ exports.seed = async function (knex) {
   // 清空所有表（注意順序，避免外鍵約束問題）
   await knex('leave_balance_transactions').del();
   await knex('leave_applications').del();
+  await knex('payroll_alert_items').del();
+  await knex('hr_todos').del();
+  await knex('user_todos').del();
+  await knex('form_library').del();
+  await knex('employee_documents').del();
   await knex('users').del();
   await knex('department_groups').del();
   await knex('delegation_groups').del();
@@ -694,6 +699,54 @@ exports.seed = async function (knex) {
       await knex('user_todos').insert(personalTodos);
     }
   }
+
+  // 建立 Payroll Alert Items 示例數據
+  // 為 HR Group 成員創建一些示例 Payroll Alert Items
+  // 使用 admin 用戶（ID=1）作為建立者，因為它是 HR Group 的成員
+  // if (admin && admin.id) {
+  //   const today = new Date();
+  //   const todayStr = today.toISOString().split('T')[0];
+  //   const nextMonth = new Date(today);
+  //   nextMonth.setMonth(nextMonth.getMonth() + 1);
+  //   const nextMonthStr = nextMonth.toISOString().split('T')[0];
+    
+  //   const payrollAlertItems = [
+  //     {
+  //       created_date: todayStr,
+  //       employee_number: null,
+  //       employee_name: null,
+  //       start_date: null,
+  //       end_date: null,
+  //       details: '檢查本月薪資計算是否正確',
+  //       progress: 'pending',
+  //       created_by_id: admin.id
+  //     },
+  //     {
+  //       created_date: todayStr,
+  //       employee_number: '001',
+  //       employee_name: '示例員工',
+  //       start_date: todayStr,
+  //       end_date: nextMonthStr,
+  //       details: '新入職員工薪資設定',
+  //       progress: 'in_progress',
+  //       created_by_id: admin.id
+  //     },
+  //     {
+  //       created_date: todayStr,
+  //       employee_number: null,
+  //       employee_name: null,
+  //       start_date: null,
+  //       end_date: null,
+  //       details: '確認所有員工的銀行帳戶資料',
+  //       progress: 'pending',
+  //       created_by_id: admin.id
+  //     }
+  //   ];
+    
+  //   if (payrollAlertItems.length > 0) {
+  //     await knex('payroll_alert_items').insert(payrollAlertItems);
+  //   }
+  // }
 
   await syncLeaveApplicationStages(knex);
 };

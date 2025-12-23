@@ -25,6 +25,7 @@ import AdminPaperFlow from './pages/AdminPaperFlow';
 import ChangePassword from './pages/ChangePassword';
 import HRDocumentUpload from './pages/HRDocumentUpload';
 import EmployeeDocuments from './pages/EmployeeDocuments';
+import FormLibrary from './pages/FormLibrary';
 import DepartmentGroupBalances from './pages/DepartmentGroupBalances';
 
 // 設定後端 API 地址
@@ -65,6 +66,7 @@ function App() {
             <Route path="/admin/groups" element={<PrivateRoute><AdminGroups /></PrivateRoute>} />
             <Route path="/documents/upload" element={<PrivateRoute><HRDocumentUpload /></PrivateRoute>} />
             <Route path="/documents/my" element={<PrivateRoute><EmployeeDocuments /></PrivateRoute>} />
+            <Route path="/form-library" element={<PrivateRoute><FormLibrary /></PrivateRoute>} />
             <Route path="/department-group-balances" element={<PrivateRoute><DepartmentGroupBalances /></PrivateRoute>} />
             <Route path="/change-password" element={<PrivateRoute><ChangePassword /></PrivateRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />

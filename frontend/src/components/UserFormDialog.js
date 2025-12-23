@@ -22,6 +22,7 @@ const UserFormDialog = ({ open, editing, onClose, onSuccess, initialData = null 
     surname: '',
     given_name: '',
     alias: '',
+    name_zh: '',
     display_name: '',
     email: '',
     password: '',
@@ -44,7 +45,8 @@ const UserFormDialog = ({ open, editing, onClose, onSuccess, initialData = null 
           surname: initialData.surname || '',
           given_name: initialData.given_name || '',
           alias: initialData.alias || '',
-          display_name: initialData.display_name || initialData.name_zh || '',
+          name_zh: initialData.name_zh || '',
+          display_name: initialData.display_name || '',
           email: initialData.email || '',
           password: '',
           department_id: initialData.department_id || '',
@@ -58,6 +60,7 @@ const UserFormDialog = ({ open, editing, onClose, onSuccess, initialData = null 
           surname: '',
           given_name: '',
           alias: '',
+          name_zh: '',
           display_name: '',
           email: '',
           password: '',
@@ -91,12 +94,6 @@ const UserFormDialog = ({ open, editing, onClose, onSuccess, initialData = null 
   const handleSubmit = async () => {
     try {
       const submitData = { ...formData };
-      
-      // 將 display_name 映射為 name_zh（後端期望的欄位名稱）
-      if (submitData.display_name) {
-        submitData.name_zh = submitData.display_name;
-        delete submitData.display_name;
-      }
       
       if (!editing && !submitData.password) {
         alert('請輸入密碼');
@@ -157,9 +154,14 @@ const UserFormDialog = ({ open, editing, onClose, onSuccess, initialData = null 
           />
           <TextField
             label="中文姓名"
+            value={formData.name_zh}
+            onChange={handleChange('name_zh')}
+            required
+          />
+          <TextField
+            label="Display Name"
             value={formData.display_name}
             onChange={handleChange('display_name')}
-            required
           />
           <TextField
             label="電子郵件"

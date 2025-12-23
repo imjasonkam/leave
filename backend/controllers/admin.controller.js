@@ -49,7 +49,8 @@ class AdminController {
         given_name,
         alias,
         name_zh,
-        display_name: name_zh, // 同時設置 display_name 以便前端顯示
+        // 如果提供了 display_name（非空字串）就使用它，否則使用 name_zh 作為 fallback
+        display_name: (req.body.display_name && req.body.display_name.trim()) || name_zh,
         email: email || null, // email 為可選，如果沒有提供則設為 null
         password_hash: passwordHash,
         department_id: department_id || null,
@@ -81,10 +82,8 @@ class AdminController {
         delete updateData.password;
       }
 
-      // 如果更新了 name_zh，同時更新 display_name
-      if (updateData.name_zh) {
-        updateData.display_name = updateData.name_zh;
-      }
+      // display_name 和 name_zh 是獨立的欄位，不自動同步
+      // 只有在新增用戶時（createUser），如果沒有提供 display_name，才使用 name_zh 作為 fallback
 
       const user = await User.update(id, updateData);
 

@@ -10,24 +10,31 @@
     "migrate:rollback": "knex migrate:rollback",
     "seed": "knex seed:run"
   },
-  "keywords": ["leave", "administration", "hris", "backend"],
+  "keywords": [
+    "leave",
+    "administration",
+    "hris",
+    "backend"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.18.2",
     "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-validator": "^7.0.1",
+    "googleapis": "^128.0.0",
     "jsonwebtoken": "^9.0.2",
     "knex": "^2.5.1",
-    "pg": "^8.11.3",
-    "dotenv": "^16.3.1",
-    "cors": "^2.8.5",
     "multer": "^1.4.5-lts.1",
-    "express-validator": "^7.0.1",
     "nodemailer": "^6.9.8",
-    "googleapis": "^128.0.0"
+    "pdf-lib": "^1.17.1",
+    "pdf-poppler": "^0.2.3",
+    "pdfkit": "^0.17.2",
+    "pg": "^8.11.3"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
   }
 }
-

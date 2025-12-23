@@ -18,6 +18,19 @@ router.put('/hr/:id', todoController.updateHRTodo);
 // 刪除 HR 待處理項目
 router.delete('/hr/:id', todoController.deleteHRTodo);
 
+// ========== Payroll Alert Items 路由 ==========
+// 獲取所有 Payroll Alert Items
+router.get('/payroll-alert', todoController.getPayrollAlertItems);
+
+// 創建 Payroll Alert Item
+router.post('/payroll-alert', todoController.createPayrollAlertItem);
+
+// 更新 Payroll Alert Item
+router.put('/payroll-alert/:id', todoController.updatePayrollAlertItem);
+
+// 刪除 Payroll Alert Item
+router.delete('/payroll-alert/:id', todoController.deletePayrollAlertItem);
+
 // ========== 個人待辦事項路由 ==========
 // 獲取當前用戶的個人待辦事項
 router.get('/my', todoController.getMyTodos);

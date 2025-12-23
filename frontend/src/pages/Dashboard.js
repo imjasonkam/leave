@@ -65,6 +65,22 @@ const Dashboard = () => {
     progress: 'pending'
   });
 
+  // Payroll Alert Items 狀態
+  const [payrollAlertItems, setPayrollAlertItems] = useState([]);
+  const [loadingPayrollAlertItems, setLoadingPayrollAlertItems] = useState(false);
+  const [savingPayrollAlertItem, setSavingPayrollAlertItem] = useState(false);
+  const [payrollAlertItemDialogOpen, setPayrollAlertItemDialogOpen] = useState(false);
+  const [editingPayrollAlertItem, setEditingPayrollAlertItem] = useState(null);
+  const [payrollAlertItemForm, setPayrollAlertItemForm] = useState({
+    created_date: new Date().toISOString().split('T')[0],
+    employee_number: '',
+    employee_name: '',
+    start_date: '',
+    end_date: '',
+    details: '',
+    progress: 'pending'
+  });
+
   // 個人待辦事項狀態
   const [myTodos, setMyTodos] = useState([]);
   const [loadingMyTodos, setLoadingMyTodos] = useState(false);
@@ -84,6 +100,7 @@ const Dashboard = () => {
   useEffect(() => {
     if (isHRMember) {
       fetchHRTodos();
+      fetchPayrollAlertItems();
     }
     fetchMyTodos();
   }, [isHRMember]);
@@ -107,6 +124,28 @@ const Dashboard = () => {
       }
     } finally {
       setLoadingHrTodos(false);
+    }
+  };
+
+  // 獲取 Payroll Alert Items
+  const fetchPayrollAlertItems = async () => {
+    try {
+      setLoadingPayrollAlertItems(true);
+      const response = await axios.get('/api/todos/payroll-alert');
+      setPayrollAlertItems(response.data.items || []);
+    } catch (error) {
+      console.error('Fetch payroll alert items error:', error);
+      if (error.response?.status === 403) {
+        await Swal.fire({
+          icon: 'error',
+          title: '權限不足',
+          text: '只有HR Group成員可以查看Payroll Alert Items',
+          confirmButtonText: '確定',
+          confirmButtonColor: '#d33'
+        });
+      }
+    } finally {
+      setLoadingPayrollAlertItems(false);
     }
   };
 
@@ -247,6 +286,123 @@ const Dashboard = () => {
       await fetchHRTodos();
     } catch (error) {
       console.error('Delete HR todo error:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: '刪除失敗',
+        text: error.response?.data?.message || '刪除失敗',
+        confirmButtonText: '確定',
+        confirmButtonColor: '#d33'
+      });
+    }
+  };
+
+  // ========== Payroll Alert Items 處理函數 ==========
+  const handleOpenPayrollAlertItemDialog = (item = null) => {
+    if (item) {
+      setEditingPayrollAlertItem(item);
+      setPayrollAlertItemForm({
+        created_date: formatDateForInput(item.created_date) || new Date().toISOString().split('T')[0],
+        employee_number: item.employee_number || '',
+        employee_name: item.employee_name || '',
+        start_date: formatDateForInput(item.start_date) || '',
+        end_date: formatDateForInput(item.end_date) || '',
+        details: item.details || '',
+        progress: item.progress || 'pending'
+      });
+    } else {
+      setEditingPayrollAlertItem(null);
+      setPayrollAlertItemForm({
+        created_date: new Date().toISOString().split('T')[0],
+        employee_number: '',
+        employee_name: '',
+        start_date: '',
+        end_date: '',
+        details: '',
+        progress: 'pending'
+      });
+    }
+    setPayrollAlertItemDialogOpen(true);
+  };
+
+  const handleClosePayrollAlertItemDialog = () => {
+    setPayrollAlertItemDialogOpen(false);
+    setEditingPayrollAlertItem(null);
+  };
+
+  const handleSavePayrollAlertItem = async () => {
+    if (savingPayrollAlertItem) return;
+
+    try {
+      setSavingPayrollAlertItem(true);
+
+      if (!payrollAlertItemForm.created_date) {
+        await Swal.fire({
+          icon: 'warning',
+          title: '提示',
+          text: '請填寫建立日期',
+          confirmButtonText: '確定',
+          confirmButtonColor: '#3085d6'
+        });
+        setSavingPayrollAlertItem(false);
+        return;
+      }
+
+      if (editingPayrollAlertItem) {
+        await axios.put(`/api/todos/payroll-alert/${editingPayrollAlertItem.id}`, payrollAlertItemForm);
+      } else {
+        await axios.post('/api/todos/payroll-alert', payrollAlertItemForm);
+      }
+
+      handleClosePayrollAlertItemDialog();
+      setSavingPayrollAlertItem(false);
+      await fetchPayrollAlertItems();
+      
+      await Swal.fire({
+        icon: 'success',
+        title: '成功',
+        text: editingPayrollAlertItem ? 'Payroll Alert Item更新成功' : 'Payroll Alert Item建立成功',
+        confirmButtonText: '確定',
+        confirmButtonColor: '#3085d6'
+      });
+    } catch (error) {
+      console.error('Save payroll alert item error:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: '操作失敗',
+        text: error.response?.data?.message || '操作失敗',
+        confirmButtonText: '確定',
+        confirmButtonColor: '#d33'
+      });
+      setSavingPayrollAlertItem(false);
+    }
+  };
+
+  const handleDeletePayrollAlertItem = async (id) => {
+    const result = await Swal.fire({
+      icon: 'warning',
+      title: '確認刪除',
+      text: '確定要刪除此Payroll Alert Item嗎？',
+      showCancelButton: true,
+      confirmButtonText: '確定',
+      cancelButtonText: '取消',
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await axios.delete(`/api/todos/payroll-alert/${id}`);
+      await Swal.fire({
+        icon: 'success',
+        title: '成功',
+        text: 'Payroll Alert Item刪除成功',
+        confirmButtonText: '確定',
+        confirmButtonColor: '#3085d6'
+      });
+      await fetchPayrollAlertItems();
+    } catch (error) {
+      console.error('Delete payroll alert item error:', error);
       await Swal.fire({
         icon: 'error',
         title: '刪除失敗',
@@ -419,6 +575,177 @@ const Dashboard = () => {
           : `${user?.department_name_zh || user?.department_name || ''} - ${user?.position_name_zh || user?.position_name || ''}`
         }
       </Typography>
+
+      {/* 個人待辦事項清單（所有用戶可見） */}
+      <Box sx={{ mt: 3 }}>
+        <Divider sx={{ mb: 3 }} />
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: isMobile ? 'flex-start' : 'center',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: isMobile ? 2 : 0,
+            mb: 2 
+          }}
+        >
+          <Typography variant="h5" gutterBottom={isMobile}>
+            <ListIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
+            {t('dashboard.myTodo.title')}
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenMyTodoDialog()}
+            fullWidth={isMobile}
+            size={isMobile ? 'medium' : 'medium'}
+          >
+            {t('dashboard.myTodo.add')}
+          </Button>
+        </Box>
+
+        {loadingMyTodos ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+            <CircularProgress />
+          </Box>
+        ) : myTodos.length === 0 ? (
+          <Paper sx={{ p: 3, textAlign: 'center' }}>
+            <Typography variant="body1" color="text.secondary">
+              {t('dashboard.myTodo.noTodos')}
+            </Typography>
+          </Paper>
+        ) : isMobile ? (
+          <Stack spacing={2}>
+            {myTodos.map((todo) => (
+              <Card key={todo.id} variant="outlined">
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      <Chip
+                        label={t(`dashboard.myTodo.status.${todo.status}`)}
+                        color={todo.status === 'completed' ? 'success' : todo.status === 'in_progress' ? 'primary' : 'default'}
+                        size="small"
+                      />
+                      <Chip
+                        label={t(`dashboard.myTodo.priority.${todo.priority}`)}
+                        color={todo.priority === 3 ? 'error' : todo.priority === 2 ? 'warning' : 'default'}
+                        size="small"
+                      />
+                    </Box>
+                    <Box>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleOpenMyTodoDialog(todo)}
+                        color="primary"
+                        sx={{ mr: 0.5 }}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleDeleteMyTodo(todo.id)}
+                        color="error"
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Box>
+                  </Box>
+                  <Stack spacing={1}>
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                        {todo.title}
+                      </Typography>
+                    </Box>
+                    {todo.description && (
+                      <Box>
+                        <Typography variant="body2" color="text.secondary">
+                          {todo.description}
+                        </Typography>
+                      </Box>
+                    )}
+                    {todo.due_date && (
+                      <Box>
+                        <Typography variant="caption" color="text.secondary">
+                          {t('dashboard.myTodo.dueDate')}: {formatDate(todo.due_date)}
+                        </Typography>
+                      </Box>
+                    )}
+                  </Stack>
+                </CardContent>
+              </Card>
+            ))}
+          </Stack>
+        ) : (
+          <TableContainer 
+            component={Paper}
+            sx={{ 
+              maxHeight: isTablet ? '600px' : 'none',
+              overflowX: 'auto'
+            }}
+          >
+            <Table stickyHeader={isTablet}>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ minWidth: 200 }}>{t('dashboard.myTodo.title')}</TableCell>
+                  <TableCell sx={{ minWidth: 150 }}>{t('dashboard.myTodo.description')}</TableCell>
+                  <TableCell sx={{ minWidth: 100 }}>{t('dashboard.myTodo.status.label')}</TableCell>
+                  <TableCell sx={{ minWidth: 100 }}>{t('dashboard.myTodo.priority.label')}</TableCell>
+                  <TableCell sx={{ minWidth: 100 }}>{t('dashboard.myTodo.dueDate')}</TableCell>
+                  <TableCell align="right" sx={{ minWidth: 100 }}>{t('dashboard.myTodo.actions')}</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {myTodos.map((todo) => (
+                  <TableRow key={todo.id} hover>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                        {todo.title}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {todo.description || '-'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={t(`dashboard.myTodo.status.${todo.status}`)}
+                        color={todo.status === 'completed' ? 'success' : todo.status === 'in_progress' ? 'primary' : 'default'}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={t(`dashboard.myTodo.priority.${todo.priority}`)}
+                        color={todo.priority === 3 ? 'error' : todo.priority === 2 ? 'warning' : 'default'}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>{formatDate(todo.due_date) || '-'}</TableCell>
+                    <TableCell align="right">
+                      <IconButton
+                        size="small"
+                        onClick={() => handleOpenMyTodoDialog(todo)}
+                        color="primary"
+                        sx={{ mr: 0.5 }}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleDeleteMyTodo(todo.id)}
+                        color="error"
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </Box>
 
       {/* HR 待處理清單（僅 HR Group 成員可見） */}
       {isHRMember && (
@@ -595,176 +922,194 @@ const Dashboard = () => {
         </Box>
       )}
 
-      {/* 個人待辦事項清單（所有用戶可見） */}
-      <Box sx={{ mt: 4 }}>
-        <Divider sx={{ mb: 3 }} />
-        <Box 
-          sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: isMobile ? 'flex-start' : 'center',
-            flexDirection: isMobile ? 'column' : 'row',
-            gap: isMobile ? 2 : 0,
-            mb: 2 
-          }}
-        >
-          <Typography variant="h5" gutterBottom={isMobile}>
-            <ListIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
-            {t('dashboard.myTodo.title')}
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => handleOpenMyTodoDialog()}
-            fullWidth={isMobile}
-            size={isMobile ? 'medium' : 'medium'}
-          >
-            {t('dashboard.myTodo.add')}
-          </Button>
-        </Box>
-
-        {loadingMyTodos ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-            <CircularProgress />
-          </Box>
-        ) : myTodos.length === 0 ? (
-          <Paper sx={{ p: 3, textAlign: 'center' }}>
-            <Typography variant="body1" color="text.secondary">
-              {t('dashboard.myTodo.noTodos')}
-            </Typography>
-          </Paper>
-        ) : isMobile ? (
-          <Stack spacing={2}>
-            {myTodos.map((todo) => (
-              <Card key={todo.id} variant="outlined">
-                <CardContent>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                      <Chip
-                        label={t(`dashboard.myTodo.status.${todo.status}`)}
-                        color={todo.status === 'completed' ? 'success' : todo.status === 'in_progress' ? 'primary' : 'default'}
-                        size="small"
-                      />
-                      <Chip
-                        label={t(`dashboard.myTodo.priority.${todo.priority}`)}
-                        color={todo.priority === 3 ? 'error' : todo.priority === 2 ? 'warning' : 'default'}
-                        size="small"
-                      />
-                    </Box>
-                    <Box>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleOpenMyTodoDialog(todo)}
-                        color="primary"
-                        sx={{ mr: 0.5 }}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDeleteMyTodo(todo.id)}
-                        color="error"
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Box>
-                  </Box>
-                  <Stack spacing={1}>
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                        {todo.title}
-                      </Typography>
-                    </Box>
-                    {todo.description && (
-                      <Box>
-                        <Typography variant="body2" color="text.secondary">
-                          {todo.description}
-                        </Typography>
-                      </Box>
-                    )}
-                    {todo.due_date && (
-                      <Box>
-                        <Typography variant="caption" color="text.secondary">
-                          {t('dashboard.myTodo.dueDate')}: {formatDate(todo.due_date)}
-                        </Typography>
-                      </Box>
-                    )}
-                  </Stack>
-                </CardContent>
-              </Card>
-            ))}
-          </Stack>
-        ) : (
-          <TableContainer 
-            component={Paper}
+      {/* Payroll Alert Items 清單（僅限 HR Group 成員可見） */}
+      {isHRMember && (
+        <Box sx={{ mt: 4 }}>
+          <Divider sx={{ mb: 3 }} />
+          <Box 
             sx={{ 
-              maxHeight: isTablet ? '600px' : 'none',
-              overflowX: 'auto'
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: isMobile ? 'flex-start' : 'center',
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: isMobile ? 2 : 0,
+              mb: 2 
             }}
           >
-            <Table stickyHeader={isTablet}>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ minWidth: 200 }}>{t('dashboard.myTodo.title')}</TableCell>
-                  <TableCell sx={{ minWidth: 150 }}>{t('dashboard.myTodo.description')}</TableCell>
-                  <TableCell sx={{ minWidth: 100 }}>{t('dashboard.myTodo.status.label')}</TableCell>
-                  <TableCell sx={{ minWidth: 100 }}>{t('dashboard.myTodo.priority.label')}</TableCell>
-                  <TableCell sx={{ minWidth: 100 }}>{t('dashboard.myTodo.dueDate')}</TableCell>
-                  <TableCell align="right" sx={{ minWidth: 100 }}>{t('dashboard.myTodo.actions')}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {myTodos.map((todo) => (
-                  <TableRow key={todo.id} hover>
-                    <TableCell>
-                      <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
-                        {todo.title}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {todo.description || '-'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
+            <Typography variant="h5" gutterBottom={isMobile}>
+              <ListIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
+              {t('dashboard.payrollAlert.title')}
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => handleOpenPayrollAlertItemDialog()}
+              fullWidth={isMobile}
+              size={isMobile ? 'medium' : 'medium'}
+            >
+              {t('dashboard.payrollAlert.add')}
+            </Button>
+          </Box>
+
+          {loadingPayrollAlertItems ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+              <CircularProgress />
+            </Box>
+          ) : payrollAlertItems.length === 0 ? (
+            <Paper sx={{ p: 3, textAlign: 'center' }}>
+              <Typography variant="body1" color="text.secondary">
+                {t('dashboard.payrollAlert.noItems')}
+              </Typography>
+            </Paper>
+          ) : isMobile ? (
+            <Stack spacing={2}>
+              {payrollAlertItems.map((item) => (
+                <Card key={item.id} variant="outlined">
+                  <CardContent>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                       <Chip
-                        label={t(`dashboard.myTodo.status.${todo.status}`)}
-                        color={todo.status === 'completed' ? 'success' : todo.status === 'in_progress' ? 'primary' : 'default'}
+                        label={getProgressLabel(item.progress)}
+                        color={getProgressColor(item.progress)}
                         size="small"
                       />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={t(`dashboard.myTodo.priority.${todo.priority}`)}
-                        color={todo.priority === 3 ? 'error' : todo.priority === 2 ? 'warning' : 'default'}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>{formatDate(todo.due_date) || '-'}</TableCell>
-                    <TableCell align="right">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleOpenMyTodoDialog(todo)}
-                        color="primary"
-                        sx={{ mr: 0.5 }}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDeleteMyTodo(todo.id)}
-                        color="error"
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
+                      <Box>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleOpenPayrollAlertItemDialog(item)}
+                          color="primary"
+                        >
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDeletePayrollAlertItem(item.id)}
+                          color="error"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Box>
+                    </Box>
+                    <Stack spacing={1}>
+                      {item.created_date && (
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">
+                            {t('dashboard.payrollAlert.createdDate')}:
+                          </Typography>
+                          <Typography variant="body2">{formatDate(item.created_date)}</Typography>
+                        </Box>
+                      )}
+                      {item.employee_number && (
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">
+                            {t('dashboard.payrollAlert.employeeNumber')}:
+                          </Typography>
+                          <Typography variant="body2">{item.employee_number}</Typography>
+                        </Box>
+                      )}
+                      {item.employee_name && (
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">
+                            {t('dashboard.payrollAlert.employeeName')}:
+                          </Typography>
+                          <Typography variant="body2">{item.employee_name}</Typography>
+                        </Box>
+                      )}
+                      {(item.start_date || item.end_date) && (
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">
+                            {t('dashboard.payrollAlert.startDate')} - {t('dashboard.payrollAlert.endDate')}:
+                          </Typography>
+                          <Typography variant="body2">
+                            {formatDate(item.start_date) || '-'} ~ {formatDate(item.end_date) || '-'}
+                          </Typography>
+                        </Box>
+                      )}
+                      {item.details && (
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">
+                            {t('dashboard.payrollAlert.details')}:
+                          </Typography>
+                          <Typography variant="body2">{item.details}</Typography>
+                        </Box>
+                      )}
+                    </Stack>
+                  </CardContent>
+                </Card>
+              ))}
+            </Stack>
+          ) : (
+            <TableContainer 
+              component={Paper}
+              sx={{ 
+                maxHeight: isTablet ? '600px' : 'none',
+                overflowX: 'auto'
+              }}
+            >
+              <Table stickyHeader={isTablet}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ minWidth: 100 }}>{t('dashboard.payrollAlert.createdDate')}</TableCell>
+                    <TableCell sx={{ minWidth: 120 }}>{t('dashboard.payrollAlert.employeeNumber')}</TableCell>
+                    <TableCell sx={{ minWidth: 120 }}>{t('dashboard.payrollAlert.employeeName')}</TableCell>
+                    {!isTablet && (
+                      <>
+                        <TableCell sx={{ minWidth: 100 }}>{t('dashboard.payrollAlert.startDate')}</TableCell>
+                        <TableCell sx={{ minWidth: 100 }}>{t('dashboard.payrollAlert.endDate')}</TableCell>
+                      </>
+                    )}
+                    <TableCell sx={{ minWidth: 200 }}>{t('dashboard.payrollAlert.details')}</TableCell>
+                    <TableCell sx={{ minWidth: 100 }}>{t('dashboard.payrollAlert.progress.label')}</TableCell>
+                    <TableCell align="right" sx={{ minWidth: 100 }}>{t('dashboard.payrollAlert.actions')}</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
-      </Box>
+                </TableHead>
+                <TableBody>
+                  {payrollAlertItems.map((item) => (
+                    <TableRow key={item.id} hover>
+                      <TableCell>{formatDate(item.created_date) || '-'}</TableCell>
+                      <TableCell>{item.employee_number || '-'}</TableCell>
+                      <TableCell>{item.employee_name || '-'}</TableCell>
+                      {!isTablet && (
+                        <>
+                          <TableCell>{formatDate(item.start_date) || '-'}</TableCell>
+                          <TableCell>{formatDate(item.end_date) || '-'}</TableCell>
+                        </>
+                      )}
+                      <TableCell>
+                        <Typography variant="body2" sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {item.details || '-'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={getProgressLabel(item.progress)}
+                          color={getProgressColor(item.progress)}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleOpenPayrollAlertItemDialog(item)}
+                          color="primary"
+                        >
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDeletePayrollAlertItem(item.id)}
+                          color="error"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </Box>
+      )}
 
       {/* HR 待處理清單對話框 */}
       {isHRMember && (
@@ -876,6 +1221,122 @@ const Dashboard = () => {
                 </>
               ) : (
                 t('dashboard.hrTodo.save')
+              )}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
+
+      {/* Payroll Alert Items 對話框 */}
+      {isHRMember && (
+        <Dialog 
+          open={payrollAlertItemDialogOpen} 
+          onClose={handleClosePayrollAlertItemDialog} 
+          maxWidth="md" 
+          fullWidth
+          fullScreen={isMobile}
+        >
+          <DialogTitle>
+            {editingPayrollAlertItem ? t('dashboard.payrollAlert.edit') : t('dashboard.payrollAlert.add')}
+          </DialogTitle>
+          <DialogContent>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label={t('dashboard.payrollAlert.createdDate')}
+                  type="date"
+                  value={payrollAlertItemForm.created_date}
+                  onChange={(e) => setPayrollAlertItemForm({ ...payrollAlertItemForm, created_date: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label={t('dashboard.payrollAlert.employeeNumber')}
+                  value={payrollAlertItemForm.employee_number}
+                  onChange={(e) => setPayrollAlertItemForm({ ...payrollAlertItemForm, employee_number: e.target.value })}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label={t('dashboard.payrollAlert.employeeName')}
+                  value={payrollAlertItemForm.employee_name}
+                  onChange={(e) => setPayrollAlertItemForm({ ...payrollAlertItemForm, employee_name: e.target.value })}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label={t('dashboard.payrollAlert.startDate')}
+                  type="date"
+                  value={payrollAlertItemForm.start_date}
+                  onChange={(e) => setPayrollAlertItemForm({ ...payrollAlertItemForm, start_date: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  label={t('dashboard.payrollAlert.endDate')}
+                  type="date"
+                  value={payrollAlertItemForm.end_date}
+                  onChange={(e) => setPayrollAlertItemForm({ ...payrollAlertItemForm, end_date: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth>
+                  <InputLabel>{t('dashboard.payrollAlert.progress.label')}</InputLabel>
+                  <Select
+                    value={payrollAlertItemForm.progress}
+                    onChange={(e) => setPayrollAlertItemForm({ ...payrollAlertItemForm, progress: e.target.value })}
+                    label={t('dashboard.payrollAlert.progress.label')}
+                  >
+                    <MenuItem value="pending">{t('dashboard.payrollAlert.progress.pending')}</MenuItem>
+                    <MenuItem value="in_progress">{t('dashboard.payrollAlert.progress.in_progress')}</MenuItem>
+                    <MenuItem value="completed">{t('dashboard.payrollAlert.progress.completed')}</MenuItem>
+                    <MenuItem value="cancelled">{t('dashboard.payrollAlert.progress.cancelled')}</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label={t('dashboard.payrollAlert.details')}
+                  multiline
+                  rows={4}
+                  value={payrollAlertItemForm.details}
+                  onChange={(e) => setPayrollAlertItemForm({ ...payrollAlertItemForm, details: e.target.value })}
+                />
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions sx={{ flexDirection: isMobile ? 'column-reverse' : 'row', gap: isMobile ? 1 : 0 }}>
+            <Button 
+              onClick={handleClosePayrollAlertItemDialog}
+              fullWidth={isMobile}
+              size={isMobile ? 'large' : 'medium'}
+            >
+              {t('dashboard.payrollAlert.cancel')}
+            </Button>
+            <Button 
+              onClick={handleSavePayrollAlertItem} 
+              variant="contained"
+              fullWidth={isMobile}
+              size={isMobile ? 'large' : 'medium'}
+              disabled={savingPayrollAlertItem}
+            >
+              {savingPayrollAlertItem ? (
+                <>
+                  <CircularProgress size={16} sx={{ mr: 1 }} />
+                  {t('dashboard.payrollAlert.saving') || '儲存中...'}
+                </>
+              ) : (
+                t('dashboard.payrollAlert.save')
               )}
             </Button>
           </DialogActions>
